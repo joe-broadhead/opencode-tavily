@@ -1,0 +1,43 @@
+import { Plugin } from "@opencode/plugin"
+import { watchConnect } from "./connect.js"
+import { checkHost } from "./host-version.js"
+import { readKey, registerServer, watchKey, type ServerState } from "./mcp.js"
+import { parseOptions } from "./options.js"
+import { registerDefaultRules } from "./permissions.js"
+import { Tavily } from "./rpc/index.js"
+import { loadSkills, registerSkills } from "./skills.js"
+import { readStatus, registerStatusCommand, unavailable } from "./status.js"
+import { selectWebsearchDefault, type WebsearchState } from "./websearch.js"
+
+const warn = (message: string) => console.warn(message)
+
+export default Plugin.define({
+  id: "tavily.web",
+  async setup(ctx) {
+    // Options first: they hold the host check's override. Validation has no side effects.
+    const options = parseOptions(ctx.options)
+    const host = checkHost(ctx.app.version, options.allowUntestedHost, warn)
+    const skills = await loadSkills()
+    const server: ServerState = { key: await readKey(ctx.integration, undefined, warn), userServer: false }
+    const websearch: WebsearchState = { tavilyDefault: false }
+
+    await registerServer(ctx.mcp, server, options.executionTimeoutMs)
+    await registerDefaultRules(ctx.agent)
+    if (options.websearch) await selectWebsearchDefault(ctx.websearch, websearch)
+    await registerSkills(ctx.skill, skills)
+    const read = () => readStatus(ctx, { server, websearch, host })
+    await registerStatusCommand(ctx, read)
+    await ctx.rpc.register(Tavily, {
+      status: (_input, { error }) =>
+        read().catch((cause: unknown) => {
+          const { message, nextStep } = unavailable(cause)
+          return error("unavailable", message, { nextStep })
+        }),
+    })
+
+    const controller = new AbortController()
+    void watchKey(ctx, server, controller.signal, warn)
+    void watchConnect(ctx, server, controller.signal)
+    return () => controller.abort()
+  },
+})
