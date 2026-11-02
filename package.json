@@ -58,6 +58,7 @@
     "host": ">=2.2.3 <2.3.0"
   },
   "jelly": {
+    "title": "Tavily",
     "tools": [
       {
         "name": "tavily.tavily_search",
@@ -96,6 +97,24 @@
     ],
     "rpc": [],
     "views": [],
+    "signIns": [
+      {
+        "id": "key",
+        "label": "Tavily",
+        "integration": "tavily",
+        "group": "tavily",
+        "help": {
+          "url": "https://app.tavily.com/home",
+          "label": "Get a Tavily API key"
+        }
+      },
+      {
+        "id": "account",
+        "label": "Tavily MCP",
+        "server": "tavily",
+        "group": "tavily"
+      }
+    ],
     "contributes": {
       "homeFeeds": [],
       "homeWidgets": [],
