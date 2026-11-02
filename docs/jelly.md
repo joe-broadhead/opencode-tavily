@@ -4,6 +4,8 @@
 package's `package.json` as JSON, without loading the plugin, when a person reviews the exact
 version, and uses it as follows.
 
+Jelly names the plugin **Tavily** (`jelly.title`), with the package name and version beneath.
+
 ## Tools and permissions
 
 5 tools are declared (5 read-only). Jelly's agents have no base "allow everything"
@@ -31,14 +33,9 @@ None yet.
 
 ## Signing in
 
-Tavily's MCP server `tavily` signs in with OpenCode's MCP OAuth, or OpenCode's key integration `tavily` (an API key, which wins). Jelly shows `mcp:tavily` and `integration:tavily`.
+`jelly.signIns` declares two alternatives in one group, `tavily`: `key`, OpenCode's key integration `tavily` (an API key; the row links to Tavily's key page), or `account`, the `tavily` MCP server's own OAuth ("Tavily MCP"). Either one connects the card, and once one is connected the card shows only that one. A key that Tavily turns down shows this plugin's `needs_auth` message on the key row, with Replace the key.
 
-<!-- AUTH-PLACEHOLDER (Jelly rd152): settings and secrets for signing in from Jelly are being
-designed by Jelly's auth lane. Until that lands this package declares no `contributes.settings`;
-add the auth declarations here and in package.json when that design is agreed. -->
-**Not yet declared for Jelly.** How this plugin's sign-in appears in Jelly (desktop and web,
-expiry, reconnect and sign-out) is still being designed; this section and
-`jelly.contributes.settings` will say it once it is.
+Jelly folds the declared sign-ins into this plugin's one card, which shows each as Connected, Not signed in or Sign in again (expired or revoked), and starts, renews and signs out of each. An agent's `jelly_connection_request`, or a tool result that names this plugin's "Run /connect and choose …" next step, opens the same card. The plugin still signs in through OpenCode, as it does without Jelly; the declaration only tells Jelly which of the engine's integrations and servers are this plugin's.
 
 ## Versions
 
