@@ -25,7 +25,7 @@ This repository builds `@joe-broadhead/opencode-tavily`, an OpenCode plugin that
 ## Package
 
 - Releases follow CONTRIBUTING. `release.yml` refuses a private package or a tag that differs from the version.
-- Version `0.0.0`; the version appears only in `package.json` and `CHANGELOG.md`.
+- The version appears only in `package.json` and `CHANGELOG.md`.
 - No `dependencies`, peer dependencies, lifecycle scripts or declaration files. `exports` lists only `.` → `./dist/index.js` and `./tui` → `./dist/tui.js`.
 - `dist/` holds exactly `index.js` and `tui.js`, each a self-contained esbuild bundle with no relative imports (`tools/build.mjs`). Only `@opencode/plugin*`, `@opentui/*`, `solid-js` and `node:*` stay external. `tsc` only typechecks.
 - `@opencode/plugin`, `@opencode/sdk`, `@opencode/client` and `@opencode/theme` are exact dev dependencies at 2.2.3. Do not add 2.2.4 to `package-lock.json`.
