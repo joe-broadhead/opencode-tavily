@@ -1,6 +1,7 @@
 import { Plugin } from "@opencode/plugin"
 import { watchConnect } from "./connect.js"
 import { checkHost } from "./host-version.js"
+import { keyChecker } from "./key-check.js"
 import { readKey, registerServer, watchKey, type ServerState } from "./mcp.js"
 import { parseOptions } from "./options.js"
 import { registerDefaultRules } from "./permissions.js"
@@ -20,12 +21,15 @@ export default Plugin.define({
     const skills = await loadSkills()
     const server: ServerState = { key: await readKey(ctx.integration, undefined, warn), userServer: false }
     const websearch: WebsearchState = { tavilyDefault: false }
+    const checkKey = keyChecker()
+    // Ask Tavily about the key now, so status has the answer; the check never throws.
+    if (server.key) void checkKey(server.key.key)
 
     await registerServer(ctx.mcp, server, options.executionTimeoutMs)
     await registerDefaultRules(ctx.agent)
     if (options.websearch) await selectWebsearchDefault(ctx.websearch, websearch)
     await registerSkills(ctx.skill, skills)
-    const read = () => readStatus(ctx, { server, websearch, host })
+    const read = () => readStatus(ctx, { server, websearch, host, checkKey })
     await registerStatusCommand(ctx, read)
     await ctx.rpc.register(Tavily, {
       status: (_input, { error }) =>
@@ -37,7 +41,7 @@ export default Plugin.define({
 
     const controller = new AbortController()
     void watchKey(ctx, server, controller.signal, warn)
-    void watchConnect(ctx, server, controller.signal)
+    void watchConnect(ctx, server, checkKey, controller.signal)
     return () => controller.abort()
   },
 })

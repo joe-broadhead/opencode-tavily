@@ -1,7 +1,7 @@
 // Hosts the plugin on OpenCode through public packages only, in two ways:
 // - startHost: the embedded host of @opencode/sdk (the dev pin, 2.2.3) in this process, with the plugin from src.
-//   Requests to mcp.tavily.com get a local 401, as Tavily answers before sign-in, and any other request off loopback
-//   fails.
+//   Requests to mcp.tavily.com and to Tavily's key check, api.tavily.com/usage, go to `hostedTavily`, a loopback fake
+//   that answers as Tavily does, and any other request off loopback fails.
 // - startStock: `opencode serve` of a stock release on a free loopback port with a password, loading an installed
 //   package. Its HTTP(S) proxy refuses every request, so Tavily's server reports "failed", and the models fetch, the
 //   update check and the free models are off.
@@ -18,6 +18,8 @@ import { fileURLToPath } from "node:url"
 import { OpenCode as Client, type OpenCodeClient } from "@opencode/client"
 import { Plugin, type PluginOptions } from "@opencode/plugin"
 import plugin from "../../src/index.js"
+import { RECORDED_TOOLS } from "./catalog.js"
+import { startFakeTavily, type FakeTavily } from "./fake-tavily.js"
 import probe from "./probe.js"
 
 export const REPO = fileURLToPath(new URL("../../", import.meta.url))
@@ -25,8 +27,20 @@ export const REPO = fileURLToPath(new URL("../../", import.meta.url))
 /** The temp root of every host and of the pack test. */
 export const root = realpathSync(mkdtempSync(join(tmpdir(), "tavily-host-")))
 
-/** Removes every host's temp root; call once after every host in the file has closed. */
-export const cleanup = () => rmSync(root, { recursive: true, force: true })
+/** Keys the fake Tavily rejects at its key check; Tavily's MCP endpoint still accepts them, as it accepts any. */
+export const REJECTED = "rejected"
+
+let hosted: Promise<FakeTavily> | undefined
+
+/** The fake that answers the embedded hosts' requests to Tavily, started on first use. */
+export const hostedTavily = () =>
+  (hosted ??= startFakeTavily(RECORDED_TOOLS, { requireAuth: true, accepts: (key) => !key.includes(REJECTED) }))
+
+/** Removes every host's temp root and stops the fake Tavily; call once after every host in the file has closed. */
+export async function cleanup() {
+  await (await hosted)?.close()
+  rmSync(root, { recursive: true, force: true })
+}
 
 /** Stock binaries given as OPENCODE_BIN_2_2_3 and so on, read before the environment is cleared below. */
 const GIVEN_BINARIES = Object.fromEntries(Object.entries(process.env).filter(([key]) => key.startsWith("OPENCODE_BIN_")))
@@ -70,21 +84,16 @@ globalThis.fetch = Object.assign(
   (input: string | URL | Request, init?: RequestInit) => {
     const url = new URL(input instanceof Request ? input.url : input)
     if (url.hostname === "127.0.0.1" || url.hostname === "localhost") return realFetch(input, init)
-    if (url.origin === "https://mcp.tavily.com") return Promise.resolve(signedOut(url))
+    if (url.origin === "https://mcp.tavily.com" || `${url.origin}${url.pathname}` === "https://api.tavily.com/usage")
+      return hostedTavily().then((fake) => {
+        const target = new URL(`${url.pathname}${url.search}`, fake.origin)
+        return realFetch(input instanceof Request ? new Request(target, input) : target, init)
+      })
     offLoopback.push(url.origin)
     return Promise.reject(new Error(`host test blocked a fetch to ${url.origin}`))
   },
   { preconnect: realFetch.preconnect },
 ) as typeof fetch
-
-/** Tavily before sign-in: the MCP endpoint answers 401, and there is no discovery document to read. */
-function signedOut(url: URL) {
-  if (url.pathname.startsWith("/.well-known/")) return new Response("Not Found", { status: 404 })
-  return new Response(JSON.stringify({ error: "invalid_token" }), {
-    status: 401,
-    headers: { "content-type": "application/json", "www-authenticate": `Bearer error="invalid_token"` },
-  })
-}
 
 /** Runs the npm on PATH with its own home, config and cache in the temp root. */
 export async function npm(args: string[], cwd: string) {
@@ -122,6 +131,8 @@ export type HostClient = Omit<OpenCodeClient, "plugin"> & { readonly plugin: Pic
 export interface Host {
   readonly client: HostClient
   readonly location: { readonly directory: string }
+  /** A stock host's server log so far. */
+  readonly log?: () => string
   close(): Promise<void>
 }
 
@@ -195,8 +206,11 @@ async function stockBinary(version: string) {
   return join(project, "node_modules", name, "bin", "opencode")
 }
 
-/** `opencode serve` of a stock release, with the installed package directory `pkg` in its user config. */
-export async function startStock(version: string, pkg: string): Promise<Host> {
+/**
+ * `opencode serve` of a stock release, with the installed package directory `pkg` in its user config, and `serveEnv`
+ * added to the server's environment only, such as TAVILY_API_KEY.
+ */
+export async function startStock(version: string, pkg: string, serveEnv: Readonly<Record<string, string>> = {}): Promise<Host> {
   const binary = await stockBinary(version)
   const { base, work } = hostFolder(`stock-${version}`)
   const home = join(base, "home")
@@ -226,7 +240,7 @@ export async function startStock(version: string, pkg: string): Promise<Host> {
   const log = createWriteStream(join(base, "serve.log"))
   const child = spawn(binary, ["serve", "--hostname", "127.0.0.1", "--port", String(port), "--print-logs", "--log-level", "warn"], {
     cwd: work,
-    env: { ...env, OPENCODE_PASSWORD: password, ...proxyEnv(proxy.url) },
+    env: { ...env, ...serveEnv, OPENCODE_PASSWORD: password, ...proxyEnv(proxy.url) },
     stdio: ["ignore", "pipe", "pipe"],
   })
   child.stdout?.pipe(log)
@@ -247,7 +261,7 @@ export async function startStock(version: string, pkg: string): Promise<Host> {
     await close()
     throw new Error(`${(error as Error).message}\n${readFileSync(join(base, "serve.log"), "utf8").slice(-2000)}`)
   }
-  return ready({ client, location: { directory: work }, close })
+  return ready({ client, location: { directory: work }, log: () => readFileSync(join(base, "serve.log"), "utf8"), close })
 }
 
 /** Waits until the plugin is active and the tavily server has settled, and closes the host if it never does. */

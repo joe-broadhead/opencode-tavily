@@ -46,6 +46,19 @@ const needsAuth: Status = {
 /** A dialog row: the label in its 29-column field, a gap, then the value. */
 const row = (label: string, value: string) => `${label.padEnd(30)}${value}`
 
+/** Runs `run` with this process's TAVILY_API_KEY set to `value`, or unset, and restores it after. */
+async function withTerminalKey(value: string | undefined, run: () => Promise<void>) {
+  const saved = process.env.TAVILY_API_KEY
+  if (value === undefined) delete process.env.TAVILY_API_KEY
+  else process.env.TAVILY_API_KEY = value
+  try {
+    await run()
+  } finally {
+    if (saved === undefined) delete process.env.TAVILY_API_KEY
+    else process.env.TAVILY_API_KEY = saved
+  }
+}
+
 const harnesses: ReturnType<typeof fakeContext>[] = []
 
 /** Sets the plugin up on a fake context and opens the view through its command; the host renders a dialog on show. */
@@ -114,6 +127,34 @@ describe("Tavily TUI status view", () => {
       ["Next step", "Nothing to do."],
     ])
       expect(frame).toContain(row(label, value))
+  })
+
+  test("shows Tavily's check of a key, and no terminal hint while the server uses a key", async () => {
+    await withTerminalKey("tvly-terminal-only", async () => {
+      const view = await open()
+      view.calls[0].resolve({ ...connected, auth: "key_connected", account: "Tavily", keyCheck: "rejected", nextStep: "Replace the key." })
+      await settle()
+      const frame = await view.frame()
+      expect(frame).toContain(row("Sign-in", "API key (/connect → Tavily), rejected by Tavily"))
+      expect(frame).not.toContain("Terminal key")
+    })
+  })
+
+  test("names a TAVILY_API_KEY that only this terminal has, without its value", async () => {
+    await withTerminalKey("tvly-terminal-only", async () => {
+      const view = await open()
+      view.calls[0].resolve(connected)
+      await settle()
+      const frame = await view.frame()
+      expect(frame).toContain(row("Terminal key", "TAVILY_API_KEY is set in this terminal"))
+      expect(frame).not.toContain("tvly-terminal-only")
+    })
+    await withTerminalKey(undefined, async () => {
+      const view = await open()
+      view.calls[0].resolve(connected)
+      await settle()
+      expect(await view.frame()).not.toContain("Terminal key")
+    })
   })
 
   test("renders sign-in required with unknown tools, agents without default rules and their block, in the S9 order", async () => {

@@ -14,9 +14,10 @@ Include the plugin version, the OpenCode version, what you did, and what happene
 
 ### Your Tavily key and sign-in
 
-- OpenCode keeps your credentials, not the plugin. A key that you connect with `/connect` → **Tavily** or `opencode auth login tavily`, and the OAuth token from `/connect` → **Tavily MCP**, are stored in OpenCode's credential store. `TAVILY_API_KEY` stays in OpenCode's environment.
+- OpenCode keeps your credentials, not the plugin. A key that you connect with `/connect` → **Tavily** or `opencode auth login tavily`, and the OAuth token from `/connect` → **Tavily MCP**, are stored in OpenCode's credential store. `TAVILY_API_KEY` stays in the OpenCode server's environment. `opencode service set env TAVILY_API_KEY <key>` stores the key in plain text in OpenCode's service settings file, readable only by you, and puts it in your shell history; `/connect` avoids both.
 - Never put a key in the plugin's options or in `opencode.json`. The plugin has no option for one.
 - The plugin reads the key from OpenCode when it starts and when a credential changes. It keeps the key in memory, in the `Authorization` header of the `tavily` server's settings. It never logs the key, writes it to disk or returns it in its status.
+- The key never goes in a URL. Tavily accepts `?tavilyApiKey=` in the server URL, but OpenCode shows a server's URL in its status errors and logs.
 - OpenCode does not show that header in its MCP, config, agent or plugin APIs, and the plugin's status and RPC never contain the key.
 - **OpenCode's own credential API returns stored secrets in full.** `GET /api/credential` on the OpenCode server returns each stored key value, and `opencode auth export` prints stored credentials, secrets included. Anyone who can call your OpenCode server can read your Tavily key. Keep the server on your own machine, and do not share its address or password.
 
@@ -30,7 +31,8 @@ Search results, page text from Extract and Crawl, and Research reports come from
 
 ### What the plugin sends and stores
 
-- The plugin itself makes no network requests. OpenCode's MCP client connects to `https://mcp.tavily.com/mcp/`, and OpenCode's built-in web search provider calls Tavily's search API.
+- The plugin itself makes one kind of request: with an API key, `GET https://api.tavily.com/usage`, with the key in the `Authorization` header, to check that Tavily accepts the key. It runs once per key, and again only after a check that could not reach Tavily. It costs no credits, sends nothing else, and the plugin keeps only the answer: accepted, rejected or not checked. With OAuth, the plugin makes no requests.
+- OpenCode's MCP client connects to `https://mcp.tavily.com/mcp/`, and OpenCode's built-in web search provider calls Tavily's search API.
 - The plugin stores nothing and collects no telemetry.
 - `npm run check:upstream` is a maintainer tool. It calls Tavily's MCP server without a key and sends no user data.
 
