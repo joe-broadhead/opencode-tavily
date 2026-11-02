@@ -2,12 +2,17 @@
 // project, offline, with the npm on PATH. Run it after `npm run build` (check does). PACK_TARBALL tests a tarball that
 // is already packed instead, such as the one the release workflow publishes. The tarball holds only
 // JavaScript, skills and docs; the install adds nothing else; and the installed package imports, and loads in each
-// stock OpenCode release it is tested on (startStock in ../host/harness.ts).
+// stock OpenCode release it is tested on (startStock in ../host/harness.ts). On each release it also signs in both
+// ways, OAuth and an API key, against a loopback fake Tavily.
 import { afterAll, beforeAll, describe, expect, setDefaultTimeout, test } from "bun:test"
-import { existsSync, mkdirSync, readdirSync, readFileSync, symlinkSync, writeFileSync } from "node:fs"
+import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, symlinkSync, writeFileSync } from "node:fs"
 import { dirname, join, relative, resolve } from "node:path"
 import { Tavily } from "../../src/rpc/index.js"
 import { DEFAULT_RULES } from "../../src/permissions.js"
+import { USAGE_URL } from "../../src/key-check.js"
+import { SERVER_URL } from "../../src/mcp.js"
+import { RECORDED_TOOLS } from "../host/catalog.js"
+import { startFakeTavily, type FakeTavily } from "../host/fake-tavily.js"
 import { cleanup, npm, REPO, root, startStock, STOCK_VERSIONS, until, type Host } from "../host/harness.js"
 import { schemaErrors } from "../schema.js"
 
@@ -188,5 +193,119 @@ for (const version of STOCK_VERSIONS)
       expect(await effect(host, "build", "tavily_tavily_feedback")).toBe("ask")
       expect(await effect(host, "build", "tavily_tavily_search")).toBe("allow")
       expect(await effect(host, "explore", "tavily_tavily_search")).toBe("deny")
+    })
+  })
+
+/**
+ * A copy of the installed package whose two Tavily URLs, the MCP server and the key check, point at `fake`. The rest
+ * is the installed build, so a stock host's requests to Tavily, and their Authorization headers, can be seen.
+ */
+function pointedAt(fake: FakeTavily, name: string) {
+  const copy = join(work, "pointed", name)
+  cpSync(installed, copy, { recursive: true })
+  const entry = join(copy, "dist/index.js")
+  const text = readFileSync(entry, "utf8")
+  for (const url of [SERVER_URL, USAGE_URL]) expect({ url, found: text.includes(url) }).toEqual({ url, found: true })
+  writeFileSync(entry, text.replaceAll(SERVER_URL, fake.url).replaceAll(USAGE_URL, `${fake.origin}/usage`))
+  return copy
+}
+
+const rpcStatus = async (host: Host) =>
+  (await host.client.rpc.call({ rpcID: "tavily.web", method: "status", input: {}, location: host.location })).output as Record<string, unknown>
+
+async function tavilyServer(host: Host) {
+  const { data } = await host.client.mcp.list({ location: host.location })
+  return data.find((server) => server.name === "tavily")
+}
+
+/** Waits until `fake` has seen, since request `from`, the MCP handshake, the tool list and the key check with `Bearer <key>`. */
+async function sentWith(fake: FakeTavily, from: number, key: string) {
+  await until("the server and the key check send the key as a bearer header", async () => {
+    const sent = new Set(fake.requests.slice(from).filter((request) => request.authorization === `Bearer ${key}`).map((request) => request.method))
+    return ["initialize", "tools/list", "usage"].every((method) => sent.has(method)) || undefined
+  })
+  expect(fake.requests.some((request) => request.search.includes(key))).toBe(false)
+}
+
+/** Waits until status reports `auth` with an accepted key, the server connected and its five tools listed. */
+const keyReady = (host: Host, auth: string) =>
+  until(`the server is connected with ${auth}`, async () => {
+    const status = await rpcStatus(host)
+    const tools = status.tools as { visible: number }
+    return status.auth === auth && status.connection === "connected" && status.keyCheck === "accepted" && tools.visible === 5 ? status : undefined
+  })
+
+async function removeKey(host: Host) {
+  const credential = (await host.client.credential.list()).find((entry) => entry.integrationID === "tavily")
+  await host.client.credential.remove({ credentialID: credential!.id })
+}
+
+/** No fake key in an API answer or in the server's log. */
+async function expectHidden(host: Host, keys: readonly string[]) {
+  const location = { location: host.location }
+  const outputs = await Promise.all([host.client.mcp.list(location), host.client.integration.list(location), host.client.config.get(location), rpcStatus(host)])
+  const text = JSON.stringify(outputs) + (host.log?.() ?? "")
+  for (const key of keys) expect(text.includes(key)).toBe(false)
+}
+
+for (const version of STOCK_VERSIONS)
+  describe(`OAuth and an API key on stock OpenCode ${version}`, () => {
+    const ENV_KEY = "tvly-pack-test-env-key"
+    const CONNECTED_KEY = "tvly-pack-test-connected-key"
+    let oauthFake: FakeTavily
+    let envFake: FakeTavily
+    let oauth: Host
+    let env: Host
+    beforeAll(async () => {
+      oauthFake = await startFakeTavily(RECORDED_TOOLS, { requireAuth: true })
+      envFake = await startFakeTavily(RECORDED_TOOLS, { requireAuth: true })
+      oauth = await startStock(version, pointedAt(oauthFake, `oauth-${version}`))
+      // TAVILY_API_KEY in the server's environment, as a background service started with it has.
+      env = await startStock(version, pointedAt(envFake, `env-${version}`), { TAVILY_API_KEY: ENV_KEY })
+    })
+    afterAll(async () => {
+      await oauth?.close()
+      await env?.close()
+      await oauthFake?.close()
+      await envFake?.close()
+    })
+
+    test("with no key, Tavily asks for OAuth; a connected key connects with a bearer header; removing it returns to OAuth", async () => {
+      expect(await rpcStatus(oauth)).toMatchObject({ connection: "needs_auth", auth: "oauth" })
+      expect(oauthFake.requests.some((request) => request.authorized)).toBe(false)
+
+      const from = oauthFake.requests.length
+      await oauth.client.integration.connect.key({ integrationID: "tavily", key: CONNECTED_KEY, label: "Pack test key", location: oauth.location })
+      await sentWith(oauthFake, from, CONNECTED_KEY)
+      expect(await keyReady(oauth, "key_connected")).toMatchObject({ account: "Pack test key", nextStep: "Nothing to do." })
+      expect((await tavilyServer(oauth))?.integrationID).toBeUndefined()
+
+      const removed = oauthFake.requests.length
+      await removeKey(oauth)
+      await until("the server returns to OAuth", async () => {
+        const server = await tavilyServer(oauth)
+        return /^mcp_/.test(server?.integrationID ?? "") && server?.status.status === "needs_auth"
+      })
+      expect(await rpcStatus(oauth)).toMatchObject({ connection: "needs_auth", auth: "oauth" })
+      const after = oauthFake.requests.slice(removed).filter((request) => request.method === "initialize")
+      expect(after.length).toBeGreaterThan(0)
+      expect(after.every((request) => !request.authorized)).toBe(true)
+      await expectHidden(oauth, [CONNECTED_KEY])
+    })
+
+    test("TAVILY_API_KEY in the server's environment connects; a connected key wins; removing it returns to TAVILY_API_KEY", async () => {
+      await sentWith(envFake, 0, ENV_KEY)
+      expect(await keyReady(env, "key_env")).toMatchObject({ nextStep: "Nothing to do." })
+
+      const from = envFake.requests.length
+      await env.client.integration.connect.key({ integrationID: "tavily", key: CONNECTED_KEY, label: "Wins", location: env.location })
+      await sentWith(envFake, from, CONNECTED_KEY)
+      expect(await keyReady(env, "key_connected")).toMatchObject({ account: "Wins" })
+
+      const back = envFake.requests.length
+      await removeKey(env)
+      await sentWith(envFake, back, ENV_KEY)
+      await keyReady(env, "key_env")
+      await expectHidden(env, [ENV_KEY, CONNECTED_KEY])
     })
   })

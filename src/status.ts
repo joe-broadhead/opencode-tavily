@@ -1,13 +1,14 @@
 import type { Plugin } from "@opencode/plugin"
 import type { TavilyKey } from "./credential.js"
 import type { HostCheck } from "./host-version.js"
+import type { KeyCheck, KeyChecker } from "./key-check.js"
 import { SERVER_NAME, type ServerState } from "./mcp.js"
 import { DEFAULT_RULES, evaluate, hasDefaultRules, KNOWN_READS, type Rule } from "./permissions.js"
 import {
   ACCESS_TEXT,
   accountText,
   agentsText,
-  AUTH_LABELS,
+  authText,
   blockLines,
   CONNECTION_LABELS,
   hostText,
@@ -30,6 +31,8 @@ export interface StatusFacts {
   readonly server?: { readonly status: Exclude<Status["connection"], "not_registered"> }
   readonly userServer: boolean
   readonly key?: TavilyKey
+  /** Tavily's answer for `key`. */
+  readonly keyCheck?: KeyCheck
   /** The OAuth credential label of the server's integration. */
   readonly oauthAccount?: string
   /** Every tool OpenCode lists; status counts the `tavily` server's. */
@@ -60,7 +63,9 @@ function authOf(facts: StatusFacts): Status["auth"] {
 
 function nextStepOf(connection: Status["connection"], auth: Status["auth"], facts: StatusFacts, unguarded: string[]) {
   const replaceKey =
-    auth === "key_env" ? "replace TAVILY_API_KEY and restart OpenCode" : "run /connect, choose Tavily and replace the key"
+    auth === "key_env"
+      ? `run /connect, choose Tavily and connect a working key (it wins over TAVILY_API_KEY), or replace TAVILY_API_KEY with "opencode service set env TAVILY_API_KEY <key>"`
+      : "run /connect, choose Tavily and replace the key"
   switch (connection) {
     case "not_registered":
       return `Check that no other plugin or policy removes the "tavily" MCP server, then run "opencode reload".`
@@ -76,6 +81,8 @@ function nextStepOf(connection: Status["connection"], auth: Status["auth"], fact
       if (auth === "key_env" || auth === "key_connected") return `Check your network. If it works, ${replaceKey}.`
       return `Run "opencode mcp list" to see the error, and check your network.`
   }
+  if (facts.keyCheck === "rejected" && (auth === "key_env" || auth === "key_connected"))
+    return `Tavily did not accept the API key: ${replaceKey}.`
   if (unguarded.length > 0) return AGENT_FIX
   if (!facts.host.tested) return `If Tavily misbehaves, use OpenCode 2.2.3 or a later 2.2 release.`
   return "Nothing to do."
@@ -89,10 +96,12 @@ export function buildStatus(facts: StatusFacts): Status {
     .filter((agent) => !hasDefaultRules(agent.permissions) && evaluate(agent.permissions, "tavily_unknown") === "allow")
     .map((agent) => agent.id)
   const nextStep = nextStepOf(connection, auth, facts, unguarded)
+  const keyCheck = auth === "key_env" || auth === "key_connected" ? facts.keyCheck : undefined
   return {
     connection,
     auth,
     ...(account === undefined ? {} : { account }),
+    ...(keyCheck === undefined ? {} : { keyCheck }),
     tools: toolsOf(facts),
     websearchDefault: facts.websearchDefault,
     host: { version: facts.host.version, tested: facts.host.tested },
@@ -107,6 +116,7 @@ interface StatusState {
   readonly server: ServerState
   readonly websearch: WebsearchState
   readonly host: HostCheck
+  readonly checkKey: KeyChecker
 }
 
 export async function readStatus(
@@ -118,7 +128,14 @@ export async function readStatus(
   },
   state: StatusState,
 ) {
-  const [servers, agents, tools] = await Promise.all([ctx.mcp.list(), ctx.agent.list(), ctx.tool.list()])
+  // One key for the whole read: the watcher can switch it while the reads below are in flight.
+  const key = state.server.key
+  const [servers, agents, tools, keyCheck] = await Promise.all([
+    ctx.mcp.list(),
+    ctx.agent.list(),
+    ctx.tool.list(),
+    key && !state.server.userServer && state.checkKey(key.key),
+  ])
   const server = servers.data.find((entry) => entry.name === SERVER_NAME)
   // The account label is optional; a failed lookup must not hide the rest of the status.
   const connection = server?.integrationID
@@ -127,7 +144,8 @@ export async function readStatus(
   return buildStatus({
     server: server && { status: server.status.status },
     userServer: state.server.userServer,
-    key: state.server.key,
+    key,
+    keyCheck: keyCheck || undefined,
     oauthAccount: connection?.type === "credential" ? connection.label : undefined,
     tools,
     websearchDefault: state.websearch.tavilyDefault,
@@ -143,7 +161,7 @@ export function formatStatus(status: Status) {
     `- Connection: ${CONNECTION_LABELS[status.connection]}`,
     `- Account: ${accountText(status)}`,
     `- Access: ${ACCESS_TEXT}`,
-    `- Sign-in: ${AUTH_LABELS[status.auth]}`,
+    `- Sign-in: ${authText(status)}`,
     `- Web search: ${websearchText(status)}`,
     `- Tools: ${toolsText(status)}`,
     `- Agents without default rules: ${agentsText(status)}`,

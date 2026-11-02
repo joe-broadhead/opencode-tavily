@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto"
 import type { Plugin } from "@opencode/plugin"
 import { INTEGRATION_ID } from "./credential.js"
+import type { KeyChecker } from "./key-check.js"
 import { SERVER_NAME, SERVER_URL, type ServerState } from "./mcp.js"
 
 /** OpenCode's built-in key integration is "Tavily" in /connect; the server's OAuth integration gets this name. */
@@ -27,9 +28,10 @@ type Ctx = {
  * - the server's OAuth integration is named "Tavily MCP", not "tavily". OpenCode's own transform sets the name, and it
  *   registers that transform again on every MCP reload, after the plugin's. So the plugin registers its rename again,
  *   after OpenCode's, whenever it finds the name reset.
- * - a connected key that Tavily rejects shows "Sign in required" on the Tavily entry, until the server connects.
+ * - a connected key that Tavily rejects shows "Sign in required" on the Tavily entry, until the key is replaced. Tavily's
+ *   MCP server connects with any key, so the key check decides, as well as a server that asks for sign-in.
  */
-export async function watchConnect(ctx: Ctx, state: ServerState, signal: AbortSignal) {
+export async function watchConnect(ctx: Ctx, state: ServerState, checkKey: KeyChecker, signal: AbortSignal) {
   let rename: Awaited<ReturnType<Ctx["integration"]["transform"]>> | undefined
   let flagged = false
 
@@ -49,7 +51,10 @@ export async function watchConnect(ctx: Ctx, state: ServerState, signal: AbortSi
 
   const report = async () => {
     const server = (await ctx.mcp.list()).data.find((entry) => entry.name === SERVER_NAME)
-    const rejected = state.key?.source === "connected" && server?.status.status === "needs_auth"
+    // Every key is checked, so status has the answer early; only a connected key has an entry to mark.
+    const key = state.key
+    const check = key && (await checkKey(key.key))
+    const rejected = key?.source === "connected" && (server?.status.status === "needs_auth" || check === "rejected")
     if (rejected === flagged) return
     const connection = await ctx.integration.connection.active(INTEGRATION_ID)
     if (connection?.type !== "credential") return

@@ -144,19 +144,36 @@ The built-in provider uses the same Tavily API key as the plugin. With no key, i
 | Your setup | What the plugin does | Sign-in in `/tavily-status` |
 | --- | --- | --- |
 | A key connected with `/connect` → **Tavily** or `opencode auth login tavily` | Sends the key to the server and turns OAuth off, so **Tavily MCP** leaves `/connect` | `API key (/connect → Tavily)`, with the key's label as the account |
-| `TAVILY_API_KEY` in OpenCode's environment, and no connected key | The same | `API key from TAVILY_API_KEY` |
+| `TAVILY_API_KEY` in the OpenCode server's environment, and no connected key. See [TAVILY_API_KEY and the background service](#tavily_api_key-and-the-background-service) | The same | `API key from TAVILY_API_KEY` |
 | No key | OAuth: `/connect` → **Tavily MCP**, `/mcps`, or `opencode mcp auth tavily` | `OAuth (/connect → Tavily MCP)`, with the sign-in's label as the account |
 | An MCP server named `tavily` in your `mcp.servers` | Leaves your server unchanged | `your own tavily server in opencode.json` |
 
 - To sign in with OAuth in the TUI, choose **Tavily MCP** in `/connect`, then press `o` or Enter to open the sign-in link in your browser. On the command line, `opencode mcp auth tavily` opens the browser automatically.
 - OpenCode names the server's OAuth entry after the server, `tavily`. The plugin renames it **Tavily MCP**, so it is not confused with OpenCode's own **Tavily** key entry.
 - A connected key wins over `TAVILY_API_KEY`.
-- When you connect, replace or remove a key, the plugin reconnects the server. You do not need to restart OpenCode. After you change `TAVILY_API_KEY`, restart OpenCode.
-- When Tavily rejects a connected key, `/connect` shows "Sign in required" on **Tavily** until the server connects again.
+- When you connect, replace or remove a key, the plugin reconnects the server. You do not need to restart OpenCode. A change to `TAVILY_API_KEY` needs a restart of the OpenCode server; see below.
+- The plugin sends the key in the `Authorization` header, never in the URL. Tavily also accepts `?tavilyApiKey=` in the URL, but OpenCode shows a server's URL in its status errors and logs.
+- **Tavily's MCP server connects with any key**, also a wrong one, and reports a wrong key only inside each tool result: `Unauthorized: missing or invalid API key`. So the plugin checks the key once with Tavily's usage endpoint, `GET https://api.tavily.com/usage`, which costs no credits. `/tavily-status` then shows `accepted by Tavily`, `rejected by Tavily`, or `not checked` when Tavily's API could not be reached, after the sign-in. A rejected key is the next step, and `/connect` shows "Sign in required" on **Tavily** for a connected key until you replace it.
 - With OAuth, Tavily chooses which of your Tavily API keys pays for the calls: a key named `mcp_auth_default`, or else your `default` key. See [Tavily's MCP documentation](https://docs.tavily.com/documentation/mcp).
 - The plugin never writes the key to config or logs. See [SECURITY.md](../SECURITY.md) for where OpenCode keeps it.
 
 Your own `tavily` server gets none of the plugin's key handling and no `executionTimeoutMs`. The default permission rules still apply to it, because they match the tool names.
+
+### TAVILY_API_KEY and the background service
+
+The plugin runs in the OpenCode server, not in your terminal. Usually that server is OpenCode's background service, and the service has its own environment:
+
+- The first `opencode` command that finds no service running starts it with that command's environment, plus the variables that you set with `opencode service set env`.
+- A `TAVILY_API_KEY` that you export in a shell later, or in another terminal, does not reach the running service. The plugin then uses OAuth. The **Tavily: Status** dialog shows a **Terminal key** row when its terminal has `TAVILY_API_KEY` but the server uses no key.
+- Restarting the TUI does not restart the service.
+
+To use a key, prefer `/connect` → **Tavily** or `opencode auth login tavily`: the key goes to OpenCode's credential store, and the plugin switches without a restart. To use `TAVILY_API_KEY` with the background service, set it for the service:
+
+```sh
+opencode service set env TAVILY_API_KEY tvly-...
+```
+
+This stops the service; the next `opencode` command starts it with the key. OpenCode keeps the value in its service settings file, readable only by you, and the command line puts the key in your shell history. A server that you start yourself, with `opencode serve` or `opencode --standalone`, uses the environment of the shell that starts it.
 
 ## Errors
 

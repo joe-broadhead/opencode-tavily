@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test"
 import type { Plugin } from "@opencode/plugin"
 import { OAUTH_INTEGRATION_ID, OAUTH_NAME, watchConnect } from "../../src/connect.js"
+import type { KeyCheck } from "../../src/key-check.js"
 import type { ServerState } from "../../src/mcp.js"
 import { envConnection, events, keyConnection, LOCATION, settle, type Connection, type EditorOf, type McpServer } from "./fake.js"
 
@@ -48,10 +49,11 @@ function host(input: { oauth?: boolean; connection?: Connection; server?: McpSer
   return { integration, mcp, state, statuses, name, reregister, live: () => transforms.filter((entry) => !entry.disposed).length }
 }
 
-function start(fake: ReturnType<typeof host>, server: ServerState) {
+function start(fake: ReturnType<typeof host>, server: ServerState, check: { result: KeyCheck; keys: string[] } = { result: "accepted", keys: [] }) {
   const stream = events()
   const controller = new AbortController()
-  const done = watchConnect({ event: stream.domain, integration: fake.integration, mcp: fake.mcp }, server, controller.signal)
+  const checkKey = async (key: string) => (check.keys.push(key), check.result)
+  const done = watchConnect({ event: stream.domain, integration: fake.integration, mcp: fake.mcp }, server, checkKey, controller.signal)
   return { stream, stop: () => (controller.abort(), done) }
 }
 
@@ -114,16 +116,45 @@ describe("a rejected key in /connect", () => {
     await watch.stop()
   })
 
+  test("marks a key that the key check rejects, though Tavily's server connects with it, and clears it once accepted", async () => {
+    const fake = host({ oauth: false, connection: keyConnection(), server: "connected" })
+    const check = { result: "rejected" as KeyCheck, keys: [] as string[] }
+    const watch = start(fake, connected, check)
+    watch.stream.push("mcp.status.changed", { server: "tavily" })
+    await settle()
+    expect(check.keys).toEqual(["tvly-bad"])
+    expect(fake.statuses.map((entry) => entry.status)).toEqual([
+      { status: "needs_auth", message: "Tavily did not accept this API key. Replace it, or remove it to sign in with Tavily MCP." },
+    ])
+    check.result = "accepted"
+    watch.stream.push("mcp.status.changed", { server: "tavily" })
+    await settle()
+    expect(fake.statuses.map((entry) => entry.status)).toEqual([fake.statuses[0]?.status, undefined])
+    await watch.stop()
+  })
+
+  test("an unchecked key is not marked", async () => {
+    const fake = host({ oauth: false, connection: keyConnection(), server: "connected" })
+    const watch = start(fake, connected, { result: "unchecked", keys: [] })
+    watch.stream.push("mcp.status.changed", { server: "tavily" })
+    await settle()
+    expect(fake.statuses).toEqual([])
+    await watch.stop()
+  })
+
   test("never marks an environment key or OAuth", async () => {
     for (const [connection, server] of [
       [envConnection(), { key: { key: "tvly-env", source: "env" }, userServer: false }],
       [undefined, oauth],
     ] as const) {
       const fake = host({ oauth: false, connection, server: "needs_auth" })
-      const watch = start(fake, server)
+      const check = { result: "rejected" as KeyCheck, keys: [] as string[] }
+      const watch = start(fake, server, check)
       watch.stream.push("mcp.status.changed", { server: "tavily" })
       await settle()
       expect(fake.statuses).toEqual([])
+      // An environment key is still checked, so status has the answer early.
+      expect(check.keys).toEqual(server.key ? [server.key.key] : [])
       await watch.stop()
     }
   })
