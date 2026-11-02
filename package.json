@@ -56,5 +56,51 @@
   },
   "opencode": {
     "host": ">=2.2.3 <2.3.0"
+  },
+  "jelly": {
+    "tools": [
+      {
+        "name": "tavily.tavily_search",
+        "permission": "tavily_tavily_search",
+        "effect": "allow",
+        "readOnly": true
+      },
+      {
+        "name": "tavily.tavily_extract",
+        "permission": "tavily_tavily_extract",
+        "effect": "allow",
+        "readOnly": true
+      },
+      {
+        "name": "tavily.tavily_map",
+        "permission": "tavily_tavily_map",
+        "effect": "allow",
+        "readOnly": true
+      },
+      {
+        "name": "tavily.tavily_crawl",
+        "permission": "tavily_tavily_crawl",
+        "effect": "allow",
+        "readOnly": true
+      },
+      {
+        "name": "tavily.tavily_research",
+        "permission": "tavily_tavily_research",
+        "effect": "allow",
+        "readOnly": true
+      }
+    ],
+    "skills": [
+      "tavily",
+      "tavily-research"
+    ],
+    "rpc": [],
+    "views": [],
+    "contributes": {
+      "homeFeeds": [],
+      "homeWidgets": [],
+      "workKinds": [],
+      "settings": []
+    }
   }
 }
