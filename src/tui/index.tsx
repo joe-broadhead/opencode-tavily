@@ -5,11 +5,12 @@ import {
   ACCESS_TEXT,
   accountText,
   agentsText,
-  AUTH_LABELS,
+  authText,
   blockLines,
   CONNECTION_LABELS,
   hostText,
   Tavily,
+  terminalKeyText,
   toolsText,
   websearchText,
   type Status,
@@ -74,6 +75,8 @@ function StatusDialog(props: {
   readonly view: View
   readonly refreshing: boolean
   readonly refresh: () => void
+  /** This terminal has TAVILY_API_KEY set; its value is never read. */
+  readonly terminalHasKey: boolean
 }) {
   // Created inside the dialog, so the host removes the layer when the dialog closes.
   props.context.keymap.layer(() => ({
@@ -111,7 +114,15 @@ function StatusDialog(props: {
             />
             <Row label="Account" value={accountText(status())} fg={theme().text.base} muted={theme().text.muted} />
             <Row label="Access" value={ACCESS_TEXT} fg={theme().text.base} muted={theme().text.muted} />
-            <Row label="Sign-in" value={AUTH_LABELS[status().auth]} fg={theme().text.base} muted={theme().text.muted} />
+            <Row
+              label="Sign-in"
+              value={authText(status())}
+              fg={status().keyCheck === "rejected" ? tone("error") : theme().text.base}
+              muted={theme().text.muted}
+            />
+            <Show when={terminalKeyText(status(), props.terminalHasKey)}>
+              {(text) => <Row label="Terminal key" value={text()} fg={tone("warning")} muted={theme().text.muted} />}
+            </Show>
             <Row label="Web search" value={websearchText(status())} fg={theme().text.base} muted={theme().text.muted} />
             <Row
               label="Tools"
@@ -157,6 +168,9 @@ function StatusDialog(props: {
   )
 }
 
+/** The TUI runs in the user's terminal, so this is the terminal's environment, not the server's. */
+const terminalHasKey = () => Boolean(globalThis.process?.env.TAVILY_API_KEY)
+
 const plugin: Plugin.Definition = {
   id: "tavily.web.tui",
   setup(context) {
@@ -192,7 +206,15 @@ const plugin: Plugin.Definition = {
       const token = {}
       setView({ state: "loading" })
       context.ui.dialog.show(
-        () => <StatusDialog context={context} view={view()} refreshing={refreshing()} refresh={refresh} />,
+        () => (
+          <StatusDialog
+            context={context}
+            view={view()}
+            refreshing={refreshing()}
+            refresh={refresh}
+            terminalHasKey={terminalHasKey()}
+          />
+        ),
         () => {
           if (open !== token) return
           open = undefined

@@ -33,11 +33,15 @@ None yet.
 
 ## Signing in
 
-`jelly.signIns` declares two alternatives in one group, `tavily`: `key`, OpenCode's key integration `tavily` (an API key; the row links to Tavily's key page), or `account`, the `tavily` MCP server's own OAuth ("Tavily MCP"). Either one connects the card, and once one is connected the card shows only that one. A key that Tavily turns down shows this plugin's `needs_auth` message on the key row, with Replace the key.
+`jelly.signIns` declares two alternatives in one group, `tavily`: `key`, OpenCode's key integration `tavily` (an API key; the row links to Tavily's key page), or `account`, the `tavily` MCP server's own OAuth ("Tavily MCP"). Either one connects the card, and once one is connected the card shows only that one. The plugin checks each key once with Tavily's usage endpoint, which costs no credits. A key saved through `/connect` or `opencode auth login tavily` that Tavily turns down shows this plugin's `needs_auth` message on the key row, with Replace the key:
+
+> Tavily did not accept this API key. Replace it, or remove it to sign in with Tavily MCP.
+
+A rejected `TAVILY_API_KEY` has no saved connection to mark, so the key row does not show it; the plugin's status names the rejection and the next step.
 
 Jelly folds the declared sign-ins into this plugin's one card, which shows each as Connected, Not signed in or Sign in again (expired or revoked), and starts, renews and signs out of each. An agent's `jelly_connection_request`, or a tool result that names this plugin's "Run /connect and choose …" next step, opens the same card. The plugin still signs in through OpenCode, as it does without Jelly; the declaration only tells Jelly which of the engine's integrations and servers are this plugin's.
 
 ## Versions
 
-Jelly's curated catalogue pins an exact version. `latest` is `0.0.0`; publish each release
-under a new version so a review in Jelly can tell the two apart.
+Jelly's curated catalogue pins an exact version. Publish each release under a new version, so
+that a review in Jelly can tell two releases apart.

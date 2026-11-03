@@ -2,6 +2,7 @@ import { Rpc } from "@opencode/plugin/rpc"
 
 const CONNECTIONS = ["connected", "pending", "needs_auth", "failed", "disabled", "not_registered"] as const
 const AUTH_SOURCES = ["oauth", "key_connected", "key_env", "user_server", "none"] as const
+const KEY_CHECKS = ["accepted", "rejected", "unchecked"] as const
 
 export interface PermissionRule {
   readonly action: string
@@ -15,6 +16,11 @@ export interface Status {
   readonly auth: (typeof AUTH_SOURCES)[number]
   /** The credential's label, never a secret. */
   readonly account?: string
+  /**
+   * With an API key: whether Tavily accepts it. `unchecked` when Tavily's API could not be reached. The MCP server
+   * connects with any key, so only this tells a wrong key apart.
+   */
+  readonly keyCheck?: (typeof KEY_CHECKS)[number]
   /** The `tavily` server's tools that OpenCode lists; unknown ones are not among the five known reads and ask. */
   readonly tools: { readonly visible: number; readonly unknown: number; readonly unknownNames: readonly string[] }
   /** This plugin selected Tavily as the web search default. A `websearch` choice in opencode.json still wins. */
@@ -49,6 +55,25 @@ export const AUTH_LABELS: Record<Status["auth"], string> = {
   key_env: "API key from TAVILY_API_KEY",
   user_server: "your own tavily server in opencode.json",
   none: "none",
+}
+
+const KEY_CHECK_TEXT: Record<NonNullable<Status["keyCheck"]>, string> = {
+  accepted: "accepted by Tavily",
+  rejected: "rejected by Tavily",
+  unchecked: "not checked: Tavily's API could not be reached",
+}
+
+export const authText = (status: Status) =>
+  status.keyCheck === undefined ? AUTH_LABELS[status.auth] : `${AUTH_LABELS[status.auth]}, ${KEY_CHECK_TEXT[status.keyCheck]}`
+
+/**
+ * The TUI runs in the user's terminal; the plugin runs in OpenCode's server, usually the background service, which
+ * has its own environment. A TAVILY_API_KEY exported only in the terminal never reaches the plugin. Shown only when
+ * the terminal has the variable and the server uses no key.
+ */
+export function terminalKeyText(status: Status, terminalHasKey: boolean) {
+  if (!terminalHasKey || (status.auth !== "oauth" && status.auth !== "none")) return undefined
+  return "TAVILY_API_KEY is set in this terminal, but OpenCode's server does not see it, so Tavily uses OAuth. Run /connect and choose Tavily to connect the key."
 }
 
 export function toolsText({ tools }: Status) {
@@ -92,6 +117,7 @@ const status = {
     connection: { type: "string", enum: [...CONNECTIONS] },
     auth: { type: "string", enum: [...AUTH_SOURCES] },
     account: { type: "string" },
+    keyCheck: { type: "string", enum: [...KEY_CHECKS] },
     tools: {
       type: "object",
       properties: { visible: { type: "integer" }, unknown: { type: "integer" }, unknownNames: strings },

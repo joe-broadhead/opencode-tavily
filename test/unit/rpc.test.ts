@@ -33,10 +33,12 @@ describe("RPC contract", () => {
       "not_registered",
     ])
     expect(status.output.properties.auth.enum).toEqual(["oauth", "key_connected", "key_env", "user_server", "none"])
+    expect(status.output.properties.keyCheck.enum).toEqual(["accepted", "rejected", "unchecked"])
     expect(Object.keys(status.output.properties)).toEqual([
       "connection",
       "auth",
       "account",
+      "keyCheck",
       "tools",
       "websearchDefault",
       "host",
@@ -60,6 +62,9 @@ describe("RPC contract", () => {
         buildStatus({ ...base, server: { status: connection }, oauthAccount: "me" }),
         buildStatus({ ...base, server: { status: connection }, key: { key: "k", source: "connected", label: "Tavily" } }),
         buildStatus({ ...base, server: { status: connection }, key: { key: "k", source: "env" } }),
+        ...(["accepted", "rejected", "unchecked"] as const).map((keyCheck) =>
+          buildStatus({ ...base, server: { status: connection }, key: { key: "k", source: "env" }, keyCheck }),
+        ),
         buildStatus({ ...base, server: { status: connection }, userServer: true }),
       ]),
       buildStatus({ ...base, server: { status: "connected" }, agents: [{ id: "reviewer", permissions: [] }] }),
@@ -67,6 +72,7 @@ describe("RPC contract", () => {
     ]
     for (const entry of statuses) expect(valid(status.output, entry)).toBe(true)
     expect(valid(status.output, { ...statuses[1], key: "k" })).toBe(false)
+    expect(valid(status.output, { ...statuses[1], keyCheck: "maybe" })).toBe(false)
     expect(valid(status.output, { ...statuses[1], tools: { visible: 1.5, unknown: 0, unknownNames: [] } })).toBe(false)
   })
 

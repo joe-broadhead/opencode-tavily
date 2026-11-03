@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test"
+import type { TavilyKey } from "../../src/credential.js"
 import { DEFAULT_RULES, type Rule } from "../../src/permissions.js"
 import type { Status } from "../../src/rpc/index.js"
 import {
@@ -27,6 +28,7 @@ const HOST = { version: "2.2.3", tested: true }
 const KNOWN = ["search", "extract", "map", "crawl", "research"].map((name) => ({ id: `tavily_tavily_${name}` }))
 const FIVE = { visible: 5, unknown: 0, unknownNames: [] }
 const NONE = { visible: 0, unknown: 0, unknownNames: [] }
+const ENV_REPLACE = `run /connect, choose Tavily and connect a working key (it wins over TAVILY_API_KEY), or replace TAVILY_API_KEY with "opencode service set env TAVILY_API_KEY <key>"`
 
 const facts = (overrides: Partial<StatusFacts> = {}): StatusFacts => ({
   server: { status: "connected" },
@@ -63,6 +65,23 @@ describe("buildStatus", () => {
     expect(status.nextStep).toBe("Nothing to do.")
   })
 
+  test("a key carries Tavily's check; OAuth and a user's own server carry none", () => {
+    const key = { key: "tvly-secret", source: "connected", label: "Tavily" } as const
+    expect(buildStatus(facts({ key, keyCheck: "accepted" }))).toMatchObject({ keyCheck: "accepted", nextStep: "Nothing to do." })
+    expect(buildStatus(facts({ key, keyCheck: "unchecked" }))).toMatchObject({ keyCheck: "unchecked", nextStep: "Nothing to do." })
+    expect(buildStatus(facts({ keyCheck: "accepted" }))).not.toHaveProperty("keyCheck")
+    expect(buildStatus(facts({ key, userServer: true, keyCheck: "rejected" }))).not.toHaveProperty("keyCheck")
+  })
+
+  test("a rejected key is the next step even while the server shows connected", () => {
+    const connected = buildStatus(facts({ key: { key: "k", source: "connected", label: "Tavily" }, keyCheck: "rejected" }))
+    expect(connected).toMatchObject({ connection: "connected", auth: "key_connected", keyCheck: "rejected" })
+    expect(connected.nextStep).toBe("Tavily did not accept the API key: run /connect, choose Tavily and replace the key.")
+    // Before the agents' fix: a key that does not work blocks every tool.
+    const unguarded = buildStatus(facts({ key: { key: "k", source: "env" }, keyCheck: "rejected", agents: [{ id: "reviewer", permissions: [BASE] }] }))
+    expect(unguarded.nextStep).toBe(`Tavily did not accept the API key: ${ENV_REPLACE}.`)
+  })
+
   test("an environment key has no account", () => {
     const status = buildStatus(facts({ key: { key: "tvly-secret", source: "env" }, oauthAccount: "ignored" }))
     expect(status.auth).toBe("key_env")
@@ -83,7 +102,7 @@ describe("buildStatus", () => {
       "Run /connect and choose tavily to sign in to your own server.",
     )
     expect(buildStatus(facts({ ...needsAuth, key: { key: "k", source: "env" } })).nextStep).toBe(
-      "Tavily did not accept the API key: replace TAVILY_API_KEY and restart OpenCode.",
+      `Tavily did not accept the API key: ${ENV_REPLACE}.`,
     )
     expect(buildStatus(facts({ ...needsAuth, key: { key: "k", source: "connected" } })).nextStep).toBe(
       "Tavily did not accept the API key: run /connect, choose Tavily and replace the key.",
@@ -95,7 +114,7 @@ describe("buildStatus", () => {
       `Run "opencode mcp list" to see the error, and check your network.`,
     )
     expect(buildStatus(facts({ server: { status: "failed" }, key: { key: "k", source: "env" } })).nextStep).toBe(
-      "Check your network. If it works, replace TAVILY_API_KEY and restart OpenCode.",
+      `Check your network. If it works, ${ENV_REPLACE}.`,
     )
   })
 
@@ -160,10 +179,13 @@ describe("readStatus", () => {
   const server = (entry: McpServer) => ({ list: async () => ({ location: LOCATION, data: [entry] }) })
   const agents = (data: AgentInfo[]) => ({ list: async () => ({ location: LOCATION, data }) })
   const tool = { list: async () => [...KNOWN, { id: "tavily_tavily_feedback" }] as never }
+  const checked: string[] = []
+  const checkKey = async (key: string) => (checked.push(key), "rejected" as const)
   const state = {
     server: { key: undefined, userServer: false },
     websearch: { tavilyDefault: true },
     host: HOST,
+    checkKey,
   }
 
   test("reads the server, the OAuth account and the agents through public APIs", async () => {
@@ -200,6 +222,33 @@ describe("readStatus", () => {
     )
     expect(status).toMatchObject({ connection: "needs_auth", auth: "oauth" })
     expect(status).not.toHaveProperty("account")
+  })
+
+  test("checks the key with Tavily, but not OAuth or a user's own server", async () => {
+    checked.length = 0
+    const ctx = {
+      mcp: server({ name: "tavily", status: { status: "connected" } }),
+      integration: integration({}).domain,
+      agent: agents([]),
+      tool,
+    }
+    const key = { key: "tvly-k", source: "env" } as const
+    expect(await readStatus(ctx, { ...state, server: { key, userServer: false } })).toMatchObject({ keyCheck: "rejected" })
+    expect(checked).toEqual(["tvly-k"])
+    expect(await readStatus(ctx, { ...state, server: { key, userServer: true } })).not.toHaveProperty("keyCheck")
+    expect(await readStatus(ctx, state)).not.toHaveProperty("keyCheck")
+    expect(checked).toEqual(["tvly-k"])
+  })
+
+  test("reports the key it checked, when the key switches during the read", async () => {
+    const server: { key: TavilyKey | undefined; userServer: boolean } = { key: { key: "tvly-old", source: "connected", label: "Old" }, userServer: false }
+    const switching = async () => {
+      server.key = { key: "tvly-new", source: "env" }
+      return "rejected" as const
+    }
+    const mcp = { list: async () => ({ location: LOCATION, data: [{ name: "tavily", status: { status: "connected" } } as McpServer] }) }
+    const status = await readStatus({ mcp, integration: integration({}).domain, agent: agents([]), tool }, { ...state, server, checkKey: switching })
+    expect(status).toMatchObject({ auth: "key_connected", account: "Old", keyCheck: "rejected" })
   })
 
   test("another server name is not Tavily", async () => {
@@ -252,7 +301,9 @@ describe("formatStatus", () => {
       nextStep: "Nothing to do.",
     })
     expect(text).toContain("- Account: Tavily")
-    expect(text).toContain("- Sign-in: API key (/connect → Tavily)")
+    expect(text).toContain("- Sign-in: API key (/connect → Tavily)\n")
+    const rejected: Status = { connection: "connected", auth: "key_env", keyCheck: "rejected", tools: NONE, websearchDefault: true, host: HOST, nextStep: "x" }
+    expect(formatStatus(rejected)).toContain("- Sign-in: API key from TAVILY_API_KEY, rejected by Tavily\n")
     expect(text).toContain("- Tools: none listed yet")
     expect(text).toContain("- Web search: not set by this plugin")
     expect(text).toContain("- Agents without default rules: none")

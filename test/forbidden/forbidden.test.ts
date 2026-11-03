@@ -70,6 +70,13 @@ const isEffect = (specifier: string) => specifier === "effect" || specifier.star
 const isUi = (specifier: string) => specifier.startsWith("@opentui/") || specifier === "solid-js" || specifier.startsWith("solid-js/")
 const inTui = (file: string) => file.startsWith(join("src", "tui")) || file === join("dist", "tui.js")
 
+/**
+ * The one allowed `evaluate` hook: the tools RPC's, which turns an ask on one of its own script calls in flight into a
+ * deny, because no one is there to answer it. It only tightens, and leaves every other call alone.
+ */
+const EVALUATE_ALLOWED = [join("src", "host", "tools-rpc.ts"), join("dist", "index.js")]
+const evaluateHooks = (file: string) => matches(file, /permission\s*\.\s*hook\s*\(\s*["'`]evaluate/)
+
 if (!existsSync(join(REPO, "dist", "index.js"))) throw new Error("dist/ is missing. Run npm run build first.")
 const shipped = [...files("src"), ...files("dist")]
 
@@ -87,7 +94,10 @@ const RULES: readonly { readonly name: string; readonly find: (file: string) => 
   { name: "the V1 @opencode-ai/ packages", find: (file) => matches(file, /@opencode-ai\//) },
   { name: "importing @opencode/ai", find: (file) => specifiers(file).filter(({ text }) => text === "@opencode/ai" || text.startsWith("@opencode/ai/")) },
   { name: "a second permission.assert argument", find: assertWithOptions },
-  { name: 'permission.hook("evaluate")', find: (file) => matches(file, /permission\s*\.\s*hook\s*\(\s*["'`]evaluate/) },
+  {
+    name: 'permission.hook("evaluate") outside the tools RPC',
+    find: (file) => (EVALUATE_ALLOWED.includes(file) ? [] : evaluateHooks(file)),
+  },
   { name: "importing effect", find: (file) => specifiers(file).filter(({ text }) => isEffect(text)) },
   { name: "OpenTUI or Solid outside the TUI", find: (file) => (inTui(file) ? [] : specifiers(file).filter(({ text }) => isUi(text))) },
 ]
@@ -101,6 +111,10 @@ describe("src/ and dist/ use no forbidden API", () => {
   })
 
   for (const rule of RULES) test(rule.name, () => expect(show(shipped.flatMap(rule.find))).toEqual([]))
+
+  test('permission.hook("evaluate") appears exactly once in the tools RPC and once in its bundle', () => {
+    for (const file of EVALUATE_ALLOWED) expect({ file, hooks: evaluateHooks(file).length }).toEqual({ file, hooks: 1 })
+  })
 })
 
 describe("tests import no host source", () => {
