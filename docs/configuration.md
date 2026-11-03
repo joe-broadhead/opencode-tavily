@@ -177,7 +177,7 @@ This stops the service; the next `opencode` command starts it with the key. Open
 
 ## Errors
 
-The plugin's own errors and warnings have one shape: `CODE: what happened. Next step: what to do.` Errors from OpenCode and from Tavily pass through unchanged. No error contains a key or a token.
+The plugin's own errors and warnings have one shape: `CODE: what happened. Next step: what to do.` Errors from OpenCode and from Tavily pass through unchanged, except in the tools RPC for scripts, whose codes are in [Scripting](scripting.md#errors). No error contains a key or a token.
 
 | Code | When | Example |
 | --- | --- | --- |

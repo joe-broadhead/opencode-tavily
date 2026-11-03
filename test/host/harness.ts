@@ -207,15 +207,20 @@ async function stockBinary(version: string) {
 }
 
 /**
- * `opencode serve` of a stock release, with the installed package directory `pkg` in its user config, and `serveEnv`
- * added to the server's environment only, such as TAVILY_API_KEY.
+ * `opencode serve` of a stock release, with the installed package directory `pkg` and `config`, such as agents, in its
+ * user config, and `serveEnv` added to the server's environment only, such as TAVILY_API_KEY.
  */
-export async function startStock(version: string, pkg: string, serveEnv: Readonly<Record<string, string>> = {}): Promise<Host> {
+export async function startStock(
+  version: string,
+  pkg: string,
+  serveEnv: Readonly<Record<string, string>> = {},
+  config: Readonly<Record<string, unknown>> = {},
+): Promise<Host> {
   const binary = await stockBinary(version)
   const { base, work } = hostFolder(`stock-${version}`)
   const home = join(base, "home")
   mkdirSync(join(home, ".config", "opencode"), { recursive: true })
-  writeFileSync(join(home, ".config", "opencode", "opencode.json"), JSON.stringify({ ...LOCAL_PROVIDERS_OFF, plugins: [pkg] }, null, 2))
+  writeFileSync(join(home, ".config", "opencode", "opencode.json"), JSON.stringify({ ...LOCAL_PROVIDERS_OFF, ...config, plugins: [pkg] }, null, 2))
   const env = {
     ...isolatedEnv(home),
     PATH: "/usr/bin:/bin",

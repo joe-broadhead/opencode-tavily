@@ -1,7 +1,9 @@
 // A loopback Streamable-HTTP MCP server that lists `tools` and answers in Server-Sent Events, as Tavily's hosted
 // server does. It stands in for a user's own `tavily` server, for Tavily in the drift check's test, and, with
 // `requireAuth`, for Tavily itself: like Tavily, it answers 401 without an Authorization header, accepts any bearer
-// token at `initialize`, and answers Tavily's `GET /usage` key check.
+// token at `initialize`, and answers Tavily's `GET /usage` key check. A `tools/call` answers with the tool's name and
+// query as structured content and text, or, for a query that starts with "fail", with an upstream error (`isError`)
+// whose first line holds a signed URL.
 import { createServer, type IncomingMessage } from "node:http"
 import type { AddressInfo } from "node:net"
 import type { CatalogTool } from "./catalog.js"
@@ -9,6 +11,8 @@ import type { CatalogTool } from "./catalog.js"
 export interface FakeRequest {
   /** The JSON-RPC method, `usage` for the key check, or the HTTP method for a request without a body. */
   readonly method: string
+  /** For `tools/call`, the tool's name. */
+  readonly tool?: string
   /** `x-tavily-host-test`, which tells whose server config the host used. */
   readonly marker?: string
   /** `x-tavily-access-mode`, which the drift check sets to `keyless`. */
@@ -36,7 +40,15 @@ export interface FakeTavily {
   close(): Promise<void>
 }
 
-type Message = { jsonrpc: "2.0"; id?: number | string; method: string; params?: { protocolVersion?: string } }
+type Message = {
+  jsonrpc: "2.0"
+  id?: number | string
+  method: string
+  params?: { protocolVersion?: string; name?: string; arguments?: { query?: unknown } }
+}
+
+/** The upstream error a "fail" query gets: two lines, the first with a signed URL. */
+export const UPSTREAM_FAILURE = "Invalid request for https://files.example.invalid/a.pdf?X-Amz-Signature=fake-signature-123\nTraceback: second line"
 
 export async function startFakeTavily(tools: readonly CatalogTool[], options: FakeTavilyOptions = {}): Promise<FakeTavily> {
   const requests: FakeRequest[] = []
@@ -51,6 +63,12 @@ export async function startFakeTavily(tools: readonly CatalogTool[], options: Fa
         })
       case "tools/list":
         return reply({ tools })
+      case "tools/call": {
+        const name = message.params?.name
+        const query = String(message.params?.arguments?.query ?? "")
+        if (query.startsWith("fail")) return reply({ content: [{ type: "text", text: UPSTREAM_FAILURE }], isError: true })
+        return reply({ content: [{ type: "text", text: `${name}: ${query}` }], structuredContent: { tool: name, query } })
+      }
       default:
         return { jsonrpc: "2.0", id: message.id, error: { code: -32601, message: `Method not found: ${message.method}` } }
     }
@@ -58,9 +76,10 @@ export async function startFakeTavily(tools: readonly CatalogTool[], options: Fa
   const server = createServer(async (request, response) => {
     const url = new URL(request.url ?? "/", "http://127.0.0.1")
     const authorization = header(request, "authorization")
-    const seen = (method: string) =>
+    const seen = (method: string, tool?: string) =>
       requests.push({
         method,
+        ...(tool === undefined ? {} : { tool }),
         marker: header(request, "x-tavily-host-test"),
         accessMode: header(request, "x-tavily-access-mode"),
         authorized: authorization !== undefined,
@@ -75,7 +94,7 @@ export async function startFakeTavily(tools: readonly CatalogTool[], options: Fa
       return void response.writeHead(accepted ? 200 : 401, { "content-type": "application/json" }).end(accepted ? "{}" : `{"detail":{}}`)
     }
     const body = request.method === "POST" ? (JSON.parse(await read(request)) as Message) : undefined
-    seen(body?.method ?? request.method ?? "")
+    seen(body?.method ?? request.method ?? "", body?.params?.name)
     if (options.requireAuth && authorization === undefined)
       return void response
         .writeHead(401, { "content-type": "application/json", "www-authenticate": `Bearer error="invalid_token"` })
