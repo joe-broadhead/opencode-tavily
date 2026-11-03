@@ -1,12 +1,13 @@
 // The plugin on the embedded OpenCode host (see harness.ts): registration, status and RPC, the default permission rules
-// through the host's own evaluation, the web search default, the user's own server and the key sign-in signal.
+// through the host's own evaluation, the web search default, the user's own server, and both sign-ins: OAuth, and an
+// API key that the server sends to the fake Tavily as a bearer header, switched without a restart.
 import { afterAll, beforeAll, describe, expect, setDefaultTimeout, test } from "bun:test"
 import { Tavily, type Status } from "../../src/rpc/index.js"
 import { OAUTH_INTEGRATION_ID } from "../../src/connect.js"
 import { formatStatus } from "../../src/status.js"
 import { NEW_TOOL as FAKE_NEW_TOOL, RECORDED_TOOLS } from "./catalog.js"
 import { startFakeTavily, type FakeTavily } from "./fake-tavily.js"
-import { cleanup, HOST_VERSION, startHost, until, type Host } from "./harness.js"
+import { cleanup, HOST_VERSION, hostedTavily, REJECTED, startHost, until, type Host } from "./harness.js"
 import { schemaErrors } from "../schema.js"
 
 // Starting a host takes seconds on a laptop and minutes in a slow container (see READY_MS in harness.ts).
@@ -23,6 +24,8 @@ const BUILT_IN_AGENTS = ["build", "general", "explore", "compaction", "title", "
 const NEW_TOOL = "tavily_tavily_feedback"
 const OAUTH_INTEGRATION = /^mcp_[0-9a-f]{16}$/
 const HOST = `OpenCode ${HOST_VERSION} (embedded SDK)`
+
+const KEY_REJECTED = "Tavily did not accept this API key. Replace it, or remove it to sign in with Tavily MCP."
 
 /** The RPC's JSON Schema output is untyped on the client; the tests check it against the schema. */
 const status = async (host: Host) => (await host.client.rpc(Tavily).status({}, { location: host.location })) as Status
@@ -62,6 +65,48 @@ async function session(host: Host, agent: string) {
 async function effect(host: Host, agent: string, action: string) {
   const sessionID = await session(host, agent)
   return (await host.client.permission.create({ sessionID, agent, action, resources: ["*"], save: ["*"] })).effect
+}
+
+/** Connects `key` to the built-in Tavily integration, as /connect → Tavily and `opencode auth login tavily` do. */
+const connectKey = (host: Host, key: string, label: string) =>
+  host.client.integration.connect.key({ integrationID: "tavily", key, label, location: host.location })
+
+async function removeKey(host: Host) {
+  const credential = (await host.client.credential.list()).find((entry) => entry.integrationID === "tavily")
+  await host.client.credential.remove({ credentialID: credential!.id })
+}
+
+/** Waits until the server is connected with a key (no OAuth integration) and OpenCode lists its five tools. */
+async function connectedWithKey(host: Host) {
+  await until("the server connects with the key", async () => {
+    const server = await tavilyServer(host)
+    return server !== undefined && server.integrationID === undefined && server.status.status === "connected"
+  })
+  return until("OpenCode lists the server's tools", async () => {
+    const current = await status(host)
+    return current.tools.visible === 5 ? current : undefined
+  })
+}
+
+/** What the server and the key check send with `Bearer <key>`: the MCP handshake, the tool list and the key check. */
+const KEYED = ["initialize", "tools/list", "usage"]
+
+/**
+ * Waits until the fake Tavily has seen, since request `from`, each of KEYED with `Bearer <key>`, and checks that no
+ * request carried the key in its URL.
+ */
+async function sentWith(from: number, key: string) {
+  const methods = async () => {
+    const requests = (await hostedTavily()).requests.slice(from)
+    return new Set(requests.filter((request) => request.authorization === `Bearer ${key}`).map((request) => request.method))
+  }
+  await until(`the server sends ${KEYED.join(", ")} with the key`, async () => {
+    const sent = await methods()
+    return KEYED.every((method) => sent.has(method)) || undefined
+  }).catch(async (error: Error) => {
+    throw new Error(`${error.message}; sent with the key: ${[...(await methods())].join(", ") || "nothing"}`)
+  })
+  expect((await hostedTavily()).requests.some((request) => request.search.includes(key))).toBe(false)
 }
 
 async function statusText(host: Host) {
@@ -157,19 +202,58 @@ describe(`defaults on ${HOST}`, () => {
     expect(data.providerID).toBe("tavily")
   })
 
-  test("a key connected with /connect switches the server to the key, and removing it switches back to OAuth", async () => {
+  test("a key connected with /connect connects the server with the key as a bearer header, and removing it switches back to OAuth", async () => {
     const key = "tvly-host-test-connected-key"
-    await host.client.integration.connect.key({ integrationID: "tavily", key, label: "Host test key", location: host.location })
-    await until("the server drops OAuth", async () => (await tavilyServer(host))?.integrationID === undefined)
-    expect(await status(host)).toMatchObject({ auth: "key_connected", account: "Host test key" })
+    const from = (await hostedTavily()).requests.length
+    await connectKey(host, key, "Host test key")
+    expect(await connectedWithKey(host)).toMatchObject({
+      connection: "connected",
+      auth: "key_connected",
+      account: "Host test key",
+      keyCheck: "accepted",
+    })
+    await sentWith(from, key)
     expect((await tavilyIntegrations(host)).map((integration) => integration.id)).toEqual(["tavily"])
     await expectKeyHidden(host, key)
 
-    const credential = (await host.client.credential.list()).find((entry) => entry.integrationID === "tavily")
-    await host.client.credential.remove({ credentialID: credential!.id })
-    await until("the server returns to OAuth", async () => OAUTH_INTEGRATION.test((await tavilyServer(host))?.integrationID ?? ""))
-    expect(await status(host)).toMatchObject({ auth: "oauth" })
+    const removed = (await hostedTavily()).requests.length
+    await removeKey(host)
+    await until("the server returns to OAuth", async () => {
+      const server = await tavilyServer(host)
+      return OAUTH_INTEGRATION.test(server?.integrationID ?? "") && server?.status.status === "needs_auth"
+    })
+    const current = await status(host)
+    expect(current).toMatchObject({ connection: "needs_auth", auth: "oauth" })
+    expect(current).not.toHaveProperty("keyCheck")
+    // After the reload, the server asks without a key, and Tavily asks for sign-in.
+    const after = (await hostedTavily()).requests.slice(removed).filter((request) => request.method === "initialize")
+    expect(after.length).toBeGreaterThan(0)
+    expect(after.every((request) => !request.authorized)).toBe(true)
     // OpenCode registers the OAuth integration again on the reload; the plugin names it again.
+    await namedEntries(host)
+  })
+
+  test("a key that Tavily rejects still connects, so status and /connect report the key check", async () => {
+    // Tavily's MCP server accepts any bearer token; only the key check tells this key apart.
+    const key = `tvly-host-test-${REJECTED}-key`
+    await connectKey(host, key, "Rejected key")
+    const current = await until("status reports the rejected key", async () => {
+      const next = await status(host)
+      return next.keyCheck === "rejected" && next.connection === "connected" ? next : undefined
+    })
+    expect(current).toMatchObject({
+      connection: "connected",
+      auth: "key_connected",
+      nextStep: "Tavily did not accept the API key: run /connect, choose Tavily and replace the key.",
+    })
+    expect(await statusText(host)).toContain("- Sign-in: API key (/connect → Tavily), rejected by Tavily\n")
+    await until("/connect marks Tavily sign-in required", async () => {
+      const entry = (await tavilyIntegrations(host)).find((integration) => integration.id === "tavily")
+      return JSON.stringify(entry?.connections ?? []).includes(KEY_REJECTED) || undefined
+    })
+    await expectKeyHidden(host, key)
+    await removeKey(host)
+    await until("the server returns to OAuth", async () => OAUTH_INTEGRATION.test((await tavilyServer(host))?.integrationID ?? ""))
     await namedEntries(host)
   })
 })
@@ -235,16 +319,29 @@ describe(`TAVILY_API_KEY on ${HOST}`, () => {
   })
   afterAll(() => host?.close())
 
-  test("turns OAuth off: the server has no OAuth integration, and status reports the key", async () => {
-    const server = await tavilyServer(host)
-    expect(server).toBeDefined()
-    expect(server?.integrationID).toBeUndefined()
+  test("turns OAuth off and connects with the key: no OAuth integration, the bearer header, and status reports the key", async () => {
+    const current = await connectedWithKey(host)
+    expect(current).toMatchObject({ connection: "connected", auth: "key_env", keyCheck: "accepted", websearchDefault: true })
+    expect(current.account).toBeUndefined()
+    await sentWith(0, key)
     const integrations = await tavilyIntegrations(host)
     expect(integrations.map((integration) => integration.id)).toEqual(["tavily"])
     expect(integrations[0]?.connections).toEqual([expect.objectContaining({ type: "env", name: "TAVILY_API_KEY" })])
-    const current = await status(host)
-    expect(current).toMatchObject({ auth: "key_env", websearchDefault: true })
-    expect(current.account).toBeUndefined()
+  })
+
+  test("a connected key wins over TAVILY_API_KEY, and removing it returns to TAVILY_API_KEY without a restart", async () => {
+    const connected = "tvly-host-test-wins-over-env"
+    const from = (await hostedTavily()).requests.length
+    await connectKey(host, connected, "Connected key")
+    // The server is already connected with the environment key, so wait for the reload's requests.
+    await sentWith(from, connected)
+    expect(await connectedWithKey(host)).toMatchObject({ auth: "key_connected", account: "Connected key", keyCheck: "accepted" })
+
+    const back = (await hostedTavily()).requests.length
+    await removeKey(host)
+    await until("status switches back to TAVILY_API_KEY", async () => ((await status(host)).auth === "key_env" ? true : undefined))
+    await sentWith(back, key)
+    expect(await connectedWithKey(host)).toMatchObject({ auth: "key_env", keyCheck: "accepted" })
   })
 
   test("the key appears in no client API, status or command output", async () => {
