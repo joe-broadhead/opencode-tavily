@@ -44,3 +44,15 @@ Search results, page text from Extract and Crawl, and Research reports come from
 - Agents that you define only in your config do not get the plugin's rules, so a new Tavily tool runs there without a prompt. `/tavily-status` names these agents and gives the fix.
 - The `tavily_*` rule also matches tools of any other MCP server whose name starts with `tavily_`.
 - In a Code Mode program on OpenCode 2.2.3, a declined call becomes an error that the program can catch, and the program continues. The `tavily` skill tells the model to accept a decline and not to try another route. See [Architecture](https://github.com/joe-broadhead/opencode-tavily/blob/HEAD/docs/architecture.md#code-mode-and-declined-calls).
+
+## Scripts
+
+The tools RPC (`tavily.web.tools`, see [docs/scripting.md](https://github.com/joe-broadhead/opencode-tavily/blob/HEAD/docs/scripting.md)) runs Tavily's five tools for a script, with no model. It adds no authority:
+
+- A script names a session that names an agent, and runs as them. A tool that the agent's or the session's rules hide from the model is refused. OpenCode's own executor then checks the call against the agent's rules, the session's rules and saved approvals, as it does for the model.
+- An ask on a script's call is denied, not prompted: no one is there to answer it. The plugin's permission hook changes only an ask on one of its own script calls in flight, only to a deny, and leaves every other call alone.
+- Only the five known reads are methods. A tool that Tavily adds later is never one, even with an allow rule.
+- The call goes through OpenCode's own MCP connection and sign-in. The plugin never sees the key or the token, and returns neither.
+- Tavily's error text reaches the script only as the first line, at most 300 characters, with tokens and URL query strings removed.
+- OpenCode's `execute.before` and `execute.after` tool hooks, from any plugin, do not run for a script's call, so another plugin's policy hook does not see it. A script's calls are not recorded in the session.
+- The RPC is reachable only by callers of the OpenCode server API, who already hold the server's full authority. The session is not a login: it scopes a script to what its agent may do.

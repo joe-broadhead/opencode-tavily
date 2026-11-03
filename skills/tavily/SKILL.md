@@ -37,6 +37,10 @@ Prefer Search and Extract. Before a large Crawl or any Research task, tell the u
 
 By default, the five tools above run without a prompt. Research and Crawl use the most credits, so a user can make them ask first with a `permissions` rule such as `{ "action": "tavily_tavily_research", "resource": "*", "effect": "ask" }`. Any other tool on the `tavily` server asks the user before it runs. If no one is present to approve, the call is refused. If the user declines a call, accept the decision and do not try a different route.
 
+## Scripts
+
+When the user wants a job that runs without you, such as a cron job or a shell script, it can call these five tools through the OpenCode server, with no model. The RPC `tavily.web.tools` has the methods `tavily_search`, `tavily_extract`, `tavily_map`, `tavily_crawl` and `tavily_research`, with the tools' own input, and `describe`, which lists them with their input schemas. Each call is `opencode api post /api/rpc/tavily.web.tools/<method>` with the body `{"input":{"sessionID":"<session>","input":<the tool's input>}}`. The script runs as that session's agent, under its permission rules, so have the script create its session once with `opencode api post /api/session` and a body such as `{"title":"news digest","agent":"build"}`. An ask is refused, so the agent needs the tools allowed. Each call spends credits as the tool does. The details are in the plugin's `docs/scripting.md`.
+
 ## Cite what Tavily returns
 
 - Cite the `url` of each result that you use, and the `sources` of a Research report.

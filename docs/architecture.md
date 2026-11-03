@@ -8,7 +8,7 @@ It uses only APIs that are public in OpenCode 2.2.3. It is tested on stock OpenC
 
 | File | What it does |
 | --- | --- |
-| `src/index.ts` | `Plugin.define({ id: "tavily.web", setup })`: runs the steps below in order and returns a cleanup that stops the key watcher |
+| `src/index.ts` | `Plugin.define({ id: "tavily.web", setup })`: runs the steps below in order and returns a cleanup that stops the key watcher and the tools RPC |
 | `src/options.ts` | Checks the options and applies the defaults (`OPTIONS_INVALID`) |
 | `src/host-version.ts` | Checks `ctx.app.version` against `>=2.2.3 <2.3.0` (`HOST_UNTESTED`) |
 | `src/skills.ts` | Loads `skills/*/SKILL.md` from the package and registers them (`SKILLS_INVALID`) |
@@ -20,10 +20,11 @@ It uses only APIs that are public in OpenCode 2.2.3. It is tested on stock OpenC
 | `src/websearch.ts` | Makes the built-in `tavily` provider the web search default |
 | `src/status.ts` | Builds the status and the `/tavily-status` command |
 | `src/rpc/index.ts` | The status RPC contract and the labels that `/tavily-status` and the dialog share |
+| `src/host/tools-rpc.ts` | The tools RPC for scripts, `tavily.web.tools`; a copy of a module shared by several plugins, with Tavily's part in one marked block |
 | `src/tui/index.tsx` | The **Tavily: Status** dialog (`tavily.web.tui`), built to `dist/tui.js` |
 | `skills/tavily`, `skills/tavily-research` | The two skills |
 
-`setup` runs in this order: options, host check, skills, key, then the MCP, agent, web search, skill and command transforms, the RPC, and last the key and `/connect` watchers. A failed check stops `setup` before the plugin registers anything.
+`setup` runs in this order: options, host check, skills, key, then the MCP, agent, web search, skill and command transforms, the status RPC, the tools RPC, and last the key and `/connect` watchers. A failed check stops `setup` before the plugin registers anything.
 
 ## The MCP server
 
@@ -93,6 +94,27 @@ The RPC is `tavily.web`, with one read-only method, `status`. Its contract is `T
 - **Output:** the status object, checked against its JSON Schema.
 - **Error:** `unavailable`, when the status cannot be read. Its message starts with `STATUS_UNAVAILABLE`, and its `data.nextStep` says what to do.
 
+## Tools RPC
+
+`tavily.web.tools` lets a script call the five tools with no model; [Scripting](scripting.md) is the user's view. Its methods are `describe` and one per known read, named after the upstream tool. It is an allowlist: a tool that Tavily adds later, which asks on the model path, is never a method.
+
+A call is `{ sessionID, input }`. The module:
+
+1. looks up the session with `ctx.session.get`, and its agent's rules with `ctx.agent.get` in the session's location (`SESSION_UNKNOWN`, `SESSION_AGENT_REQUIRED`);
+2. refuses the tool when the last rule that matches `tavily_<tool>` on `*`, in the agent's rules followed by the session's, is a deny: OpenCode hides such a tool from the model (`PERMISSION_DENIED`);
+3. refuses with `SERVER_CONFLICT` while the user's own `tavily` server is in use;
+4. finds the tool's executor in `ctx.tool.list()`, or names the server's connection state (`AUTH_REQUIRED` and so on) or `TOOL_UNAVAILABLE`;
+5. calls `execute(input, { sessionID, agent, messageID, id, signal, progress })` with a new call id. OpenCode's executor checks `tavily_<tool>` on `*` itself, with the agent's rules, the session's rules and saved approvals, and sends OpenCode's own credential;
+6. returns `{ output?, text }`: the tool's structured content and its text parts.
+
+While a call runs, its id is live. A `permission.hook("evaluate")` turns an `ask` whose source id is live into a deny, so the script gets `PERMISSION_DENIED` at once and no prompt waits. It changes nothing else; this is the plugin's only `evaluate` hook, and the forbidden-API scan allows exactly this one.
+
+A `Tool.Error` with a cause is a permission refusal; one without a cause is Tavily's own error (`isError`), which becomes `UPSTREAM_ERROR` with its first line, at most 300 characters, with tokens and URL queries removed. Any other failure is OpenCode's own and passes through.
+
+OpenCode decodes a plain JSON Schema input with Effect, which drops unknown keys of an object that has properties instead of refusing them. So the envelope's schema carries a strict Standard Schema validator as a non-enumerable `~standard` property, which OpenCode prefers. The contract still reads and serialises as plain JSON Schema, and OpenCode answers a bad envelope with `rpc.invalid_input`.
+
+The executor does not run `execute.before` and `execute.after` hooks. Tavily has none, so results are unchanged.
+
 ## Terminal UI
 
 `dist/tui.js` is prebuilt JavaScript from `src/tui/index.tsx`. OpenCode does not compile `.tsx` files from `node_modules`, so the package ships no TSX. The RPC contract is inlined into it, so it imports only `@opencode/plugin/rpc`, `@opentui/core`, `@opentui/solid` and `solid-js`, which OpenCode supplies.
@@ -148,4 +170,6 @@ The links point to the OpenCode source at tag `v2.2.3`.
 | The web search provider is the one chosen by the transforms. The user's stored first-use choice is used only when no transform chose one. | [`packages/core/src/websearch.ts`](https://github.com/anomalyco/opencode/blob/v2.2.3/packages/core/src/websearch.ts) |
 | The `websearch` setting in `opencode.json` is applied by OpenCode's own `opencode.config.websearch` plugin, which runs after package plugins. | [`packages/core/src/config/plugin/websearch.ts`](https://github.com/anomalyco/opencode/blob/v2.2.3/packages/core/src/config/plugin/websearch.ts) |
 | `ctx.integration.connection.active(id)` and `.resolve()` are public. A saved account wins over an environment connection. The package test checks it on stock 2.2.3 and 2.2.4. | [`packages/core/src/integration.ts`](https://github.com/anomalyco/opencode/blob/v2.2.3/packages/core/src/integration.ts) |
+| `ctx.tool.list()` returns each MCP tool with a callable `execute`, which checks `<server>_<tool>` with the agent's and the session's rules and saved approvals, and gives the `evaluate` hook the call's `source`. A deny is a `Tool.Error` with a cause; the server's `isError` is one without. `execute.before` and `execute.after` hooks do not run for it. Not documented as an entry point: the package test checks it on stock 2.2.3 and 2.2.4. | [`packages/core/src/tool/mcp.ts`](https://github.com/anomalyco/opencode/blob/v2.2.3/packages/core/src/tool/mcp.ts) |
+| An RPC input given as a Standard Schema is validated with it; a plain JSON Schema is decoded with Effect, which drops unknown keys of an object that has properties. The package test checks the envelope on stock 2.2.3 and 2.2.4. | `@opencode/core` 2.2.3, the RPC service's `parse` |
 | A permission decline inside a Code Mode program becomes an error that the program can catch. | [`packages/core/src/codemode/tool.ts`](https://github.com/anomalyco/opencode/blob/v2.2.3/packages/core/src/codemode/tool.ts) |

@@ -2,7 +2,8 @@ import { Plugin } from "@opencode/plugin"
 import { watchConnect } from "./connect.js"
 import { checkHost } from "./host-version.js"
 import { keyChecker } from "./key-check.js"
-import { readKey, registerServer, watchKey, type ServerState } from "./mcp.js"
+import { registerToolsRpc } from "./host/tools-rpc.js"
+import { readKey, registerServer, SERVER_NAME, watchKey, type ServerState } from "./mcp.js"
 import { parseOptions } from "./options.js"
 import { registerDefaultRules } from "./permissions.js"
 import { Tavily } from "./rpc/index.js"
@@ -39,9 +40,15 @@ export default Plugin.define({
         }),
     })
 
+    // Scripts call the five tools with no model, as a session and its agent; a user's own server is not the plugin's.
+    const stopTools = await registerToolsRpc(ctx, { mcp: { server: SERVER_NAME, managed: () => !server.userServer } })
+
     const controller = new AbortController()
     void watchKey(ctx, server, controller.signal, warn)
     void watchConnect(ctx, server, checkKey, controller.signal)
-    return () => controller.abort()
+    return async () => {
+      controller.abort()
+      await stopTools()
+    }
   },
 })
