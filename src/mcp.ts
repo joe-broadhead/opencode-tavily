@@ -9,6 +9,19 @@ export interface ServerState {
   key: TavilyKey | undefined
   /** The user's config already defines a `tavily` server, which the plugin leaves untouched. */
   userServer: boolean
+  /** That server is at Tavily's URL, so the tools RPC may call it: it is Tavily, whatever its sign-in. */
+  userServerAtTavily: boolean
+}
+
+/** True for a remote server at Tavily's URL, with or without the final slash or a query such as `?tavilyApiKey=`. */
+export function isTavilyServer(config: Mcp.ServerConfig): boolean {
+  if (config.type !== "remote") return false
+  const path = (url: URL) => `${url.origin}${url.pathname.replace(/\/+$/, "")}`
+  try {
+    return path(new URL(config.url)) === path(new URL(SERVER_URL))
+  } catch {
+    return false
+  }
 }
 
 export function serverConfig(input: { readonly key?: string; readonly executionTimeoutMs: number }): Mcp.ServerConfig {
@@ -19,8 +32,10 @@ export function serverConfig(input: { readonly key?: string; readonly executionT
 
 export function registerServer(mcp: Pick<Plugin.Context["mcp"], "transform">, state: ServerState, executionTimeoutMs: number) {
   return mcp.transform((editor) => {
-    state.userServer = editor.get(SERVER_NAME) !== undefined
-    if (state.userServer) return
+    const own = editor.get(SERVER_NAME)
+    state.userServer = own !== undefined
+    state.userServerAtTavily = own !== undefined && isTavilyServer(own)
+    if (own) return
     editor.set(SERVER_NAME, serverConfig({ key: state.key?.key, executionTimeoutMs }))
   })
 }
@@ -33,7 +48,7 @@ export function readKey(
 ) {
   return resolveKey(integration).catch((error: unknown) => {
     warn(
-      `KEY_UNAVAILABLE: OpenCode could not read the Tavily API key (${message(error)}). Next step: Run /connect, choose Tavily and connect the key again.`,
+      `KEY_UNAVAILABLE: OpenCode could not read the Tavily API key (${message(error)}). Next step: Run /connect and choose Tavily, then connect the key again.`,
     )
     return fallback
   })

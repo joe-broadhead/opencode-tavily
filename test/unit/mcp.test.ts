@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test"
 import { resolveKey } from "../../src/credential.js"
-import { readKey, registerServer, serverConfig, SERVER_URL, watchKey, type ServerState } from "../../src/mcp.js"
+import { isTavilyServer, readKey, registerServer, serverConfig, SERVER_URL, watchKey, type ServerState } from "../../src/mcp.js"
 import {
   envConnection,
   events,
@@ -49,7 +49,7 @@ describe("readKey", () => {
     const warnings: string[] = []
     expect(await readKey(domain, undefined, (message) => warnings.push(message))).toBeUndefined()
     expect(warnings).toEqual([
-      "KEY_UNAVAILABLE: OpenCode could not read the Tavily API key (store locked). Next step: Run /connect, choose Tavily and connect the key again.",
+      "KEY_UNAVAILABLE: OpenCode could not read the Tavily API key (store locked). Next step: Run /connect and choose Tavily, then connect the key again.",
     ])
   })
 })
@@ -80,7 +80,7 @@ describe("serverConfig", () => {
 describe("registerServer", () => {
   test("registers tavily, and replays with the current key on every rebuild", async () => {
     const mcp = transforms<McpEditor>()
-    const state: ServerState = { key: undefined, userServer: false }
+    const state: ServerState = { key: undefined, userServer: false, userServerAtTavily: false }
     await registerServer(mcp, state, 900_000)
 
     const first = mcpEditor()
@@ -96,7 +96,7 @@ describe("registerServer", () => {
 
   test("keeps a user's own tavily server untouched", async () => {
     const mcp = transforms<McpEditor>()
-    const state: ServerState = { key: { key: "tvly-k", source: "env" }, userServer: false }
+    const state: ServerState = { key: { key: "tvly-k", source: "env" }, userServer: false, userServerAtTavily: false }
     await registerServer(mcp, state, 900_000)
     const own = { type: "local" as const, command: ["tavily-mcp"] }
     const { editor, servers, sets } = mcpEditor({ tavily: own })
@@ -111,6 +111,35 @@ describe("registerServer", () => {
     expect(next.sets).toEqual(["tavily"])
     expect(state.userServer).toBe(false)
   })
+
+  test("marks a user's own server at Tavily's URL, so scripts may use it, and keeps it untouched", async () => {
+    const mcp = transforms<McpEditor>()
+    const state: ServerState = { key: undefined, userServer: false, userServerAtTavily: false }
+    await registerServer(mcp, state, 900_000)
+    for (const [url, atTavily] of [
+      [SERVER_URL, true],
+      ["https://mcp.tavily.com/mcp", true],
+      ["https://mcp.tavily.com/mcp/?tavilyApiKey=tvly-k", true],
+      ["https://mcp.tavily.com/other/", false],
+      ["http://mcp.tavily.com/mcp/", false],
+      ["https://mcp.tavily.com.example.invalid/mcp/", false],
+      ["not a url", false],
+    ] as const) {
+      const own = { type: "remote" as const, url }
+      const { editor, sets } = mcpEditor({ tavily: own })
+      mcp.run(editor)
+      expect({ url, sets, userServer: state.userServer, atTavily: state.userServerAtTavily }).toEqual({ url, sets: [], userServer: true, atTavily })
+    }
+    mcp.run(mcpEditor({ tavily: { type: "local" as const, command: ["tavily-mcp"] } }).editor)
+    expect(state.userServerAtTavily).toBe(false)
+  })
+})
+
+describe("isTavilyServer", () => {
+  test("only a remote server at Tavily's URL", () => {
+    expect(isTavilyServer({ type: "remote", url: SERVER_URL })).toBe(true)
+    expect(isTavilyServer({ type: "local", command: ["npx", "tavily-mcp"] })).toBe(false)
+  })
 })
 
 describe("watchKey", () => {
@@ -118,7 +147,7 @@ describe("watchKey", () => {
     const stream = events()
     const credentials = integration(initial)
     let reloads = 0
-    const state: ServerState = { key, userServer: false }
+    const state: ServerState = { key, userServer: false, userServerAtTavily: false }
     const controller = new AbortController()
     const warnings: string[] = []
     const done = watchKey(
@@ -175,7 +204,7 @@ describe("watchKey", () => {
     expect(watch.reloads()).toBe(0)
     expect(watch.state.key?.key).toBe("tvly-secret")
     expect(watch.warnings).toEqual([
-      "KEY_UNAVAILABLE: OpenCode could not read the Tavily API key (store locked). Next step: Run /connect, choose Tavily and connect the key again.",
+      "KEY_UNAVAILABLE: OpenCode could not read the Tavily API key (store locked). Next step: Run /connect and choose Tavily, then connect the key again.",
     ])
     expect(watch.warnings[0]).not.toContain("tvly-secret")
     watch.controller.abort()

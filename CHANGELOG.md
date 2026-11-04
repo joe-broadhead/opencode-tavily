@@ -4,9 +4,30 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+### Fixed
+
+- Tavily's own errors no longer look like results. Tavily's server answers some failures, such as its rate limit, as an ordinary result: `{"error":"Map failed","status":429,…}`. The model now gets `UPSTREAM_ERROR: … This is an error from Tavily, not a result. Next step: …`, in Code Mode too, and a script gets `UPSTREAM_ERROR` with Tavily's words redacted. For a 429 the next step is to wait and retry, then check your Tavily plan and key. Successful results are unchanged.
+- Your own `tavily` server in `opencode.json` no longer leaves scripts failing while status says "Nothing to do.". At Tavily's URL, `https://mcp.tavily.com/mcp/`, scripts now use it. At any other URL, status says that scripts can't use it, and why.
+- Status lists an agent without the default rules only when it has a base allow and its own rules would run a new Tavily tool without asking.
+- The tools RPC's sign-in next step now matches status and the README: Tavily MCP first, then an API key.
+- The scripting docs say where `opencode api` calls run (the service's default location, your home directory), that it exits with status 1 on an RPC error, and that a result without structured content carries the text in `output`.
+- README Uninstall now signs out first, in an order that works with OAuth, an API key or both, checked on OpenCode 2.2.3, 2.2.4 and 2.2.5.
+
 ### Changed
 
+- The status RPC (`tavily.web` `status`) has the shared status fields:
+  - `connection` is now `state`, with the values `connected`, `sign_in_required` (was `needs_auth`), `connecting` (was `pending`), `failed`, `disabled` and `not_configured` (was `not_registered`);
+  - `version`, the plugin's version, is new;
+  - `host` is `{ version, range, tested }`: `range` is new, `version` is `null` when OpenCode reports none, and `tested` is true only for 2.2.3, 2.2.4 and 2.2.5;
+  - `unguardedAgents` is always present, empty when none.
+- OpenCode 2.2.5 is a tested release. A later 2.2 release still runs, and status calls it untested without changing the next step.
 - The tools RPC's envelope errors use the shared wording, such as `describe takes no input`, and a permission refusal names the action that was refused. A call that meets the server while it reconnects gets `CONNECTING`, not `CONNECTION_FAILED`.
+- The `KEY_UNAVAILABLE` next step reads "Run /connect and choose Tavily, then connect the key again."
+
+### Added
+
+- Code Mode's catalog describes the `tavily` namespace.
+- README: an Update section.
 
 ## [0.0.2] - 2026-11-03
 

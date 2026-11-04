@@ -5,6 +5,10 @@ import { afterAll, beforeAll, describe, expect, setDefaultTimeout, test } from "
 import { Tavily, type Status } from "../../src/rpc/index.js"
 import { OAUTH_INTEGRATION_ID } from "../../src/connect.js"
 import { formatStatus } from "../../src/status.js"
+import { TOOLS_RPC_ID } from "../../src/host/tools-rpc.js"
+import { SERVER_URL } from "../../src/mcp.js"
+import { NAMESPACE_DESCRIPTION } from "../../src/tools.js"
+import { MODEL_ID, startFakeModel, type ChatRequest, type FakeModel } from "./fake-model.js"
 import { NEW_TOOL as FAKE_NEW_TOOL, RECORDED_TOOLS } from "./catalog.js"
 import { startFakeTavily, type FakeTavily } from "./fake-tavily.js"
 import { cleanup, HOST_VERSION, hostedTavily, REJECTED, startHost, until, type Host } from "./harness.js"
@@ -153,10 +157,10 @@ describe(`defaults on ${HOST}`, () => {
     const current = await status(host)
     expect(schemaErrors(Tavily.methods.status.output, current)).toEqual([])
     expect(current).toMatchObject({
-      connection: "needs_auth",
+      state: "sign_in_required",
       auth: "oauth",
       websearchDefault: true,
-      host: { version: HOST_VERSION, tested: true },
+      host: { version: HOST_VERSION, range: ">=2.2.3 <2.3.0", tested: true },
       unguardedAgents: ["reviewer"],
     })
     expect(current.tools).toEqual({ visible: 0, unknown: 0, unknownNames: [] })
@@ -207,7 +211,7 @@ describe(`defaults on ${HOST}`, () => {
     const from = (await hostedTavily()).requests.length
     await connectKey(host, key, "Host test key")
     expect(await connectedWithKey(host)).toMatchObject({
-      connection: "connected",
+      state: "connected",
       auth: "key_connected",
       account: "Host test key",
       keyCheck: "accepted",
@@ -223,7 +227,7 @@ describe(`defaults on ${HOST}`, () => {
       return OAUTH_INTEGRATION.test(server?.integrationID ?? "") && server?.status.status === "needs_auth"
     })
     const current = await status(host)
-    expect(current).toMatchObject({ connection: "needs_auth", auth: "oauth" })
+    expect(current).toMatchObject({ state: "sign_in_required", auth: "oauth" })
     expect(current).not.toHaveProperty("keyCheck")
     // After the reload, the server asks without a key, and Tavily asks for sign-in.
     const after = (await hostedTavily()).requests.slice(removed).filter((request) => request.method === "initialize")
@@ -239,10 +243,10 @@ describe(`defaults on ${HOST}`, () => {
     await connectKey(host, key, "Rejected key")
     const current = await until("status reports the rejected key", async () => {
       const next = await status(host)
-      return next.keyCheck === "rejected" && next.connection === "connected" ? next : undefined
+      return next.keyCheck === "rejected" && next.state === "connected" ? next : undefined
     })
     expect(current).toMatchObject({
-      connection: "connected",
+      state: "connected",
       auth: "key_connected",
       nextStep: "Tavily did not accept the API key: run /connect, choose Tavily and replace the key.",
     })
@@ -283,7 +287,7 @@ describe(`user config on ${HOST}`, () => {
     expect((await tavilyServer(host))?.status).toEqual({ status: "connected" })
     expect(fake.requests.map((request) => request.method)).toContain("tools/list")
     expect(new Set(fake.requests.map((request) => request.marker))).toEqual(new Set(["user"]))
-    expect(await status(host)).toMatchObject({ connection: "connected", auth: "user_server" })
+    expect(await status(host)).toMatchObject({ state: "connected", auth: "user_server" })
   })
 
   test("status counts the server's tools that OpenCode lists and names the unknown one", async () => {
@@ -302,12 +306,110 @@ describe(`user config on ${HOST}`, () => {
     expect(await effect(host, "reviewer", "tavily_tavily_other")).toBe("ask")
     expect(await effect(host, "reviewer", NEW_TOOL)).toBe("allow")
     expect(await effect(host, "reviewer", "tavily_tavily_search")).toBe("allow")
-    expect((await status(host)).unguardedAgents).toBeUndefined()
+    expect((await status(host)).unguardedAgents).toEqual([])
   })
 
   test("a websearch choice in config still serves web search", async () => {
     const { data } = await host.client.websearch.query({ location: host.location, query: "host test" })
     expect(data.providerID).toBe("fakeprobe")
+  })
+
+  test("scripts can't use a server at another URL: status says so and why, and the tools RPC refuses", async () => {
+    expect((await status(host)).nextStep).toBe(
+      `Scripts can't use your own tavily server, because its URL is not Tavily's (${SERVER_URL}); point it at that URL, or remove it from opencode.json, to use the tools RPC.`,
+    )
+    const description = (await host.client.rpc.call({ rpcID: TOOLS_RPC_ID, method: "describe", input: {}, location: host.location })).output as {
+      methods: { available: boolean; reason?: string }[]
+    }
+    expect(description.methods.map((method) => method.reason)).toEqual(Array(5).fill("SERVER_CONFLICT"))
+    const from = fake.requests.length
+    expect(await script(host, "tavily_search", { sessionID: await session(host, "build"), input: { query: "q" } })).toMatchObject({
+      type: "failed",
+      code: "SERVER_CONFLICT",
+    })
+    expect(fake.requests.slice(from).filter((request) => request.method === "tools/call")).toEqual([])
+  })
+})
+
+/** A tools RPC call's result, or its error's `{ type, code, message }`. */
+async function script(host: Host, method: string, input: unknown): Promise<Record<string, any>> {
+  try {
+    return { value: (await host.client.rpc.call({ rpcID: TOOLS_RPC_ID, method, input: input as never, location: host.location })).output }
+  } catch (error) {
+    const e = error as Record<string, any>
+    return { type: e.type ?? e._tag, code: e.data?.code, message: String(e.message ?? e) }
+  }
+}
+
+describe(`the user's own server at Tavily's URL on ${HOST}`, () => {
+  const key = "tvly-host-test-own-server-key"
+  let host: Host
+  beforeAll(async () => {
+    // Tavily's documented URL, without the final slash; the harness sends it to the fake Tavily.
+    const url = SERVER_URL.replace(/\/$/, "")
+    host = await startHost({ config: { mcp: { servers: { tavily: { type: "remote", url, oauth: false, headers: { Authorization: `Bearer ${key}` } } } } } })
+    await until("OpenCode lists the server's tools", async () => ((await status(host)).tools.visible === 5 ? true : undefined))
+  })
+  afterAll(() => host?.close())
+
+  test("is kept, and scripts use it: nothing to do, and a known read runs", async () => {
+    expect(await status(host)).toMatchObject({ state: "connected", auth: "user_server", nextStep: "Nothing to do." })
+    const from = (await hostedTavily()).requests.length
+    const result = await script(host, "tavily_search", { sessionID: await session(host, "build"), input: { query: "own" } })
+    expect(result).toEqual({ value: { output: { tool: "tavily_search", query: "own" }, text: "tavily_search: own" } })
+    const sent = (await hostedTavily()).requests.slice(from).filter((request) => request.method === "tools/call")
+    expect(sent.map((request) => [request.tool, request.authorization === `Bearer ${key}`])).toEqual([["tavily_search", true]])
+  })
+})
+
+describe(`Tavily's results in a model turn on ${HOST}`, () => {
+  let model: FakeModel
+  let host: Host
+  beforeAll(async () => {
+    model = await startFakeModel()
+    host = await startHost({
+      env: { TAVILY_API_KEY: "tvly-host-test-model-key" },
+      // No model leaves the machine: LM Studio's local API is the scripted model; the other local providers are off.
+      config: { providers: { lmstudio: { settings: { baseURL: model.baseURL } }, ollama: { settings: { baseURL: "" } }, vllm: { settings: { baseURL: "" } } } },
+    })
+    await connectedWithKey(host)
+    await until("the scripted model is listed", async () => {
+      const { data } = (await host.client.model.list({ location: host.location })) as unknown as { data: { id: string; providerID: string }[] }
+      return data.some((entry) => entry.providerID === "lmstudio" && entry.id === MODEL_ID)
+    })
+  })
+  afterAll(async () => {
+    await host?.close()
+    await model?.close()
+  })
+
+  /** One turn in which the model runs `code` in Code Mode; returns the tool results the model receives next. */
+  async function toolResults(code: string) {
+    const from = model.requests.length
+    model.script = [{ tool: "execute", arguments: { code } }]
+    const { id: sessionID } = await host.client.session.create({ agent: "build", location: host.location, model: { providerID: "lmstudio", id: MODEL_ID } })
+    await host.client.session.prompt({ sessionID, text: "Use Tavily." })
+    const turn = await until("the model's turn after the tool result", async () =>
+      model.requests.slice(from).find((request: ChatRequest) => request.messages?.some((message) => message.role === "tool")),
+    )
+    return turn.messages!.filter((message) => message.role === "tool").map((message) => message.content)
+  }
+
+  test("Tavily's error object, answered as a result, reaches the model as an error with a next step", async () => {
+    expect(await toolResults(`return await tools.tavily.tavily_map({ url: "https://example.invalid", query: "limit" })`)).toEqual([
+      "UPSTREAM_ERROR: tavily_tavily_map failed: Tavily answered with error 429: Map failed: Your request has been blocked due to excessive requests. Verify you are using production API keys. This is an error from Tavily, not a result. Next step: Wait a minute, then retry; if it keeps happening, check your Tavily plan and API key at https://app.tavily.com.",
+    ])
+  })
+
+  test("Code Mode's catalog, in what the model receives, describes the tavily namespace", async () => {
+    await toolResults(`return 1`)
+    expect(JSON.stringify(model.requests.at(-1))).toContain(`- tavily (5 tools) // ${NAMESPACE_DESCRIPTION}`)
+  })
+
+  test("a successful result reaches the model unchanged", async () => {
+    // Code Mode returns the tool's structured content, exactly as the fake Tavily sent it.
+    const [result] = await toolResults(`return await tools.tavily.tavily_search({ query: "hello" })`)
+    expect(JSON.parse(String(result))).toEqual({ tool: "tavily_search", query: "hello" })
   })
 })
 
@@ -321,7 +423,7 @@ describe(`TAVILY_API_KEY on ${HOST}`, () => {
 
   test("turns OAuth off and connects with the key: no OAuth integration, the bearer header, and status reports the key", async () => {
     const current = await connectedWithKey(host)
-    expect(current).toMatchObject({ connection: "connected", auth: "key_env", keyCheck: "accepted", websearchDefault: true })
+    expect(current).toMatchObject({ state: "connected", auth: "key_env", keyCheck: "accepted", websearchDefault: true })
     expect(current.account).toBeUndefined()
     await sentWith(0, key)
     const integrations = await tavilyIntegrations(host)

@@ -23,19 +23,15 @@ describe("RPC contract", () => {
   })
 
   test("describes every status field and value", () => {
-    expect(status.output.required).toEqual(["connection", "auth", "tools", "websearchDefault", "host", "nextStep"])
-    expect(status.output.properties.connection.enum).toEqual([
-      "connected",
-      "pending",
-      "needs_auth",
-      "failed",
-      "disabled",
-      "not_registered",
-    ])
+    expect(status.output.required).toEqual(["version", "state", "auth", "tools", "websearchDefault", "host", "unguardedAgents", "nextStep"])
+    // The shared states (S13) that Tavily can be in.
+    expect(status.output.properties.state.enum).toEqual(["connected", "sign_in_required", "connecting", "failed", "disabled", "not_configured"])
+    expect(status.output.properties.host.required).toEqual(["version", "range", "tested"])
     expect(status.output.properties.auth.enum).toEqual(["oauth", "key_connected", "key_env", "user_server", "none"])
     expect(status.output.properties.keyCheck.enum).toEqual(["accepted", "rejected", "unchecked"])
     expect(Object.keys(status.output.properties)).toEqual([
-      "connection",
+      "version",
+      "state",
       "auth",
       "account",
       "keyCheck",
@@ -51,9 +47,10 @@ describe("RPC contract", () => {
   test("every built status matches the output schema", () => {
     const base: StatusFacts = {
       userServer: false,
+      userServerAtTavily: false,
       tools: [{ id: "tavily_tavily_search" }, { id: "tavily_tavily_feedback" }],
       websearchDefault: false,
-      host: { version: "2.2.3", tested: true },
+      host: { version: "2.2.3", tested: true, inRange: true },
       agents: [{ id: "build", permissions: [{ action: "*", resource: "*", effect: "allow" }, ...DEFAULT_RULES] }],
     }
     const statuses: Status[] = [
@@ -66,12 +63,17 @@ describe("RPC contract", () => {
           buildStatus({ ...base, server: { status: connection }, key: { key: "k", source: "env" }, keyCheck }),
         ),
         buildStatus({ ...base, server: { status: connection }, userServer: true }),
+        buildStatus({ ...base, server: { status: connection }, userServer: true, userServerAtTavily: true }),
       ]),
       buildStatus({ ...base, server: { status: "connected" }, agents: [{ id: "reviewer", permissions: [] }] }),
-      buildStatus({ ...base, server: { status: "connected" }, host: { version: "3.0.0", tested: false } }),
+      buildStatus({ ...base, server: { status: "connected" }, agents: [{ id: "reviewer", permissions: [{ action: "*", resource: "*", effect: "allow" }] }] }),
+      buildStatus({ ...base, server: { status: "connected" }, host: { version: "3.0.0", tested: false, inRange: false } }),
+      buildStatus({ ...base, server: { status: "connected" }, host: { version: null, tested: false, inRange: false } }),
     ]
     for (const entry of statuses) expect(valid(status.output, entry)).toBe(true)
     expect(valid(status.output, { ...statuses[1], key: "k" })).toBe(false)
+    expect(valid(status.output, { ...statuses[1], connection: "connected" })).toBe(false)
+    expect(valid(status.output, { ...statuses[1], state: "pending" })).toBe(false)
     expect(valid(status.output, { ...statuses[1], keyCheck: "maybe" })).toBe(false)
     expect(valid(status.output, { ...statuses[1], tools: { visible: 1.5, unknown: 0, unknownNames: [] } })).toBe(false)
   })

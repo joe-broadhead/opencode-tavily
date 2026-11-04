@@ -44,6 +44,17 @@ export function insertDefaultRules(rules: Rule[]) {
   rules.splice(base + 1, 0, ...DEFAULT_RULES.map((rule) => ({ ...rule })))
 }
 
+/** A tool Tavily might add later: no rule names it, so the block's `tavily_*` ask decides it. */
+const UNKNOWN_TOOL = `tavily_unknown`
+
+/**
+ * An agent is unguarded when it has a base allow, lacks the block, and its own rules would let a new Tavily tool
+ * run without asking. An agent whose rules already ask or deny for every Tavily tool needs no fix.
+ */
+export function isUnguarded(rules: readonly Rule[]) {
+  return rules.some((rule) => same(rule, BASE_ALLOW)) && !hasDefaultRules(rules) && evaluate(rules, UNKNOWN_TOOL) === "allow"
+}
+
 /** Host wildcards: `*` matches any run of characters and `?` one character, over the whole string. */
 const matches = (pattern: string, value: string) =>
   new RegExp(`^${pattern.replace(/[.+^${}()|[\]\\]/g, "\\$&").replace(/\*/g, ".*").replace(/\?/g, ".")}$`).test(value)
