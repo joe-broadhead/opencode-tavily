@@ -1,8 +1,8 @@
 # Architecture
 
-The plugin is a thin layer over OpenCode's public plugin API. Tavily's hosted MCP server provides the tools, and OpenCode runs them: OAuth, the MCP connection, permission prompts and tool results. The plugin chooses the server's settings, adds default permission rules, chooses the web search default and reports status. It adds no tools of its own and does not change results.
+The plugin is a thin layer over OpenCode's public plugin API. Tavily's hosted MCP server provides the tools, and OpenCode runs them: OAuth, the MCP connection, permission prompts and tool results. The plugin chooses the server's settings, adds default permission rules, chooses the web search default and reports status. It adds no tools of its own. It changes one kind of result only: Tavily's error object, which Tavily's server sends as an ordinary result, becomes an error (see [Tavily's error objects](#tavilys-error-objects)).
 
-It uses only APIs that are public in OpenCode 2.2.3. It is tested on stock OpenCode 2.2.3 and 2.2.4, and refuses to start outside `>=2.2.3 <2.3.0` unless `allowUntestedHost` is set.
+It uses only APIs that are public in OpenCode 2.2.3. It is tested on stock OpenCode 2.2.3, 2.2.4 and 2.2.5 (`TESTED_HOSTS` in `src/host-version.ts`). A later 2.2 release runs too, and status calls it untested. Outside `>=2.2.3 <2.3.0` the plugin does not start, unless `allowUntestedHost` is set.
 
 ## Parts
 
@@ -10,7 +10,7 @@ It uses only APIs that are public in OpenCode 2.2.3. It is tested on stock OpenC
 | --- | --- |
 | `src/index.ts` | `Plugin.define({ id: "tavily.web", setup })`: runs the steps below in order and returns a cleanup that stops the key watcher and the tools RPC |
 | `src/options.ts` | Checks the options and applies the defaults (`OPTIONS_INVALID`) |
-| `src/host-version.ts` | Checks `ctx.app.version` against `>=2.2.3 <2.3.0` (`HOST_UNTESTED`) |
+| `src/host-version.ts` | Checks `ctx.app.version` against `>=2.2.3 <2.3.0` (`HOST_UNTESTED`), and holds the tested releases (`TESTED_HOSTS`) |
 | `src/skills.ts` | Loads `skills/*/SKILL.md` from the package and registers them (`SKILLS_INVALID`) |
 | `src/credential.ts` | Reads the key of OpenCode's built-in `tavily` integration |
 | `src/key-check.ts` | Asks Tavily's usage endpoint whether it accepts the key, once per key |
@@ -19,12 +19,15 @@ It uses only APIs that are public in OpenCode 2.2.3. It is tested on stock OpenC
 | `src/permissions.ts` | Adds the default rules to every agent |
 | `src/websearch.ts` | Makes the built-in `tavily` provider the web search default |
 | `src/status.ts` | Builds the status and the `/tavily-status` command |
+| `src/tools.ts` | The Code Mode namespace description, and the `execute.after` hook that marks Tavily's error objects for the model |
+| `src/tavily-error.ts` | Recognises Tavily's error object in a result, and its next step |
+| `src/version.ts` | The plugin's version, which the build defines from `package.json` |
 | `src/rpc/index.ts` | The status RPC contract and the labels that `/tavily-status` and the dialog share |
 | `src/host/tools-rpc.ts` | The tools RPC for scripts, `tavily.web.tools`; a copy of a module shared by several plugins, with Tavily's part in one marked block |
 | `src/tui/index.tsx` | The **Tavily: Status** dialog (`tavily.web.tui`), built to `dist/tui.js` |
 | `skills/tavily`, `skills/tavily-research` | The two skills |
 
-`setup` runs in this order: options, host check, skills, key, then the MCP, agent, web search, skill and command transforms, the status RPC, the tools RPC, and last the key and `/connect` watchers. A failed check stops `setup` before the plugin registers anything.
+`setup` runs in this order: options, host check, skills, key, then the MCP, agent, web search, skill and command transforms, the status RPC, the tool namespace and `execute.after` hook, the tools RPC, and last the key and `/connect` watchers. A failed check stops `setup` before the plugin registers anything.
 
 ## The MCP server
 
@@ -38,12 +41,12 @@ With an API key, it adds `oauth: false` and `headers: { Authorization: "Bearer <
 
 - **The key.** The plugin reads the active connection of OpenCode's built-in `tavily` integration with `ctx.integration.connection.active("tavily")` and `.resolve()`. It uses the result only when its type is `key`. The source is a key connected with `/connect` → Tavily or `opencode auth login tavily`, or `TAVILY_API_KEY`. The key stays in memory and is never logged or written.
 - **Key changes.** Transforms must be synchronous, so the plugin reads the key in `setup`. It then listens for `credential.updated`, `credential.switched` and `integration.updated`. When the key itself changes, it calls `ctx.mcp.reload()`. OpenCode then reconnects the server with the key, or with OAuth.
-- **Your own server.** If your config already defines a server named `tavily`, the transform leaves it unchanged. Status then reports `user_server`.
+- **Your own server.** If your config already defines a server named `tavily`, the transform leaves it unchanged. Status then reports `user_server`. The tools RPC calls it only when it is a remote server at Tavily's URL (with or without the final slash or a query); any other gets `SERVER_CONFLICT`, and status's next step says so.
 - **The `/connect` entries.** OpenCode's built-in key integration is named "Tavily". Without a key, OpenCode gives the server an OAuth integration, `mcp_` and 16 hex digits of the SHA-1 of `tavily`, NUL and the URL, and names it after the server. The plugin renames it **Tavily MCP**. OpenCode registers that integration, with its name, after plugin setup and again on every MCP reload, and transforms replay in registration order. So the plugin checks the name on `integration.updated`, and polls for the first 10 seconds because a subscription has no start acknowledgement; when the name was reset, it registers its rename again, after OpenCode's, and disposes the old one.
 - **The key check.** Tavily's MCP server accepts any bearer token at `initialize` and `tools/list`, and reports a wrong key only inside each tool result, with `isError: false`. So a server with a wrong key shows `connected`. The plugin checks each key once with `GET https://api.tavily.com/usage` (401 for a wrong key, no credits), at setup, on every `mcp.status.changed` of `tavily`, and when status is read; a check that could not reach Tavily runs again next time. Status reports the answer as `keyCheck`.
 - **A rejected key.** On `mcp.status.changed`, when a connected key is in use and the key check rejects it, or the server needs sign-in, the plugin reports `needs_auth` on the key's connection with `ctx.integration.connection.status`, so `/connect` shows "Sign in required" on **Tavily**. It clears the report once the key is accepted.
 - **`TAVILY_API_KEY`.** The plugin runs in the OpenCode server, usually the background service. That service gets the environment of the command that started it, plus `opencode service set env` variables, so a variable exported in a terminal later never reaches it. The TUI runs in the terminal: the dialog compares the terminal's `TAVILY_API_KEY` (only whether it is set) with the server's sign-in, and names the mismatch.
-- **Code Mode.** OpenCode's default applies: MCP tools are in Code Mode, as `tools.tavily.tavily_search` and so on. With Code Mode off, they are direct tools named `tavily_tavily_search` and so on. OpenCode's own `websearch` tool covers simple searches outside Code Mode.
+- **Code Mode.** OpenCode's default applies: MCP tools are in Code Mode, as `tools.tavily.tavily_search` and so on. The plugin describes the `tavily` namespace in Code Mode's catalog with `editor.namespace` (`src/tools.ts`). With Code Mode off, they are direct tools named `tavily_tavily_search` and so on. OpenCode's own `websearch` tool covers simple searches outside Code Mode.
 
 ## Permissions: default ask rules
 
@@ -54,7 +57,7 @@ In every agent, right after the first `{ action: "*", resource: "*", effect: "al
 - `{ action: "tavily_*", resource: "*", effect: "ask" }`, so unknown and new tools ask;
 - one `allow` for each of Tavily's five read-only tools: `tavily_tavily_search`, `_extract`, `_map`, `_crawl` and `_research`.
 
-The plugin adds the block only when the agent does not already have it, so rebuilds add nothing. OpenCode asserts `<server>_<tool>` on resource `*` for each MCP call, and the last matching rule wins. So every later rule wins over the block: the agent's own denies (Explore's `* * deny`, Plan's limits), your `permissions` and your saved "Always allow" answers. The host tests check each case on OpenCode 2.2.3: the known reads are allowed and a new tool asks, a user `allow` and a saved "Always allow" each win, and Plan and Explore stay strict. The package test checks that the installed plugin's rules are in place on stock 2.2.3 and 2.2.4, that a known read is allowed and a new tool asks, and that Explore stays strict.
+The plugin adds the block only when the agent does not already have it, so rebuilds add nothing. OpenCode asserts `<server>_<tool>` on resource `*` for each MCP call, and the last matching rule wins. So every later rule wins over the block: the agent's own denies (Explore's `* * deny`, Plan's limits), your `permissions` and your saved "Always allow" answers. The host tests check each case on OpenCode 2.2.3: the known reads are allowed and a new tool asks, a user `allow` and a saved "Always allow" each win, and Plan and Explore stay strict. The package test checks that the installed plugin's rules are in place on stock 2.2.3, 2.2.4 and 2.2.5, that a known read is allowed and a new tool asks, and that Explore stays strict.
 
 An escalating permission hook was rejected. It would run after the rules and saved approvals, so it would override a user's explicit allow.
 
@@ -72,19 +75,22 @@ One status object feeds `/tavily-status`, the RPC and the dialog:
 
 ```ts
 {
-  connection: "connected" | "pending" | "needs_auth" | "failed" | "disabled" | "not_registered"
+  version: string             // the plugin's version
+  state: "connected" | "sign_in_required" | "connecting" | "failed" | "disabled" | "not_configured"
   auth: "oauth" | "key_connected" | "key_env" | "user_server" | "none"
   account?: string            // a credential label, never a secret
   tools: { visible: number; unknown: number; unknownNames: string[] } // the tavily server's tools OpenCode lists
   websearchDefault: boolean   // the plugin chose Tavily; opencode.json can still override it
-  host: { version: string; tested: boolean }
-  unguardedAgents?: string[]  // agents without the default rules
-  permissionsBlock?: Rule[]   // the block to paste, with unguardedAgents
+  host: { version: string | null; range: string; tested: boolean } // tested: 2.2.3, 2.2.4 or 2.2.5
+  unguardedAgents: string[]   // agents without the default rules; empty when none
+  permissionsBlock?: Rule[]   // the block to paste, when unguardedAgents is not empty
   nextStep: string            // one next step; "Nothing to do." when ready
 }
 ```
 
-The plugin reads it from `ctx.mcp.list()`, `ctx.tool.list()`, `ctx.agent.list()`, `ctx.integration.connection.active()` and its own state. It holds no key or token. An agent counts as guarded when the block appears anywhere after its first base allow: other plugins insert their blocks at the same place. `unknownNames` lists at most 20 plain names.
+The plugin reads it from `ctx.mcp.list()`, `ctx.tool.list()`, `ctx.agent.list()`, `ctx.integration.connection.active()` and its own state. It holds no key or token. An agent counts as guarded when the block appears anywhere after its first base allow: other plugins insert their blocks at the same place. An agent is listed in `unguardedAgents` only when it has a base allow, lacks the block, and its own rules would let a new Tavily tool run without asking; one whose rules ask or deny for every Tavily tool needs no fix. `unknownNames` lists at most 20 plain names.
+
+`version`, `host`, `state`, `unguardedAgents` and `nextStep` are the fields every plugin of this family shares in its status RPC. `state` is the server's state; a release inside the range that is not a tested one changes only `host.tested` and the `OpenCode` row, never `state` or the next step. The plugin does not start outside the range unless `allowUntestedHost` is set, and then runs normally, so `state` is never `host_untested`.
 
 `/tavily-status` posts the text as a synthetic message with `resume: false`, so no model turn starts.
 
@@ -109,11 +115,21 @@ A call is `{ sessionID, input }`. The module:
 
 While a call runs, its id is live. A `permission.hook("evaluate")` turns an `ask` whose source id is live into a deny, so the script gets `PERMISSION_DENIED` at once and no prompt waits. It changes nothing else; this is the plugin's only `evaluate` hook, and the forbidden-API scan allows exactly this one.
 
-A `Tool.Error` with a cause is a permission refusal; one without a cause is Tavily's own error (`isError`), which becomes `UPSTREAM_ERROR` with its first line, at most 300 characters, with tokens and URL queries removed. Any other failure is OpenCode's own and passes through.
+A `Tool.Error` with a cause is a permission refusal; one without a cause is Tavily's own error (`isError`), which becomes `UPSTREAM_ERROR` with its first line, at most 300 characters, with tokens and URL queries removed. Tavily's error object in an ordinary result becomes `UPSTREAM_ERROR` too, in `shapeResult`, with Tavily's status and words redacted the same way and a next step for its status. Any other failure is OpenCode's own and passes through.
 
 OpenCode decodes a plain JSON Schema input with Effect, which drops unknown keys of an object that has properties instead of refusing them. So the envelope's schema carries a strict Standard Schema validator as a non-enumerable `~standard` property, which OpenCode prefers. The contract still reads and serialises as plain JSON Schema, and OpenCode answers a bad envelope with `rpc.invalid_input`.
 
-The executor does not run `execute.before` and `execute.after` hooks. Tavily has none, so results are unchanged.
+The executor does not run `execute.before` and `execute.after` hooks, so `shapeResult` does what the plugin's `execute.after` hook does for the model. Every other result is returned unchanged.
+
+## Tavily's error objects
+
+Tavily's hosted server answers some failures, such as its rate limit, as an ordinary result: `{"error":"Map failed","status":429,"detail":{"error":"…"},"documentation":"…"}`. A model or a script would read that as data. The plugin recognises an object with an integer `status` of 400 or more together with an `error`, in the result's structured content or as its whole text (`src/tavily-error.ts`):
+
+- **For the model**, an `execute.after` hook on `tavily_*` tools replaces such a result with `UPSTREAM_ERROR: tavily_<tool> failed: Tavily answered with error <status>: <Tavily's words>. This is an error from Tavily, not a result. Next step: …`. The host test checks it inside Code Mode, OpenCode's default.
+- **For scripts**, `shapeResult` gives the same error as `UPSTREAM_ERROR`.
+- The next step depends on the status: 429, wait and retry, then check the plan and key; 432 and 433, the plan's limits; 401, `/tavily-status`; 5xx, wait and retry; any other, the input.
+
+Every other result, successful or not, is left exactly as it is.
 
 ## Terminal UI
 
@@ -169,7 +185,7 @@ The links point to the OpenCode source at tag `v2.2.3`.
 | OpenCode ships the `tavily` web search provider and the `tavily` integration (named "Tavily", with `key` and `TAVILY_API_KEY` methods). The provider sends the key, or uses Tavily's keyless mode when there is none. | [`packages/core/src/plugin/websearch/tavily.ts`](https://github.com/anomalyco/opencode/blob/v2.2.3/packages/core/src/plugin/websearch/tavily.ts) |
 | The web search provider is the one chosen by the transforms. The user's stored first-use choice is used only when no transform chose one. | [`packages/core/src/websearch.ts`](https://github.com/anomalyco/opencode/blob/v2.2.3/packages/core/src/websearch.ts) |
 | The `websearch` setting in `opencode.json` is applied by OpenCode's own `opencode.config.websearch` plugin, which runs after package plugins. | [`packages/core/src/config/plugin/websearch.ts`](https://github.com/anomalyco/opencode/blob/v2.2.3/packages/core/src/config/plugin/websearch.ts) |
-| `ctx.integration.connection.active(id)` and `.resolve()` are public. A saved account wins over an environment connection. The package test checks it on stock 2.2.3 and 2.2.4. | [`packages/core/src/integration.ts`](https://github.com/anomalyco/opencode/blob/v2.2.3/packages/core/src/integration.ts) |
-| `ctx.tool.list()` returns each MCP tool with a callable `execute`, which checks `<server>_<tool>` with the agent's and the session's rules and saved approvals, and gives the `evaluate` hook the call's `source`. A deny is a `Tool.Error` with a cause; the server's `isError` is one without. `execute.before` and `execute.after` hooks do not run for it. Not documented as an entry point: the package test checks it on stock 2.2.3 and 2.2.4. | [`packages/core/src/tool/mcp.ts`](https://github.com/anomalyco/opencode/blob/v2.2.3/packages/core/src/tool/mcp.ts) |
-| An RPC input given as a Standard Schema is validated with it; a plain JSON Schema is decoded with Effect, which drops unknown keys of an object that has properties. The package test checks the envelope on stock 2.2.3 and 2.2.4. | `@opencode/core` 2.2.3, the RPC service's `parse` |
+| `ctx.integration.connection.active(id)` and `.resolve()` are public. A saved account wins over an environment connection. The package test checks it on stock 2.2.3, 2.2.4 and 2.2.5. | [`packages/core/src/integration.ts`](https://github.com/anomalyco/opencode/blob/v2.2.3/packages/core/src/integration.ts) |
+| `ctx.tool.list()` returns each MCP tool with a callable `execute`, which checks `<server>_<tool>` with the agent's and the session's rules and saved approvals, and gives the `evaluate` hook the call's `source`. A deny is a `Tool.Error` with a cause; the server's `isError` is one without. `execute.before` and `execute.after` hooks do not run for it. Not documented as an entry point: the package test checks it on stock 2.2.3, 2.2.4 and 2.2.5. | [`packages/core/src/tool/mcp.ts`](https://github.com/anomalyco/opencode/blob/v2.2.3/packages/core/src/tool/mcp.ts) |
+| An RPC input given as a Standard Schema is validated with it; a plain JSON Schema is decoded with Effect, which drops unknown keys of an object that has properties. The package test checks the envelope on stock 2.2.3, 2.2.4 and 2.2.5. | `@opencode/core` 2.2.3, the RPC service's `parse` |
 | A permission decline inside a Code Mode program becomes an error that the program can catch. | [`packages/core/src/codemode/tool.ts`](https://github.com/anomalyco/opencode/blob/v2.2.3/packages/core/src/codemode/tool.ts) |
