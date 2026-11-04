@@ -57,7 +57,7 @@ function start(fake: ReturnType<typeof host>, server: ServerState, check: { resu
   return { stream, stop: () => (controller.abort(), done) }
 }
 
-const oauth: ServerState = { key: undefined, userServer: false }
+const oauth: ServerState = { key: undefined, userServer: false, userServerAtTavily: false }
 
 describe("the Tavily MCP name in /connect", () => {
   test("names the server's OAuth integration, and names it again after OpenCode re-registers it", async () => {
@@ -79,7 +79,7 @@ describe("the Tavily MCP name in /connect", () => {
 
   test("leaves a user's own server and a key-only setup alone", async () => {
     for (const [fake, server] of [
-      [host(), { key: undefined, userServer: true }],
+      [host(), { key: undefined, userServer: true, userServerAtTavily: false }],
       [host({ oauth: false }), oauth],
     ] as const) {
       const watch = start(fake, server)
@@ -92,7 +92,7 @@ describe("the Tavily MCP name in /connect", () => {
 })
 
 describe("a rejected key in /connect", () => {
-  const connected: ServerState = { key: { key: "tvly-bad", source: "connected", label: "Tavily" }, userServer: false }
+  const connected: ServerState = { key: { key: "tvly-bad", source: "connected", label: "Tavily" }, userServer: false, userServerAtTavily: false }
 
   test("marks the Tavily entry sign-in required, and clears it once the server connects", async () => {
     const fake = host({ oauth: false, connection: keyConnection(), server: "needs_auth" })
@@ -144,7 +144,7 @@ describe("a rejected key in /connect", () => {
 
   test("never marks an environment key or OAuth", async () => {
     for (const [connection, server] of [
-      [envConnection(), { key: { key: "tvly-env", source: "env" }, userServer: false }],
+      [envConnection(), { key: { key: "tvly-env", source: "env" }, userServer: false, userServerAtTavily: false }],
       [undefined, oauth],
     ] as const) {
       const fake = host({ oauth: false, connection, server: "needs_auth" })

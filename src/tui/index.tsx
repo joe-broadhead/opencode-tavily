@@ -7,8 +7,8 @@ import {
   agentsText,
   authText,
   blockLines,
-  CONNECTION_LABELS,
   hostText,
+  STATE_LABELS,
   Tavily,
   terminalKeyText,
   toolsText,
@@ -26,13 +26,13 @@ type Tone = "success" | "warning" | "error"
 /** Wide enough for the longest label, "Agents without default rules". */
 const LABEL_WIDTH = 29
 
-const TONE: Record<Status["connection"], Tone> = {
+const TONE: Record<Status["state"], Tone> = {
   connected: "success",
-  pending: "warning",
-  needs_auth: "warning",
+  connecting: "warning",
+  sign_in_required: "warning",
   failed: "error",
   disabled: "warning",
-  not_registered: "error",
+  not_configured: "error",
 }
 
 /** Events after which the open dialog can be out of date: a reconnect, the server's state, agents, credentials. */
@@ -108,8 +108,8 @@ function StatusDialog(props: {
           <box flexDirection="column">
             <Row
               label="Connection"
-              value={CONNECTION_LABELS[status().connection]}
-              fg={tone(TONE[status().connection])}
+              value={STATE_LABELS[status().state]}
+              fg={tone(TONE[status().state])}
               muted={theme().text.muted}
             />
             <Row label="Account" value={accountText(status())} fg={theme().text.base} muted={theme().text.muted} />
@@ -133,7 +133,7 @@ function StatusDialog(props: {
             <Row
               label="Agents without default rules"
               value={agentsText(status())}
-              fg={status().unguardedAgents ? tone("warning") : theme().text.base}
+              fg={status().unguardedAgents.length > 0 ? tone("warning") : theme().text.base}
               muted={theme().text.muted}
             />
             <For each={blockLines(status().permissionsBlock ?? [])}>

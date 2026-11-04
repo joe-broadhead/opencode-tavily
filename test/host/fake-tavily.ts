@@ -2,8 +2,9 @@
 // server does. It stands in for a user's own `tavily` server, for Tavily in the drift check's test, and, with
 // `requireAuth`, for Tavily itself: like Tavily, it answers 401 without an Authorization header, accepts any bearer
 // token at `initialize`, and answers Tavily's `GET /usage` key check. A `tools/call` answers with the tool's name and
-// query as structured content and text, or, for a query that starts with "fail", with an upstream error (`isError`)
-// whose first line holds a signed URL.
+// query as structured content and text; for a query that starts with "fail", with an upstream error (`isError`)
+// whose first line holds a signed URL; and for a query that starts with "limit", with Tavily's own error object as an
+// ordinary result, as Tavily's hosted server answers a rate limit.
 import { createServer, type IncomingMessage } from "node:http"
 import type { AddressInfo } from "node:net"
 import type { CatalogTool } from "./catalog.js"
@@ -47,6 +48,14 @@ type Message = {
   params?: { protocolVersion?: string; name?: string; arguments?: { query?: unknown } }
 }
 
+/** Tavily's error object, as its hosted server answered a rate-limited `tavily_map` on 2026-11-04. */
+export const RATE_LIMITED = {
+  error: "Map failed",
+  status: 429,
+  detail: { error: "Your request has been blocked due to excessive requests. Verify you are using production API keys." },
+  documentation: "https://docs.tavily.com/documentation/rate-limits",
+}
+
 /** The upstream error a "fail" query gets: two lines, the first with a signed URL. */
 export const UPSTREAM_FAILURE = "Invalid request for https://files.example.invalid/a.pdf?X-Amz-Signature=fake-signature-123\nTraceback: second line"
 
@@ -67,6 +76,7 @@ export async function startFakeTavily(tools: readonly CatalogTool[], options: Fa
         const name = message.params?.name
         const query = String(message.params?.arguments?.query ?? "")
         if (query.startsWith("fail")) return reply({ content: [{ type: "text", text: UPSTREAM_FAILURE }], isError: true })
+        if (query.startsWith("limit")) return reply({ content: [{ type: "text", text: JSON.stringify(RATE_LIMITED) }], structuredContent: RATE_LIMITED })
         return reply({ content: [{ type: "text", text: `${name}: ${query}` }], structuredContent: { tool: name, query } })
       }
       default:

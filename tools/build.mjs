@@ -33,6 +33,8 @@ const solidJsx = {
   },
 }
 
+const { version } = JSON.parse(await readFile(new URL("package.json", `file://${ROOT}`), "utf8"))
+
 await rm(new URL("dist/", `file://${ROOT}`), { recursive: true, force: true })
 const result = await build({
   absWorkingDir: ROOT,
@@ -46,6 +48,8 @@ const result = await build({
   external: HOST,
   plugins: [solidJsx],
   legalComments: "none",
+  // src/version.ts: the version lives only in package.json.
+  define: { __PLUGIN_VERSION__: JSON.stringify(version) },
   metafile: true,
   logLevel: "warning",
 })

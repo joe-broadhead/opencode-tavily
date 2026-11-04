@@ -1,21 +1,22 @@
 import type { Plugin } from "@opencode/plugin"
 import type { TavilyKey } from "./credential.js"
-import type { HostCheck } from "./host-version.js"
+import { HOST_RANGE, TESTED_TEXT, type HostCheck } from "./host-version.js"
 import type { KeyCheck, KeyChecker } from "./key-check.js"
-import { SERVER_NAME, type ServerState } from "./mcp.js"
-import { DEFAULT_RULES, evaluate, hasDefaultRules, KNOWN_READS, type Rule } from "./permissions.js"
+import { SERVER_NAME, SERVER_URL, type ServerState } from "./mcp.js"
+import { DEFAULT_RULES, isUnguarded, KNOWN_READS, type Rule } from "./permissions.js"
 import {
   ACCESS_TEXT,
   accountText,
   agentsText,
   authText,
   blockLines,
-  CONNECTION_LABELS,
   hostText,
+  STATE_LABELS,
   toolsText,
   websearchText,
   type Status,
 } from "./rpc/index.js"
+import { PLUGIN_VERSION } from "./version.js"
 import type { WebsearchState } from "./websearch.js"
 
 /**
@@ -26,10 +27,29 @@ import type { WebsearchState } from "./websearch.js"
 const AGENT_FIX =
   "Put the block first in each listed agent's own permissions, in opencode.json or the agent's Markdown file, followed by your top-level permissions rules for tavily_* actions."
 
+/**
+ * The tools RPC calls only a server the plugin can vouch for: its own, or the user's own at Tavily's URL. Any other
+ * server named `tavily` may be anything, so scripts get SERVER_CONFLICT.
+ */
+const USER_SERVER_SCRIPTS = `Scripts can't use your own tavily server, because its URL is not Tavily's (${SERVER_URL}); point it at that URL, or remove it from opencode.json, to use the tools RPC.`
+
+/** OpenCode's state of an MCP server. */
+type ServerStatus = "connected" | "pending" | "needs_auth" | "failed" | "disabled"
+
+const STATE_OF: Record<ServerStatus, Status["state"]> = {
+  connected: "connected",
+  pending: "connecting",
+  needs_auth: "sign_in_required",
+  failed: "failed",
+  disabled: "disabled",
+}
+
 /** Everything status depends on, gathered from public host APIs and the plugin's own state. */
 export interface StatusFacts {
-  readonly server?: { readonly status: Exclude<Status["connection"], "not_registered"> }
+  readonly server?: { readonly status: ServerStatus }
   readonly userServer: boolean
+  /** The user's own server is at Tavily's URL, so scripts can use it. */
+  readonly userServerAtTavily: boolean
   readonly key?: TavilyKey
   /** Tavily's answer for `key`. */
   readonly keyCheck?: KeyCheck
@@ -61,19 +81,19 @@ function authOf(facts: StatusFacts): Status["auth"] {
   return facts.key.source === "env" ? "key_env" : "key_connected"
 }
 
-function nextStepOf(connection: Status["connection"], auth: Status["auth"], facts: StatusFacts, unguarded: string[]) {
+function nextStepOf(state: Status["state"], auth: Status["auth"], facts: StatusFacts, unguarded: string[]) {
   const replaceKey =
     auth === "key_env"
       ? `run /connect, choose Tavily and connect a working key (it wins over TAVILY_API_KEY), or replace TAVILY_API_KEY with "opencode service set env TAVILY_API_KEY <key>"`
       : "run /connect, choose Tavily and replace the key"
-  switch (connection) {
-    case "not_registered":
+  switch (state) {
+    case "not_configured":
       return `Check that no other plugin or policy removes the "tavily" MCP server, then run "opencode reload".`
     case "disabled":
       return `Enable the tavily server in /mcps, or remove "disabled": true from mcp.servers.tavily in opencode.json.`
-    case "pending":
+    case "connecting":
       return `Wait a few seconds, then run /tavily-status again.`
-    case "needs_auth":
+    case "sign_in_required":
       if (auth === "oauth") return `Run /connect and choose Tavily MCP to sign in, or choose Tavily to use an API key.`
       if (auth === "user_server") return `Run /connect and choose tavily to sign in to your own server.`
       return `Tavily did not accept the API key: ${replaceKey}.`
@@ -84,30 +104,30 @@ function nextStepOf(connection: Status["connection"], auth: Status["auth"], fact
   if (facts.keyCheck === "rejected" && (auth === "key_env" || auth === "key_connected"))
     return `Tavily did not accept the API key: ${replaceKey}.`
   if (unguarded.length > 0) return AGENT_FIX
-  if (!facts.host.tested) return `If Tavily misbehaves, use OpenCode 2.2.3 or a later 2.2 release.`
+  if (auth === "user_server" && !facts.userServerAtTavily) return USER_SERVER_SCRIPTS
+  // An untested release inside the range changes nothing; outside it, the plugin runs only with allowUntestedHost.
+  if (!facts.host.inRange) return `If Tavily misbehaves, use OpenCode ${TESTED_TEXT}.`
   return "Nothing to do."
 }
 
 export function buildStatus(facts: StatusFacts): Status {
-  const connection = facts.server?.status ?? "not_registered"
+  const state = facts.server ? STATE_OF[facts.server.status] : "not_configured"
   const auth = authOf(facts)
   const account = auth === "key_connected" ? facts.key?.label : auth === "key_env" ? undefined : facts.oauthAccount
-  const unguarded = facts.agents
-    .filter((agent) => !hasDefaultRules(agent.permissions) && evaluate(agent.permissions, "tavily_unknown") === "allow")
-    .map((agent) => agent.id)
-  const nextStep = nextStepOf(connection, auth, facts, unguarded)
+  const unguarded = facts.agents.filter((agent) => isUnguarded(agent.permissions)).map((agent) => agent.id)
+  const nextStep = nextStepOf(state, auth, facts, unguarded)
   const keyCheck = auth === "key_env" || auth === "key_connected" ? facts.keyCheck : undefined
   return {
-    connection,
+    version: PLUGIN_VERSION,
+    state,
     auth,
     ...(account === undefined ? {} : { account }),
     ...(keyCheck === undefined ? {} : { keyCheck }),
     tools: toolsOf(facts),
     websearchDefault: facts.websearchDefault,
-    host: { version: facts.host.version, tested: facts.host.tested },
-    ...(unguarded.length === 0
-      ? {}
-      : { unguardedAgents: unguarded, permissionsBlock: DEFAULT_RULES.map((rule) => ({ ...rule })) }),
+    host: { version: facts.host.version, range: HOST_RANGE, tested: facts.host.tested },
+    unguardedAgents: unguarded,
+    ...(unguarded.length === 0 ? {} : { permissionsBlock: DEFAULT_RULES.map((rule) => ({ ...rule })) }),
     nextStep,
   }
 }
@@ -144,6 +164,7 @@ export async function readStatus(
   return buildStatus({
     server: server && { status: server.status.status },
     userServer: state.server.userServer,
+    userServerAtTavily: state.server.userServerAtTavily,
     key,
     keyCheck: keyCheck || undefined,
     oauthAccount: connection?.type === "credential" ? connection.label : undefined,
@@ -158,7 +179,7 @@ export async function readStatus(
 export function formatStatus(status: Status) {
   return [
     "Tavily status",
-    `- Connection: ${CONNECTION_LABELS[status.connection]}`,
+    `- Connection: ${STATE_LABELS[status.state]}`,
     `- Account: ${accountText(status)}`,
     `- Access: ${ACCESS_TEXT}`,
     `- Sign-in: ${authText(status)}`,

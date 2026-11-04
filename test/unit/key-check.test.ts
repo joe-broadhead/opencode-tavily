@@ -53,11 +53,13 @@ describe("keyChecker", () => {
 
 describe("terminalKeyText", () => {
   const status = (auth: Status["auth"]): Status => ({
-    connection: "connected",
+    version: "0.0.0",
+    state: "connected",
     auth,
     tools: { visible: 5, unknown: 0, unknownNames: [] },
     websearchDefault: true,
-    host: { version: "2.2.3", tested: true },
+    host: { version: "2.2.3", range: ">=2.2.3 <2.3.0", tested: true },
+    unguardedAgents: [],
     nextStep: "Nothing to do.",
   })
 

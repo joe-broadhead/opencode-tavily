@@ -28,6 +28,7 @@ import { Rpc } from "@opencode/plugin/rpc"
 
 import { SERVER_NAME } from "../mcp.js"
 import { KNOWN_READS as READ_ACTIONS } from "../permissions.js"
+import { tavilyErrorIn, tavilyErrorLine, type TavilyError } from "../tavily-error.js"
 
 /** The plugin's id. The RPC id is `<PLUGIN_ID>.tools`. */
 export const PLUGIN_ID = "tavily.web"
@@ -39,8 +40,22 @@ export const PLUGIN_ID = "tavily.web"
  */
 export const KNOWN_READS: readonly string[] = READ_ACTIONS.map((action) => action.slice(`${SERVER_NAME}_`.length))
 
-/** What the model path's `execute.after` hooks do to a result, which the executor skips. Tavily has no such hook. */
-export function shapeResult(_method: string, result: McpResult): McpResult {
+/** Tavily's error object in a result, which `shapeResult` throws so that `pluginError` names it. */
+class TavilyResultError extends Error {
+  readonly failure: Failure
+  constructor(method: string, error: TavilyError) {
+    super(error.message)
+    this.failure = { code: "UPSTREAM_ERROR", what: `${SERVER_NAME}_${method} failed: ${upstreamText(tavilyErrorLine(error))}`, next: error.next }
+  }
+}
+
+/**
+ * What the model path's `execute.after` hook does (src/tavily-error.ts), which the executor skips: Tavily's error
+ * object, which its server answers as a result, becomes UPSTREAM_ERROR. Every other result is returned as it is.
+ */
+export function shapeResult(method: string, result: McpResult): McpResult {
+  const error = tavilyErrorIn(result.output, result.text)
+  if (error) throw new TavilyResultError(method, error)
   return result
 }
 
@@ -50,7 +65,7 @@ export const NEXT_STEPS: NextSteps = {
   SESSION_AGENT_REQUIRED: `Create a session that names an agent, such as POST /api/session with {"agent":"build"}, and pass its id.`,
   PERMISSION_DENIED: "Add an allow rule for the tool to the session's agent or to the session, or use a session whose agent allows it.",
   SERVER_CONFLICT: `Remove your own "tavily" server from opencode.json so that the plugin manages it, then run "opencode reload".`,
-  AUTH_REQUIRED: "Run /connect and choose Tavily to connect an API key, or Tavily MCP to sign in.",
+  AUTH_REQUIRED: "Run /connect and choose Tavily MCP to sign in, or choose Tavily to use an API key.",
   CONNECTING: "Wait a few seconds, then call the method again.",
   CONNECTION_FAILED: "Run /tavily-status and follow its next step.",
   DISABLED: `Enable the tavily server in /mcps, or remove "disabled": true from mcp.servers.tavily in opencode.json.`,
@@ -60,9 +75,9 @@ export const NEXT_STEPS: NextSteps = {
   CANCELLED: "Call the method again if you still need the result.",
 }
 
-/** The plugin's own errors, thrown by plugin-owned specs, as a code, what happened and the next step. Tavily has none. */
-export function pluginError(_error: unknown): Failure | undefined {
-  return undefined
+/** The plugin's own errors as a code, what happened and the next step: only Tavily's error object, from `shapeResult`. */
+export function pluginError(error: unknown): Failure | undefined {
+  return error instanceof TavilyResultError ? error.failure : undefined
 }
 
 // <<< PLUGIN-SPECIFIC <<<

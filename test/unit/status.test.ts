@@ -21,10 +21,15 @@ import {
   type McpServer,
 } from "./fake.js"
 import type { Plugin } from "@opencode/plugin"
+import pkg from "../../package.json" with { type: "json" }
 
 const BASE: Rule = { action: "*", resource: "*", effect: "allow" }
 const guarded = { id: "build", permissions: [BASE, ...DEFAULT_RULES] }
-const HOST = { version: "2.2.3", tested: true }
+/** The host check for a tested release, and the same host as status reports it. */
+const CHECK = { version: "2.2.3", tested: true, inRange: true }
+const HOST = { version: "2.2.3", range: ">=2.2.3 <2.3.0", tested: true }
+const USER_SERVER_SCRIPTS =
+  "Scripts can't use your own tavily server, because its URL is not Tavily's (https://mcp.tavily.com/mcp/); point it at that URL, or remove it from opencode.json, to use the tools RPC."
 const KNOWN = ["search", "extract", "map", "crawl", "research"].map((name) => ({ id: `tavily_tavily_${name}` }))
 const FIVE = { visible: 5, unknown: 0, unknownNames: [] }
 const NONE = { visible: 0, unknown: 0, unknownNames: [] }
@@ -33,9 +38,10 @@ const ENV_REPLACE = `run /connect, choose Tavily and connect a working key (it w
 const facts = (overrides: Partial<StatusFacts> = {}): StatusFacts => ({
   server: { status: "connected" },
   userServer: false,
+  userServerAtTavily: false,
   tools: KNOWN,
   websearchDefault: true,
-  host: HOST,
+  host: CHECK,
   agents: [guarded],
   ...overrides,
 })
@@ -43,12 +49,14 @@ const facts = (overrides: Partial<StatusFacts> = {}): StatusFacts => ({
 describe("buildStatus", () => {
   test("connected through OAuth is ready, with the account label", () => {
     expect(buildStatus(facts({ oauthAccount: "jo@example.com" }))).toEqual({
-      connection: "connected",
+      version: pkg.version,
+      state: "connected",
       auth: "oauth",
       account: "jo@example.com",
       tools: FIVE,
       websearchDefault: true,
       host: HOST,
+      unguardedAgents: [],
       nextStep: "Nothing to do.",
     })
   })
@@ -75,7 +83,7 @@ describe("buildStatus", () => {
 
   test("a rejected key is the next step even while the server shows connected", () => {
     const connected = buildStatus(facts({ key: { key: "k", source: "connected", label: "Tavily" }, keyCheck: "rejected" }))
-    expect(connected).toMatchObject({ connection: "connected", auth: "key_connected", keyCheck: "rejected" })
+    expect(connected).toMatchObject({ state: "connected", auth: "key_connected", keyCheck: "rejected" })
     expect(connected.nextStep).toBe("Tavily did not accept the API key: run /connect, choose Tavily and replace the key.")
     // Before the agents' fix: a key that does not work blocks every tool.
     const unguarded = buildStatus(facts({ key: { key: "k", source: "env" }, keyCheck: "rejected", agents: [{ id: "reviewer", permissions: [BASE] }] }))
@@ -91,6 +99,19 @@ describe("buildStatus", () => {
   test("a user's own server is reported, whatever key exists", () => {
     const status = buildStatus(facts({ userServer: true, key: { key: "tvly-secret", source: "env" }, oauthAccount: "me" }))
     expect(status).toMatchObject({ auth: "user_server", account: "me" })
+  })
+
+  test("a user's own server at another URL: status says scripts can't use it, and why", () => {
+    expect(buildStatus(facts({ userServer: true })).nextStep).toBe(USER_SERVER_SCRIPTS)
+    // Sign-in and the agents' fix come first.
+    expect(buildStatus(facts({ userServer: true, server: { status: "needs_auth" } })).nextStep).toBe(
+      "Run /connect and choose tavily to sign in to your own server.",
+    )
+    expect(buildStatus(facts({ userServer: true, agents: [{ id: "reviewer", permissions: [BASE] }] })).nextStep).toStartWith("Put the block first")
+  })
+
+  test("a user's own server at Tavily's URL serves scripts: nothing to do", () => {
+    expect(buildStatus(facts({ userServer: true, userServerAtTavily: true })).nextStep).toBe("Nothing to do.")
   })
 
   test("needs sign-in, for each auth source", () => {
@@ -124,7 +145,7 @@ describe("buildStatus", () => {
       `Enable the tavily server in /mcps, or remove "disabled": true from mcp.servers.tavily in opencode.json.`,
     )
     const missing = buildStatus(facts({ server: undefined }))
-    expect(missing).toMatchObject({ connection: "not_registered", auth: "none" })
+    expect(missing).toMatchObject({ state: "not_configured", auth: "none" })
     expect(missing.nextStep).toBe(
       `Check that no other plugin or policy removes the "tavily" MCP server, then run "opencode reload".`,
     )
@@ -157,13 +178,37 @@ describe("buildStatus", () => {
     // The host's order for a config-only agent: the base rules, the top-level rules, then the agent's own rules.
     const topLevel = { action: "tavily_tavily_research", resource: "*", effect: "ask" } as const
     const fixed = { id: "reviewer", permissions: [BASE, { action: "read", resource: "*.env", effect: "ask" } as const, topLevel, ...DEFAULT_RULES, topLevel] }
-    expect(buildStatus(facts({ agents: [fixed] }))).not.toHaveProperty("unguardedAgents")
+    const status = buildStatus(facts({ agents: [fixed] }))
+    expect(status.unguardedAgents).toEqual([])
+    expect(status).not.toHaveProperty("permissionsBlock")
   })
 
-  test("an untested host is reported once everything else is ready", () => {
-    const status = buildStatus(facts({ host: { version: "3.0.0", tested: false } }))
-    expect(status.host).toEqual({ version: "3.0.0", tested: false })
-    expect(status.nextStep).toBe("If Tavily misbehaves, use OpenCode 2.2.3 or a later 2.2 release.")
+  test("an agent whose own rules ask or deny for every Tavily tool needs no fix, and isn't listed", () => {
+    const asks = { id: "perf-probe", permissions: [BASE, { action: "*", resource: "*", effect: "ask" } as const] }
+    const denies = { id: "locked", permissions: [BASE, { action: "tavily_*", resource: "*", effect: "deny" } as const] }
+    const allows = { id: "smoke-bot", permissions: [BASE, { action: "*", resource: "*", effect: "allow" } as const] }
+    expect(buildStatus(facts({ agents: [asks, denies, allows] })).unguardedAgents).toEqual(["smoke-bot"])
+  })
+
+  test("an agent without a base allow gets no block, so it is never listed, even when its rules allow Tavily", () => {
+    const own = { id: "researcher", permissions: [{ action: "tavily_*", resource: "*", effect: "allow" } as const] }
+    expect(buildStatus(facts({ agents: [own] })).unguardedAgents).toEqual([])
+  })
+
+  test("an untested release inside the range runs normally: same state and next step, host.tested false", () => {
+    const status = buildStatus(facts({ host: { version: "2.2.6", tested: false, inRange: true } }))
+    expect(status).toMatchObject({ state: "connected", host: { version: "2.2.6", range: ">=2.2.3 <2.3.0", tested: false } })
+    expect(status.nextStep).toBe("Nothing to do.")
+    expect(formatStatus(status)).toContain("- OpenCode: 2.2.6 (untested; supported range >=2.2.3 <2.3.0)\n")
+  })
+
+  test("a host outside the range, run with allowUntestedHost, is reported once everything else is ready", () => {
+    const status = buildStatus(facts({ host: { version: "3.0.0", tested: false, inRange: false } }))
+    expect(status).toMatchObject({ state: "connected", host: { version: "3.0.0", range: ">=2.2.3 <2.3.0", tested: false } })
+    expect(status.nextStep).toBe("If Tavily misbehaves, use OpenCode 2.2.3, 2.2.4 or 2.2.5.")
+    const unknown = buildStatus(facts({ host: { version: null, tested: false, inRange: false } }))
+    expect(unknown.host.version).toBeNull()
+    expect(formatStatus(unknown)).toContain("- OpenCode: unknown version (untested; supported range >=2.2.3 <2.3.0)\n")
   })
 
   test("never carries the key", () => {
@@ -182,9 +227,9 @@ describe("readStatus", () => {
   const checked: string[] = []
   const checkKey = async (key: string) => (checked.push(key), "rejected" as const)
   const state = {
-    server: { key: undefined, userServer: false },
+    server: { key: undefined, userServer: false, userServerAtTavily: false },
     websearch: { tavilyDefault: true },
-    host: HOST,
+    host: CHECK,
     checkKey,
   }
 
@@ -200,7 +245,7 @@ describe("readStatus", () => {
       state,
     )
     expect(status).toMatchObject({
-      connection: "connected",
+      state: "connected",
       auth: "oauth",
       account: "jo@example.com",
       tools: { visible: 6, unknown: 1, unknownNames: ["tavily_feedback"] },
@@ -220,7 +265,7 @@ describe("readStatus", () => {
       },
       state,
     )
-    expect(status).toMatchObject({ connection: "needs_auth", auth: "oauth" })
+    expect(status).toMatchObject({ state: "sign_in_required", auth: "oauth" })
     expect(status).not.toHaveProperty("account")
   })
 
@@ -233,15 +278,19 @@ describe("readStatus", () => {
       tool,
     }
     const key = { key: "tvly-k", source: "env" } as const
-    expect(await readStatus(ctx, { ...state, server: { key, userServer: false } })).toMatchObject({ keyCheck: "rejected" })
+    expect(await readStatus(ctx, { ...state, server: { key, userServer: false, userServerAtTavily: false } })).toMatchObject({ keyCheck: "rejected" })
     expect(checked).toEqual(["tvly-k"])
-    expect(await readStatus(ctx, { ...state, server: { key, userServer: true } })).not.toHaveProperty("keyCheck")
+    expect(await readStatus(ctx, { ...state, server: { key, userServer: true, userServerAtTavily: false } })).not.toHaveProperty("keyCheck")
     expect(await readStatus(ctx, state)).not.toHaveProperty("keyCheck")
     expect(checked).toEqual(["tvly-k"])
   })
 
   test("reports the key it checked, when the key switches during the read", async () => {
-    const server: { key: TavilyKey | undefined; userServer: boolean } = { key: { key: "tvly-old", source: "connected", label: "Old" }, userServer: false }
+    const server: { key: TavilyKey | undefined; userServer: boolean; userServerAtTavily: boolean } = {
+      key: { key: "tvly-old", source: "connected", label: "Old" },
+      userServer: false,
+      userServerAtTavily: false,
+    }
     const switching = async () => {
       server.key = { key: "tvly-new", source: "env" }
       return "rejected" as const
@@ -256,14 +305,15 @@ describe("readStatus", () => {
       { mcp: server({ name: "other", status: { status: "connected" } }), integration: integration({}).domain, agent: agents([]), tool },
       state,
     )
-    expect(status.connection).toBe("not_registered")
+    expect(status.state).toBe("not_configured")
   })
 })
 
 describe("formatStatus", () => {
   test("renders every field in the view's order, with the block to paste", () => {
     const status: Status = {
-      connection: "needs_auth",
+      version: "0.0.0",
+      state: "sign_in_required",
       auth: "oauth",
       tools: { visible: 6, unknown: 1, unknownNames: ["tavily_feedback"] },
       websearchDefault: true,
@@ -292,17 +342,29 @@ describe("formatStatus", () => {
 
   test("a ready status ends with one next step: Nothing to do.", () => {
     const text = formatStatus({
-      connection: "connected",
+      version: "0.0.0",
+      state: "connected",
       auth: "key_connected",
       account: "Tavily",
       tools: NONE,
       websearchDefault: false,
       host: HOST,
+      unguardedAgents: [],
       nextStep: "Nothing to do.",
     })
     expect(text).toContain("- Account: Tavily")
     expect(text).toContain("- Sign-in: API key (/connect → Tavily)\n")
-    const rejected: Status = { connection: "connected", auth: "key_env", keyCheck: "rejected", tools: NONE, websearchDefault: true, host: HOST, nextStep: "x" }
+    const rejected: Status = {
+      version: "0.0.0",
+      state: "connected",
+      auth: "key_env",
+      keyCheck: "rejected",
+      tools: NONE,
+      websearchDefault: true,
+      host: HOST,
+      unguardedAgents: [],
+      nextStep: "x",
+    }
     expect(formatStatus(rejected)).toContain("- Sign-in: API key from TAVILY_API_KEY, rejected by Tavily\n")
     expect(text).toContain("- Tools: none listed yet")
     expect(text).toContain("- Web search: not set by this plugin")
@@ -333,7 +395,16 @@ describe("/tavily-status", () => {
   }
 
   test("posts the status as a synthetic message without starting a model turn", async () => {
-    const ready: Status = { connection: "connected", auth: "oauth", tools: FIVE, websearchDefault: true, host: HOST, nextStep: "Nothing to do." }
+    const ready: Status = {
+      version: "0.0.0",
+      state: "connected",
+      auth: "oauth",
+      tools: FIVE,
+      websearchDefault: true,
+      host: HOST,
+      unguardedAgents: [],
+      nextStep: "Nothing to do.",
+    }
     const { added, posted } = await command(async () => ready)
     expect(added.map((definition) => definition.name)).toEqual(["tavily-status"])
     await added[0]?.execute({ sessionID: "ses_1" as never, prompt: { text: "" }, delivery: "steer" })
