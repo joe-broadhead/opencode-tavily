@@ -326,6 +326,7 @@ describe(`user config on ${HOST}`, () => {
     expect(await script(host, "tavily_search", { sessionID: await session(host, "build"), input: { query: "q" } })).toMatchObject({
       type: "failed",
       code: "SERVER_CONFLICT",
+      message: expect.stringContaining(`Next step: Remove your own "tavily" server from opencode.json so that the plugin manages it, then run "opencode reload".`),
     })
     expect(fake.requests.slice(from).filter((request) => request.method === "tools/call")).toEqual([])
   })
