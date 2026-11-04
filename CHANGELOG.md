@@ -4,6 +4,12 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+### Fixed
+
+- Tavily's 403 now gets the sign-in next step, as its 401 does: `/tavily-status` already counts a 403 as a rejected key, and the old "check the input" advice sent the model the wrong way.
+- Tavily's plan and usage limits (432, 433) no longer say "then retry": the next step now says a retry fails until the limit resets or the plan changes.
+- The docs describe a wrong key as it arrives, an `UPSTREAM_ERROR` with Tavily's 401, and list `UPSTREAM_ERROR` among the plugin's errors in the README and `docs/configuration.md`.
+
 ### Changed
 
 - Tools RPC: a `PERMISSION_DENIED` from a deny rule names the denied action, such as `tavily_tavily_search`, and its next step says to remove or narrow that deny rule, or add a later allow rule to the session.

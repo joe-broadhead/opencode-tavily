@@ -9,6 +9,14 @@ const RATE_LIMITED = {
   documentation: "https://docs.tavily.com/documentation/rate-limits",
 }
 
+/** Tavily's answer to `tools/call` with a wrong key, as it arrived live on 2026-11-05: `isError: false`, the object in both. */
+const WRONG_KEY = {
+  error: "Search failed",
+  status: 401,
+  detail: { error: "Unauthorized: missing or invalid API key." },
+  documentation: "https://docs.tavily.com/documentation/api-reference/introduction",
+}
+
 describe("Tavily's error object", () => {
   test("is a numeric status of 400 or more together with an error, with Tavily's words and a next step", () => {
     expect(tavilyErrorOf(RATE_LIMITED)).toEqual({
@@ -22,9 +30,11 @@ describe("Tavily's error object", () => {
 
   test.each([
     [401, "Run /tavily-status and follow its next step to sign in again or replace the key."],
-    [403, "Check the input against the tool's schema, then retry with a corrected input."],
-    [432, "Check your Tavily plan's usage and limits at https://app.tavily.com, then retry."],
-    [433, "Check your Tavily plan's usage and limits at https://app.tavily.com, then retry."],
+    // Tavily's /usage check also counts 403 as a rejected key (src/key-check.ts).
+    [403, "Run /tavily-status and follow its next step to sign in again or replace the key."],
+    [400, "Check the input against the tool's schema, then retry with a corrected input."],
+    [432, "Check your Tavily plan's usage and limits at https://app.tavily.com; a retry fails until the limit resets or the plan changes."],
+    [433, "Check your Tavily plan's usage and limits at https://app.tavily.com; a retry fails until the limit resets or the plan changes."],
     [500, "Wait a minute, then retry; Tavily had a problem on its side."],
   ])("status %d gets its own next step", (status, next) => {
     expect(tavilyErrorOf({ error: "x", status })?.next).toBe(next)
@@ -41,6 +51,12 @@ describe("Tavily's error object", () => {
     ["null", null],
   ])("%s is not one", (_name, value) => {
     expect(tavilyErrorOf(value)).toBeUndefined()
+  })
+
+  test("a wrong key, as Tavily's server answers it, is a 401 with the sign-in next step, in structured content and in text", () => {
+    const model = "UPSTREAM_ERROR: tavily_tavily_search failed: Tavily answered with error 401: Search failed: Unauthorized: missing or invalid API key. This is an error from Tavily, not a result. Next step: Run /tavily-status and follow its next step to sign in again or replace the key."
+    expect(modelText("tavily_tavily_search", tavilyErrorIn(WRONG_KEY, JSON.stringify(WRONG_KEY))!)).toBe(model)
+    expect(modelText("tavily_tavily_search", tavilyErrorIn(undefined, JSON.stringify(WRONG_KEY))!)).toBe(model)
   })
 
   test("is found in structured content, or in text that is exactly one JSON object", () => {

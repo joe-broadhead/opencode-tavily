@@ -127,7 +127,7 @@ Tavily's hosted server answers some failures, such as its rate limit, as an ordi
 
 - **For the model**, an `execute.after` hook on `tavily_*` tools replaces such a result with `UPSTREAM_ERROR: tavily_<tool> failed: Tavily answered with error <status>: <Tavily's words>. This is an error from Tavily, not a result. Next step: …`. The host test checks it inside Code Mode, OpenCode's default.
 - **For scripts**, `shapeResult` gives the same error as `UPSTREAM_ERROR`.
-- The next step depends on the status: 429, wait and retry, then check the plan and key; 432 and 433, the plan's limits; 401, `/tavily-status`; 5xx, wait and retry; any other, the input.
+- The next step depends on the status: 429, wait and retry, then check the plan and key; 432 and 433, the plan's limits, where a retry fails; 401 and 403, `/tavily-status`; 5xx, wait and retry; any other, the input.
 
 Every other result, successful or not, is left exactly as it is.
 

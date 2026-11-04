@@ -137,13 +137,13 @@ Run `/tavily-status` first. It always ends with one next step, `Nothing to do.` 
 | `disabled` | Enable `tavily` in `/mcps`, or remove `"disabled": true` from `mcp.servers.tavily` in `opencode.json`. |
 | `not configured` | Another plugin or a policy removed the `tavily` server. Remove that, then run `opencode reload`. |
 
-Sign-in `…, rejected by Tavily` means that Tavily does not accept the key, though the connection shows `connected`: every tool call answers `Unauthorized: missing or invalid API key`. Replace the key in `/connect` → **Tavily**, which shows "Sign in required" meanwhile, or replace `TAVILY_API_KEY` for the OpenCode server.
+Sign-in `…, rejected by Tavily` means that Tavily does not accept the key, though the connection shows `connected`: every tool call fails with `UPSTREAM_ERROR: … Tavily answered with error 401: … Unauthorized: missing or invalid API key`. Replace the key in `/connect` → **Tavily**, which shows "Sign in required" meanwhile, or replace `TAVILY_API_KEY` for the OpenCode server.
 
 Sign-in `OAuth` although you set `TAVILY_API_KEY` means that the variable is in your shell but not in the OpenCode server's environment. The **Tavily: Status** dialog then shows a **Terminal key** row. Run `/connect` and choose **Tavily** to connect the key, or see [TAVILY_API_KEY and the background service](https://github.com/joe-broadhead/opencode-tavily/blob/HEAD/docs/configuration.md#tavily_api_key-and-the-background-service).
 
 Sign-in `your own tavily server in opencode.json` means that your config already defines an MCP server named `tavily`. The plugin leaves it unchanged; its key handling and timeout do not apply to it, but the permission block does. Scripts can use it only when its `url` is Tavily's, `https://mcp.tavily.com/mcp/`: the tools RPC calls no other server, and answers `SERVER_CONFLICT`. Status then says so in its next step. Point the server at that URL, or remove it from `opencode.json`, to use the tools RPC.
 
-A 401 from a Tavily tool, or `Unauthorized: missing or invalid API key` in its result, means the sign-in expired or the key is wrong. A 429 is Tavily's rate limit; 432 and 433 are your plan's limits. Tavily's server sends some of these as an ordinary result, an object such as `{"error":"Map failed","status":429,…}`. The plugin turns that into an `UPSTREAM_ERROR` with a next step, for the model and for scripts. It does not retry.
+A 401 or 403 from a Tavily tool means the sign-in expired or the key is wrong. A 429 is Tavily's rate limit; 432 and 433 are your plan's limits. Tavily's server sends some of these as an ordinary result, an object such as `{"error":"Map failed","status":429,…}`. The plugin turns that into an `UPSTREAM_ERROR` with a next step, for the model and for scripts. It does not retry.
 
 The plugin's errors and warnings start with a code. Each ends with one next step.
 
@@ -155,8 +155,9 @@ The plugin's errors and warnings start with a code. Each ends with one next step
 | `KEY_UNAVAILABLE` | Log warning | Run `/connect` and choose **Tavily**, then connect the key again. |
 | `KEY_WATCH_STOPPED` | Log warning | Restart OpenCode after you change the key. |
 | `STATUS_UNAVAILABLE` | Status | Run `/tavily-status` again, and restart OpenCode if it keeps failing. |
+| `UPSTREAM_ERROR` | A Tavily tool's result is Tavily's error object | The one in the message, by Tavily's status: 401 or 403, `/tavily-status`; 429, wait and retry; 432 or 433, your plan's limits; 5xx, wait and retry; any other, the input. |
 
-When the plugin does not start, `/tavily-status` is missing, and OpenCode's log (`~/.local/share/opencode/log/opencode.log`) has a "failed to load plugin" line with one of these errors. Errors from OpenCode and from Tavily pass through unchanged. A script's errors from the tools RPC have their own codes, listed in [Scripting](https://github.com/joe-broadhead/opencode-tavily/blob/HEAD/docs/scripting.md#errors).
+When the plugin does not start, `/tavily-status` is missing, and OpenCode's log (`~/.local/share/opencode/log/opencode.log`) has a "failed to load plugin" line with one of the start-up errors. Other errors from OpenCode and from Tavily pass through unchanged. A script's errors from the tools RPC have their own codes, listed in [Scripting](https://github.com/joe-broadhead/opencode-tavily/blob/HEAD/docs/scripting.md#errors).
 
 ## Uninstall
 
