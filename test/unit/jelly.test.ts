@@ -55,6 +55,33 @@ describe("the jelly declaration", () => {
   })
 })
 
+// The drawing elements Jelly's icon cleaner keeps (hey-jelly `plugin-icon.ts`). It drops a whole icon that has any
+// other element, so a `<title>` is refused too.
+const ICON_ELEMENTS = new Set(["svg", "g", "path", "circle", "ellipse", "rect", "line", "polyline", "polygon", "defs"])
+for (const name of ["linearGradient", "radialGradient", "stop", "clipPath", "mask"]) ICON_ELEMENTS.add(name)
+
+describe("the jelly summary and icon", () => {
+  test("the summary is one line of 1 to 120 characters", () => {
+    const summary = (pkg.jelly as { summary: string }).summary
+    expect(summary.trim().length).toBeGreaterThan(0)
+    expect(summary.length).toBeLessThanOrEqual(120)
+    expect(summary).not.toContain("\n")
+  })
+
+  test("the icon is assets/icon.svg, shipped, with one svg root, xmlns and viewBox, only drawing elements, under 16 KB", () => {
+    const icon = (pkg.jelly as { icon: string }).icon
+    expect(icon).toBe("assets/icon.svg")
+    expect(pkg.files).toContain(icon)
+    const svg = readFileSync(new URL(`../../${icon}`, import.meta.url), "utf8").trim()
+    expect(svg.length).toBeLessThanOrEqual(16_384)
+    expect(svg).toMatch(/^<svg xmlns="http:\/\/www\.w3\.org\/2000\/svg"[^>]* viewBox="[^"]+"/)
+    expect(svg.endsWith("</svg>")).toBe(true)
+    expect(svg).not.toMatch(/<title|<style|<script|&|<!/i)
+    const elements = [...svg.matchAll(/<\/?([A-Za-z][A-Za-z0-9]*)/g)].map((match) => match[1])
+    expect(elements.filter((name) => !ICON_ELEMENTS.has(name!))).toEqual([])
+  })
+})
+
 describe("docs/jelly.md", () => {
   test("counts the declared tools and lists the declared skills", () => {
     const reads = jelly.tools.filter((tool) => tool.readOnly).length
