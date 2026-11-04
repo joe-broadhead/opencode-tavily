@@ -2,6 +2,12 @@
 
 All notable changes to this project are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+- Tools RPC: a `PERMISSION_DENIED` from a deny rule names the denied action, such as `tavily_tavily_search`, and its next step says to remove or narrow that deny rule, or add a later allow rule to the session.
+
 ## [0.0.4] - 2026-11-04
 
 ### Added

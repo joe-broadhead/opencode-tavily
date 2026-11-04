@@ -72,7 +72,7 @@ A refusal or failure is the RPC error `failed`, with a message `CODE: what happe
 | --- | --- |
 | `SESSION_UNKNOWN` | OpenCode says the session does not exist. Any other failure to look the session up is OpenCode's own error. |
 | `SESSION_AGENT_REQUIRED` | The session names no agent, or an agent that does not exist. |
-| `PERMISSION_DENIED` | The agent's or the session's rules deny the tool, or ask for an approval. |
+| `PERMISSION_DENIED` | The agent's or the session's rules deny the tool, or ask for an approval. A deny names the denied action, such as `tavily_tavily_search`, and the next step says which rule to remove, narrow or override. |
 | `SERVER_CONFLICT` | Your `opencode.json` defines its own `tavily` server at a URL that is not Tavily's (`https://mcp.tavily.com/mcp/`). Scripts use your own server only at that URL; `/tavily-status` says so too. |
 | `AUTH_REQUIRED`, `CONNECTING`, `CONNECTION_FAILED`, `DISABLED`, `NOT_REGISTERED` | The `tavily` server needs a sign-in, is still connecting, could not connect, is disabled, or is missing. `/tavily-status` gives the details. |
 | `TOOL_UNAVAILABLE` | The server is connected, but OpenCode does not list the tool. |
