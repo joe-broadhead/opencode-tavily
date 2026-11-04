@@ -8,6 +8,7 @@ import { parseOptions } from "./options.js"
 import { registerDefaultRules } from "./permissions.js"
 import { Tavily } from "./rpc/index.js"
 import { loadSkills, registerSkills } from "./skills.js"
+import { registerTools } from "./tools.js"
 import { readStatus, registerStatusCommand, unavailable } from "./status.js"
 import { selectWebsearchDefault, type WebsearchState } from "./websearch.js"
 
@@ -20,7 +21,7 @@ export default Plugin.define({
     const options = parseOptions(ctx.options)
     const host = checkHost(ctx.app.version, options.allowUntestedHost, warn)
     const skills = await loadSkills()
-    const server: ServerState = { key: await readKey(ctx.integration, undefined, warn), userServer: false }
+    const server: ServerState = { key: await readKey(ctx.integration, undefined, warn), userServer: false, userServerAtTavily: false }
     const websearch: WebsearchState = { tavilyDefault: false }
     const checkKey = keyChecker()
     // Ask Tavily about the key now, so status has the answer; the check never throws.
@@ -40,8 +41,13 @@ export default Plugin.define({
         }),
     })
 
-    // Scripts call the five tools with no model, as a session and its agent; a user's own server is not the plugin's.
-    const stopTools = await registerToolsRpc(ctx, { mcp: { server: SERVER_NAME, managed: () => !server.userServer } })
+    // The Code Mode namespace line, and Tavily's error objects as errors for the model (shapeResult does it for scripts).
+    await registerTools(ctx.tool)
+    // Scripts call the five tools with no model, as a session and its agent. A user's own server is used only when it
+    // is at Tavily's URL; any other is not the plugin's to vouch for.
+    const stopTools = await registerToolsRpc(ctx, {
+      mcp: { server: SERVER_NAME, managed: () => !server.userServer || server.userServerAtTavily },
+    })
 
     const controller = new AbortController()
     void watchKey(ctx, server, controller.signal, warn)

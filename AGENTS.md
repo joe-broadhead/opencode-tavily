@@ -5,7 +5,7 @@ This repository builds `@joe-broadhead/opencode-tavily`, an OpenCode plugin that
 ## Platform
 
 - Use only public `@opencode/plugin` APIs that exist in OpenCode 2.2.3. The host range is exactly `>=2.2.3 <2.3.0`, never `^2.2.3`.
-- Test against stock OpenCode 2.2.3 and 2.2.4 only.
+- Test against stock OpenCode 2.2.3, 2.2.4 and 2.2.5, the list in `src/host-version.ts` (`TESTED_HOSTS`). The host, pack and stock stages and CI take their versions from it.
 - `npm run lint` (`test/forbidden`) scans `src/` and `dist/` and fails on any of these:
   - `ctx.generate.text` or `experimental.generate.text`;
   - `ctx.experimental.artifact`;
@@ -26,7 +26,7 @@ This repository builds `@joe-broadhead/opencode-tavily`, an OpenCode plugin that
 ## Package
 
 - Releases follow CONTRIBUTING. `release.yml` refuses a private package or a tag that differs from the version.
-- The version appears only in `package.json` and `CHANGELOG.md`.
+- The version appears only in `package.json` and `CHANGELOG.md`. `tools/build.mjs` defines `__PLUGIN_VERSION__` from `package.json` for `src/version.ts`, and `bunfig.toml` preloads `test/version.ts`, which does the same for the tests.
 - No `dependencies`, peer dependencies, lifecycle scripts or declaration files. `exports` lists only `.` → `./dist/index.js` and `./tui` → `./dist/tui.js`.
 - `dist/` holds exactly `index.js` and `tui.js`, each a self-contained esbuild bundle with no relative imports (`tools/build.mjs`). Only `@opencode/plugin*`, `@opentui/*`, `solid-js` and `node:*` stay external. `tsc` only typechecks.
 - `@opencode/plugin`, `@opencode/sdk`, `@opencode/client` and `@opencode/theme` are exact dev dependencies at 2.2.3. Do not add 2.2.4 to `package-lock.json`.
