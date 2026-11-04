@@ -1,9 +1,10 @@
 // The built package as users get it: `npm pack`, then `npm install --ignore-scripts` of the tarball into an empty
 // project, offline, with the npm on PATH. Run it after `npm run build` (check does). PACK_TARBALL tests a tarball that
 // is already packed instead, such as the one the release workflow publishes. The tarball holds only
-// JavaScript, skills and docs; the install adds nothing else; and the installed package imports, and loads in each
-// stock OpenCode release it is tested on (startStock in ../host/harness.ts). On each release it also signs in both
-// ways, OAuth and an API key, against a loopback fake Tavily, and a script calls the tools through the tools RPC.
+// JavaScript, skills, docs and the Jelly icon; the install adds nothing else; and the installed package imports, and
+// loads in each stock OpenCode release it is tested on (startStock in ../host/harness.ts). On each release it also
+// signs in both ways, OAuth and an API key, against a loopback fake Tavily, and a script calls the tools through the
+// tools RPC.
 import { afterAll, beforeAll, describe, expect, setDefaultTimeout, test } from "bun:test"
 import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, symlinkSync, writeFileSync } from "node:fs"
 import { dirname, join, relative, resolve } from "node:path"
@@ -22,12 +23,13 @@ import { schemaErrors } from "../schema.js"
 setDefaultTimeout(300_000)
 
 const NAME = "@joe-broadhead/opencode-tavily"
-const ALLOWED = /^(package\.json|README\.md|LICENSE|CHANGELOG\.md|dist\/.+|skills\/.+)$/
+const ALLOWED = /^(package\.json|README\.md|LICENSE|CHANGELOG\.md|assets\/icon\.svg|dist\/.+|skills\/.+)$/
 const REQUIRED = [
   "package.json",
   "README.md",
   "LICENSE",
   "CHANGELOG.md",
+  "assets/icon.svg",
   "dist/index.js",
   "dist/tui.js",
   "skills/tavily/SKILL.md",
@@ -71,7 +73,7 @@ const files = (directory: string): string[] =>
   )
 
 describe("the tarball", () => {
-  test("holds only dist, skills, README.md, LICENSE, CHANGELOG.md and package.json, under 300 KB and 80 files", () => {
+  test("holds only dist, skills, assets/icon.svg, README.md, LICENSE, CHANGELOG.md and package.json, under 300 KB and 80 files", () => {
     const paths = packed.files.map((file) => file.path)
     expect(paths.filter((path) => !ALLOWED.test(path))).toEqual([])
     expect(REQUIRED.filter((path) => !paths.includes(path))).toEqual([])
