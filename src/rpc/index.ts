@@ -1,6 +1,7 @@
 import { Rpc } from "@opencode/plugin/rpc"
 
-const CONNECTIONS = ["connected", "pending", "needs_auth", "failed", "disabled", "not_registered"] as const
+/** The shared status states (S13) Tavily reports, in machine form; the status rows use STATE_LABELS. */
+const STATES = ["connected", "sign_in_required", "connecting", "failed", "disabled", "not_configured"] as const
 const AUTH_SOURCES = ["oauth", "key_connected", "key_env", "user_server", "none"] as const
 const KEY_CHECKS = ["accepted", "rejected", "unchecked"] as const
 
@@ -12,7 +13,10 @@ export interface PermissionRule {
 
 /** The plugin's read-only status. It never carries a key or token. */
 export interface Status {
-  readonly connection: (typeof CONNECTIONS)[number]
+  /** The plugin's version. */
+  readonly version: string
+  /** The tavily server's state. */
+  readonly state: (typeof STATES)[number]
   readonly auth: (typeof AUTH_SOURCES)[number]
   /** The credential's label, never a secret. */
   readonly account?: string
@@ -25,25 +29,26 @@ export interface Status {
   readonly tools: { readonly visible: number; readonly unknown: number; readonly unknownNames: readonly string[] }
   /** This plugin selected Tavily as the web search default. A `websearch` choice in opencode.json still wins. */
   readonly websearchDefault: boolean
-  readonly host: { readonly version: string; readonly tested: boolean }
+  /** OpenCode's version (null when it reports none), the supported range, and whether it is a tested release. */
+  readonly host: { readonly version: string | null; readonly range: string; readonly tested: boolean }
   /**
-   * Agents that miss the plugin's default rules and would run new Tavily tools without asking. OpenCode creates
-   * agents defined only in user config after plugins run, so those agents never receive the rules.
+   * Agents that miss the plugin's default rules and would run new Tavily tools without asking; empty when none.
+   * OpenCode creates agents defined only in user config after plugins run, so those agents never receive the rules.
    */
-  readonly unguardedAgents?: readonly string[]
+  readonly unguardedAgents: readonly string[]
   /** The default rules to paste into each unguarded agent's own permissions; present with `unguardedAgents`. */
   readonly permissionsBlock?: readonly PermissionRule[]
   /** The one next step; `Nothing to do.` when everything is ready. */
   readonly nextStep: string
 }
 
-export const CONNECTION_LABELS: Record<Status["connection"], string> = {
+export const STATE_LABELS: Record<Status["state"], string> = {
   connected: "connected",
-  pending: "connecting",
-  needs_auth: "sign-in required",
+  connecting: "connecting",
+  sign_in_required: "sign-in required",
   failed: "failed",
   disabled: "disabled",
-  not_registered: "not configured",
+  not_configured: "not configured",
 }
 
 /** Every Tavily tool only reads from the web. */
@@ -88,11 +93,12 @@ export const websearchText = (status: Status) =>
 export const accountText = (status: Status) => status.account ?? "none"
 
 export const agentsText = (status: Status) =>
-  status.unguardedAgents === undefined
+  status.unguardedAgents.length === 0
     ? "none"
     : `${status.unguardedAgents.join(", ")}. New Tavily tools run there without asking. The block:`
 
-export const hostText = (status: Status) => `${status.host.version} (${status.host.tested ? "tested" : "untested"})`
+export const hostText = ({ host }: Status) =>
+  `${host.version ?? "unknown version"} (${host.tested ? "tested" : `untested; supported range ${host.range}`})`
 
 /** The permission block as lines to paste: one rule per line, comma-separated. */
 export const blockLines = (block: readonly PermissionRule[]) =>
@@ -114,7 +120,8 @@ const rule = {
 const status = {
   type: "object",
   properties: {
-    connection: { type: "string", enum: [...CONNECTIONS] },
+    version: { type: "string" },
+    state: { type: "string", enum: [...STATES] },
     auth: { type: "string", enum: [...AUTH_SOURCES] },
     account: { type: "string" },
     keyCheck: { type: "string", enum: [...KEY_CHECKS] },
@@ -127,15 +134,15 @@ const status = {
     websearchDefault: { type: "boolean" },
     host: {
       type: "object",
-      properties: { version: { type: "string" }, tested: { type: "boolean" } },
-      required: ["version", "tested"],
+      properties: { version: { type: ["string", "null"] }, range: { type: "string" }, tested: { type: "boolean" } },
+      required: ["version", "range", "tested"],
       additionalProperties: false,
     },
     unguardedAgents: strings,
     permissionsBlock: { type: "array", items: rule },
     nextStep: { type: "string" },
   },
-  required: ["connection", "auth", "tools", "websearchDefault", "host", "nextStep"],
+  required: ["version", "state", "auth", "tools", "websearchDefault", "host", "unguardedAgents", "nextStep"],
   additionalProperties: false,
 } as const
 

@@ -58,23 +58,25 @@ The tool's input is Tavily's: `describe` shows each tool's schema as OpenCode li
 opencode api post /api/rpc/tavily.web.tools/describe -d '{"input":{}}'
 ```
 
-A result is `{"output": {"output": <the tool's structured content, if any>, "text": <the tool's text>}}`, as plain JSON. Web content in it is untrusted data.
+A result is `{"output": {"output": <the tool's structured content, or its text when it has none>, "text": <the tool's text>}}`, as plain JSON. Web content in it is untrusted data.
 
-The calls run on the OpenCode instance of the directory where you run `opencode api`, and its `tavily` connection. The session may belong to another directory.
+`opencode api` calls run in the service's default location, your home directory, and use that location's `tavily` connection. To target a project, call the HTTP API with `?location[directory]=<dir>`, or create the session with `"location":{"directory":"<dir>"}`. The session may belong to another directory.
 
 ## Errors
 
 A refusal or failure is the RPC error `failed`, with a message `CODE: what happened. Next step: what to do.` and `data: { code, next }`.
+
+`opencode api` prints the error as JSON, then `HTTP 400 Bad Request`, and exits with status 1 for any RPC error, so a shell script can test `$?`.
 
 | Code | When |
 | --- | --- |
 | `SESSION_UNKNOWN` | OpenCode says the session does not exist. Any other failure to look the session up is OpenCode's own error. |
 | `SESSION_AGENT_REQUIRED` | The session names no agent, or an agent that does not exist. |
 | `PERMISSION_DENIED` | The agent's or the session's rules deny the tool, or ask for an approval. |
-| `SERVER_CONFLICT` | Your `opencode.json` defines its own `tavily` server, which this plugin does not manage. |
+| `SERVER_CONFLICT` | Your `opencode.json` defines its own `tavily` server at a URL that is not Tavily's (`https://mcp.tavily.com/mcp/`). Scripts use your own server only at that URL; `/tavily-status` says so too. |
 | `AUTH_REQUIRED`, `CONNECTING`, `CONNECTION_FAILED`, `DISABLED`, `NOT_REGISTERED` | The `tavily` server needs a sign-in, is still connecting, could not connect, is disabled, or is missing. `/tavily-status` gives the details. |
 | `TOOL_UNAVAILABLE` | The server is connected, but OpenCode does not list the tool. |
-| `UPSTREAM_ERROR` | Tavily answered with an error, such as an invalid input or a used-up plan. The message holds the first line of Tavily's text, at most 300 characters, with tokens and URL query strings removed. |
+| `UPSTREAM_ERROR` | Tavily answered with an error, such as an invalid input, its rate limit (429) or a used-up plan (432, 433). Tavily's server sends some of these as an ordinary result, an object such as `{"error":"Map failed","status":429,"detail":{…}}`; the plugin turns that into this error too. The message holds the first line of Tavily's text, or its status and words, at most 300 characters, with tokens and URL query strings removed. For a 429 the next step is to wait a minute and retry, then check the Tavily plan and key. |
 | `CANCELLED` | The request was cancelled. |
 
 OpenCode itself answers `rpc.invalid_input` for a body that is not the envelope above, and `rpc.method_not_found` for a method that does not exist, such as a tool Tavily added later.
@@ -85,4 +87,4 @@ OpenCode itself answers `rpc.invalid_input` for a body that is not the envelope 
 - Answer an approval prompt, or use a tool that asks.
 - Use a key or token: the plugin has none to give.
 
-A script's calls write nothing to the session, and OpenCode's `execute.before` and `execute.after` tool hooks, from any plugin, do not run for them.
+A script's calls write nothing to the session, and OpenCode's `execute.before` and `execute.after` tool hooks, from any plugin, do not run for them. The plugin's own handling of Tavily's error objects, which a hook does for the model, is built into the tools RPC.

@@ -1,9 +1,10 @@
 // The built package as users get it: `npm pack`, then `npm install --ignore-scripts` of the tarball into an empty
 // project, offline, with the npm on PATH. Run it after `npm run build` (check does). PACK_TARBALL tests a tarball that
 // is already packed instead, such as the one the release workflow publishes. The tarball holds only
-// JavaScript, skills and docs; the install adds nothing else; and the installed package imports, and loads in each
-// stock OpenCode release it is tested on (startStock in ../host/harness.ts). On each release it also signs in both
-// ways, OAuth and an API key, against a loopback fake Tavily, and a script calls the tools through the tools RPC.
+// JavaScript, skills, docs and the Jelly icon; the install adds nothing else; and the installed package imports, and
+// loads in each stock OpenCode release it is tested on (startStock in ../host/harness.ts). On each release it also
+// signs in both ways, OAuth and an API key, against a loopback fake Tavily, and a script calls the tools through the
+// tools RPC.
 import { afterAll, beforeAll, describe, expect, setDefaultTimeout, test } from "bun:test"
 import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, symlinkSync, writeFileSync } from "node:fs"
 import { dirname, join, relative, resolve } from "node:path"
@@ -13,7 +14,7 @@ import { USAGE_URL } from "../../src/key-check.js"
 import { SERVER_URL } from "../../src/mcp.js"
 import { KNOWN_READS as METHODS, TOOLS_RPC_ID } from "../../src/host/tools-rpc.js"
 import { NEW_TOOL, RECORDED_TOOLS } from "../host/catalog.js"
-import { startFakeTavily, UPSTREAM_FAILURE, type FakeTavily } from "../host/fake-tavily.js"
+import { RATE_LIMITED, startFakeTavily, UPSTREAM_FAILURE, type FakeTavily } from "../host/fake-tavily.js"
 import { cleanup, npm, REPO, root, startStock, STOCK_VERSIONS, until, type Host } from "../host/harness.js"
 import { schemaErrors } from "../schema.js"
 
@@ -22,12 +23,13 @@ import { schemaErrors } from "../schema.js"
 setDefaultTimeout(300_000)
 
 const NAME = "@joe-broadhead/opencode-tavily"
-const ALLOWED = /^(package\.json|README\.md|LICENSE|CHANGELOG\.md|dist\/.+|skills\/.+)$/
+const ALLOWED = /^(package\.json|README\.md|LICENSE|CHANGELOG\.md|assets\/icon\.svg|dist\/.+|skills\/.+)$/
 const REQUIRED = [
   "package.json",
   "README.md",
   "LICENSE",
   "CHANGELOG.md",
+  "assets/icon.svg",
   "dist/index.js",
   "dist/tui.js",
   "skills/tavily/SKILL.md",
@@ -71,7 +73,7 @@ const files = (directory: string): string[] =>
   )
 
 describe("the tarball", () => {
-  test("holds only dist, skills, README.md, LICENSE, CHANGELOG.md and package.json, under 300 KB and 80 files", () => {
+  test("holds only dist, skills, assets/icon.svg, README.md, LICENSE, CHANGELOG.md and package.json, under 300 KB and 80 files", () => {
     const paths = packed.files.map((file) => file.path)
     expect(paths.filter((path) => !ALLOWED.test(path))).toEqual([])
     expect(REQUIRED.filter((path) => !paths.includes(path))).toEqual([])
@@ -171,7 +173,8 @@ for (const version of STOCK_VERSIONS)
       for (const skill of packaged) expect(skill.path).toContain(join("node_modules", NAME, "skills"))
       const { output } = await host.client.rpc.call({ rpcID: "tavily.web", method: "status", input: {}, location: host.location })
       expect(schemaErrors(Tavily.methods.status.output, output)).toEqual([])
-      expect(output).toMatchObject({ auth: "oauth", host: { version, tested: true } })
+      // The proxy refuses every request, so the server fails to connect (see startStock).
+      expect(output).toMatchObject({ version: manifest.version, state: "failed", auth: "oauth", host: { version, range: ">=2.2.3 <2.3.0", tested: true }, unguardedAgents: [] })
     })
 
     test("/connect lists the built-in key entry as Tavily and the server's OAuth entry as Tavily MCP", async () => {
@@ -233,7 +236,7 @@ const keyReady = (host: Host, auth: string) =>
   until(`the server is connected with ${auth}`, async () => {
     const status = await rpcStatus(host)
     const tools = status.tools as { visible: number }
-    return status.auth === auth && status.connection === "connected" && status.keyCheck === "accepted" && tools.visible === 5 ? status : undefined
+    return status.auth === auth && status.state === "connected" && status.keyCheck === "accepted" && tools.visible === 5 ? status : undefined
   })
 
 async function removeKey(host: Host) {
@@ -272,7 +275,7 @@ for (const version of STOCK_VERSIONS)
     })
 
     test("with no key, Tavily asks for OAuth; a connected key connects with a bearer header; removing it returns to OAuth", async () => {
-      expect(await rpcStatus(oauth)).toMatchObject({ connection: "needs_auth", auth: "oauth" })
+      expect(await rpcStatus(oauth)).toMatchObject({ state: "sign_in_required", auth: "oauth" })
       expect(oauthFake.requests.some((request) => request.authorized)).toBe(false)
 
       const from = oauthFake.requests.length
@@ -287,7 +290,7 @@ for (const version of STOCK_VERSIONS)
         const server = await tavilyServer(oauth)
         return /^mcp_/.test(server?.integrationID ?? "") && server?.status.status === "needs_auth"
       })
-      expect(await rpcStatus(oauth)).toMatchObject({ connection: "needs_auth", auth: "oauth" })
+      expect(await rpcStatus(oauth)).toMatchObject({ state: "sign_in_required", auth: "oauth" })
       const after = oauthFake.requests.slice(removed).filter((request) => request.method === "initialize")
       expect(after.length).toBeGreaterThan(0)
       expect(after.every((request) => !request.authorized)).toBe(true)
@@ -341,7 +344,7 @@ for (const version of STOCK_VERSIONS)
       })
       await until("the server is connected with its six tools", async () => {
         const status = await rpcStatus(host)
-        return status.connection === "connected" && (status.tools as { visible: number }).visible === 6
+        return status.state === "connected" && (status.tools as { visible: number }).visible === 6
       })
       const create = async (input: Record<string, unknown>) => (await host.client.session.create({ location: host.location, ...input })).id
       sessions.build = await create({ agent: "build" })
@@ -416,7 +419,18 @@ for (const version of STOCK_VERSIONS)
       expect(UPSTREAM_FAILURE).toContain("fake-signature-123")
     })
 
-    test("names an unknown session, a session without an agent, and rejects an envelope with extra keys", async () => {
+    test("gives Tavily's error object, answered as a result, as UPSTREAM_ERROR with its own next step", async () => {
+    const result = await call("build", "tavily_map", { url: "https://example.invalid", query: "limit" })
+    expect(result).toEqual({
+      type: "failed",
+      code: "UPSTREAM_ERROR",
+      message:
+        "UPSTREAM_ERROR: tavily_tavily_map failed: Tavily answered with error 429: Map failed: Your request has been blocked due to excessive requests. Verify you are using production API keys. Next step: Wait a minute, then retry; if it keeps happening, check your Tavily plan and API key at https://app.tavily.com.",
+    })
+    expect(RATE_LIMITED.status).toBe(429)
+  })
+
+  test("names an unknown session, a session without an agent, and rejects an envelope with extra keys", async () => {
       expect(await call("ses_does_not_exist", "tavily_search", { query: "q" })).toMatchObject({ type: "failed", code: "SESSION_UNKNOWN" })
       expect(await call("agentless", "tavily_search", { query: "q" })).toMatchObject({ type: "failed", code: "SESSION_AGENT_REQUIRED" })
       const from = fake.requests.length

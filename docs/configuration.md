@@ -24,7 +24,7 @@ All options are optional.
 | --- | --- | --- |
 | `websearch` | `true` | Make OpenCode's built-in Tavily provider the default for the `websearch` tool. A `websearch` setting in `opencode.json` still wins. See [Web search](#web-search). |
 | `executionTimeoutMs` | `900000` (15 minutes) | How long one call to a Tavily tool can run, in milliseconds. An integer from `60000` (1 minute) to `3600000` (1 hour). Research needs the most time. |
-| `allowUntestedHost` | `false` | Start on an OpenCode version outside `>=2.2.3 <2.3.0`. The plugin then logs a `HOST_UNTESTED` warning and runs. |
+| `allowUntestedHost` | `false` | Start on an OpenCode version outside `>=2.2.3 <2.3.0`. The plugin then logs a `HOST_UNTESTED` warning and runs. A later 2.2 release needs no option: it runs, and status calls it untested. |
 
 An unknown option, or a value of the wrong type, stops the plugin at start-up with a [`OPTIONS_INVALID`](#errors) error.
 
@@ -157,7 +157,7 @@ The built-in provider uses the same Tavily API key as the plugin. With no key, i
 - With OAuth, Tavily chooses which of your Tavily API keys pays for the calls: a key named `mcp_auth_default`, or else your `default` key. See [Tavily's MCP documentation](https://docs.tavily.com/documentation/mcp).
 - The plugin never writes the key to config or logs. See [SECURITY.md](../SECURITY.md) for where OpenCode keeps it.
 
-Your own `tavily` server gets none of the plugin's key handling and no `executionTimeoutMs`. The default permission rules still apply to it, because they match the tool names.
+Your own `tavily` server gets none of the plugin's key handling and no `executionTimeoutMs`. The default permission rules still apply to it, because they match the tool names. Scripts can use it through the tools RPC only when its `url` is Tavily's, `https://mcp.tavily.com/mcp/` (with or without the final slash or a query): the plugin vouches for no other server, so a script gets `SERVER_CONFLICT`, and `/tavily-status` says so in its next step.
 
 ### TAVILY_API_KEY and the background service
 
@@ -182,9 +182,9 @@ The plugin's own errors and warnings have one shape: `CODE: what happened. Next 
 | Code | When | Example |
 | --- | --- | --- |
 | `OPTIONS_INVALID` | Start-up; the plugin does not start | `OPTIONS_INVALID: Unknown option "foo"; the options are websearch, executionTimeoutMs, allowUntestedHost. Next step: Fix the plugin's options in opencode.json.` |
-| `HOST_UNTESTED` | Start-up, outside `>=2.2.3 <2.3.0`; a warning with `allowUntestedHost` | `HOST_UNTESTED: This plugin supports OpenCode >=2.2.3 <2.3.0, and this is 2.3.0. Next step: Use OpenCode 2.2.3 or a later 2.2 release, or set "allowUntestedHost": true to run anyway.` |
+| `HOST_UNTESTED` | Start-up, outside `>=2.2.3 <2.3.0`; a warning with `allowUntestedHost` | `HOST_UNTESTED: This plugin supports OpenCode >=2.2.3 <2.3.0, and this is 2.3.0. Next step: Use OpenCode 2.2.3, 2.2.4 or 2.2.5, or set "allowUntestedHost": true to run anyway.` |
 | `SKILLS_INVALID` | Start-up; a packaged skill is missing or damaged | `SKILLS_INVALID: skills/tavily has no SKILL.md. Next step: Reinstall the plugin.` |
-| `KEY_UNAVAILABLE` | Log warning; OpenCode could not read the key | `KEY_UNAVAILABLE: OpenCode could not read the Tavily API key (<reason>). Next step: Run /connect, choose Tavily and connect the key again.` |
+| `KEY_UNAVAILABLE` | Log warning; OpenCode could not read the key | `KEY_UNAVAILABLE: OpenCode could not read the Tavily API key (<reason>). Next step: Run /connect and choose Tavily, then connect the key again.` |
 | `KEY_WATCH_STOPPED` | Log warning; key changes are no longer picked up | `KEY_WATCH_STOPPED: The plugin stopped watching for Tavily key changes (<reason>). Next step: Restart OpenCode after you change the key.` |
 | `STATUS_UNAVAILABLE` | `/tavily-status`, the dialog and the RPC | `STATUS_UNAVAILABLE: Could not read Tavily's status (<reason>). Next step: Run /tavily-status again, and restart OpenCode if it keeps failing.` |
 

@@ -8,24 +8,39 @@
 // Each host gets its own folder in one temp root, holding HOME, XDG_*, OPENCODE_TEST_HOME, TMPDIR, the config, the
 // database and the project, and runs in it, so no real config or credential is read. Each host checks that
 // OpenCode's global paths are inside the temp root. Nothing reaches Tavily.
+// The temp root is under /tmp, never under the user's home: OpenCode searches the folders above a project for
+// `.opencode/` config, so a root inside the home would pick up the user's agents and skills. Each project is its own
+// git worktree, where that search stops, and no folder above the root may hold `.opencode/`. A stock host's managed
+// service, if its CLI ever starts one, has its own port, never OpenCode's default.
 import { spawn, spawnSync } from "node:child_process"
 import { randomBytes } from "node:crypto"
-import { createWriteStream, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs"
+import { createWriteStream, existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs"
 import { createServer, type AddressInfo, type Server, type Socket } from "node:net"
 import { tmpdir } from "node:os"
-import { join } from "node:path"
+import { dirname, join } from "node:path"
 import { fileURLToPath } from "node:url"
 import { OpenCode as Client, type OpenCodeClient } from "@opencode/client"
 import { Plugin, type PluginOptions } from "@opencode/plugin"
 import plugin from "../../src/index.js"
+import { TESTED_HOSTS } from "../../src/host-version.js"
 import { RECORDED_TOOLS } from "./catalog.js"
 import { startFakeTavily, type FakeTavily } from "./fake-tavily.js"
 import probe from "./probe.js"
 
 export const REPO = fileURLToPath(new URL("../../", import.meta.url))
 
-/** The temp root of every host and of the pack test. */
-export const root = realpathSync(mkdtempSync(join(tmpdir(), "tavily-host-")))
+/** The temp root of every host and of the pack test: under /tmp (/private/tmp on macOS), whatever TMPDIR says. */
+export const root = realpathSync(mkdtempSync("/tmp/tavily-host-"))
+
+/** Throws when a folder above the temp root holds `.opencode/`, which OpenCode's upward config search would read. */
+function expectNoConfigAbove(folder: string) {
+  for (let parent = dirname(folder); ; parent = dirname(parent)) {
+    if (existsSync(join(parent, ".opencode")))
+      throw new Error(`The test isolation failed: ${join(parent, ".opencode")} is above the temp root ${root}, and OpenCode would read it.`)
+    if (parent === dirname(parent)) return
+  }
+}
+expectNoConfigAbove(root)
 
 /** Keys the fake Tavily rejects at its key check; Tavily's MCP endpoint still accepts them, as it accepts any. */
 export const REJECTED = "rejected"
@@ -146,13 +161,18 @@ const LOCAL_PROVIDERS_OFF = {
 
 let hosts = 0
 
-/** A new folder for one host; `work` is its project and working directory. */
+/** A new folder for one host; `work` is its project and working directory, a git worktree of its own. */
 function hostFolder(name: string) {
   const base = join(root, `${name}-${++hosts}`)
   const work = join(base, "work")
   mkdirSync(work, { recursive: true })
+  const git = spawnSync("git", ["init", "--quiet", work], { encoding: "utf8" })
+  if (git.status !== 0) throw new Error(`git init ${work} failed: ${git.stderr || git.error?.message}`)
   return { base, work }
 }
+
+/** A loopback port for a managed service, away from OpenCode's default (49374) and from the ports `freePort` gives. */
+const servicePort = () => 20_000 + Math.floor(Math.random() * 20_000)
 
 /** The embedded host with the plugin from src and the web search probe. */
 export async function startHost(input: HostInput = {}): Promise<Host> {
@@ -188,14 +208,23 @@ export async function startHost(input: HostInput = {}): Promise<Host> {
   })
 }
 
-/** The stock releases the plugin is tested on. */
-export const STOCK_VERSIONS = ["2.2.3", "2.2.4"]
+/** The stock releases the plugin is tested on: src/host-version.ts's list, which status and the docs use too. */
+export const STOCK_VERSIONS = TESTED_HOSTS
+
+const binaries = new Map<string, Promise<string>>()
 
 /**
  * The stock `opencode` binary of a release: OPENCODE_BIN_2_2_3 and so on when set, or else the release's platform
  * package, installed from npm with scripts off. Its wrapper, @opencode/cli, only links that binary in a script.
+ * Memoised per version: hosts start in parallel, and two installs into one folder fail.
  */
-async function stockBinary(version: string) {
+function stockBinary(version: string) {
+  let binary = binaries.get(version)
+  if (!binary) binaries.set(version, (binary = installStock(version)))
+  return binary
+}
+
+async function installStock(version: string) {
   const given = GIVEN_BINARIES[`OPENCODE_BIN_${version.replaceAll(".", "_")}`]
   if (given) return realpathSync(given)
   const project = join(root, `opencode-${version}`)
@@ -221,6 +250,7 @@ export async function startStock(
   const home = join(base, "home")
   mkdirSync(join(home, ".config", "opencode"), { recursive: true })
   writeFileSync(join(home, ".config", "opencode", "opencode.json"), JSON.stringify({ ...LOCAL_PROVIDERS_OFF, ...config, plugins: [pkg] }, null, 2))
+  writeFileSync(join(home, ".config", "opencode", "service.json"), JSON.stringify({ port: servicePort() }))
   const env = {
     ...isolatedEnv(home),
     PATH: "/usr/bin:/bin",
