@@ -9,7 +9,7 @@ interface Options {
   readonly allowUntestedHost: boolean
 }
 
-export const DEFAULT_OPTIONS: Options = {
+const DEFAULT_OPTIONS: Options = {
   websearch: true,
   executionTimeoutMs: 900_000,
   allowUntestedHost: false,

@@ -10,13 +10,15 @@ import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, symlinkSync, 
 import { dirname, join, relative, resolve } from "node:path"
 import { Tavily } from "../../src/rpc/index.js"
 import { DEFAULT_RULES } from "../../src/permissions.js"
-import { USAGE_URL } from "../../src/key-check.js"
 import { SERVER_URL } from "../../src/mcp.js"
 import { KNOWN_READS as METHODS, TOOLS_RPC_ID } from "../../src/host/tools-rpc.js"
 import { NEW_TOOL, RECORDED_TOOLS } from "../host/catalog.js"
 import { RATE_LIMITED, startFakeTavily, UPSTREAM_FAILURE, type FakeTavily } from "../host/fake-tavily.js"
 import { cleanup, npm, REPO, root, startStock, STOCK_VERSIONS, until, type Host } from "../host/harness.js"
 import { schemaErrors } from "../schema.js"
+
+/** Tavily's key check, which the bundle calls. */
+const USAGE_URL = "https://api.tavily.com/usage"
 
 // Packing, installing, and downloading and starting a stock host take minutes in a slow container (see READY_MS in
 // harness.ts).

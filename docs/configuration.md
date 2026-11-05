@@ -96,7 +96,7 @@ To turn off every Tavily tool:
 
 OpenCode creates the agents that you define only in your config after plugins run, so these agents do not get the plugin's rules. Without the rules, a new Tavily tool runs there without a prompt. `/tavily-status` and the **Tavily: Status** dialog name these agents and show the block to paste. An agent counts as covered when the block appears anywhere after its first `* * allow` rule.
 
-Put the block first in that agent's own `permissions`, followed by your top-level `permissions` rules for `tavily_*` actions, because the agent's own rules come after the top-level ones and would otherwise win. For example, for an agent named `reviewer`, when your top-level `permissions` allow `tavily_tavily_feedback`:
+Put the default rules shown by `/tavily-status` first in each listed agent's own permissions, in `opencode.json` or the agent's Markdown file, followed by your top-level rules for Tavily tools: the agent's own rules come after the top-level ones and would otherwise win. For example, for an agent named `reviewer`, when your top-level `permissions` allow `tavily_tavily_feedback`:
 
 ```jsonc
 {
@@ -153,7 +153,7 @@ The built-in provider uses the same Tavily API key as the plugin. With no key, i
 - A connected key wins over `TAVILY_API_KEY`.
 - When you connect, replace or remove a key, the plugin reconnects the server. You do not need to restart OpenCode. A change to `TAVILY_API_KEY` needs a restart of the OpenCode server; see below.
 - The plugin sends the key in the `Authorization` header, never in the URL. Tavily also accepts `?tavilyApiKey=` in the URL, but OpenCode shows a server's URL in its status errors and logs.
-- **Tavily's MCP server connects with any key**, also a wrong one, and reports a wrong key only inside each tool result: `Unauthorized: missing or invalid API key`. So the plugin checks the key once with Tavily's usage endpoint, `GET https://api.tavily.com/usage`, which costs no credits. `/tavily-status` then shows `accepted by Tavily`, `rejected by Tavily`, or `not checked` when Tavily's API could not be reached, after the sign-in. A rejected key is the next step, and `/connect` shows "Sign in required" on **Tavily** for a connected key until you replace it.
+- **Tavily's MCP server connects with any key**, also a wrong one, and reports a wrong key only inside each tool result, which the plugin turns into `UPSTREAM_ERROR: … Tavily answered with error 401: … Unauthorized: missing or invalid API key`. So the plugin checks the key once with Tavily's usage endpoint, `GET https://api.tavily.com/usage`, which costs no credits. `/tavily-status` then shows `accepted by Tavily`, `rejected by Tavily`, or `not checked` when Tavily's API could not be reached, after the sign-in. A rejected key is the next step, and `/connect` shows "Sign in required" on **Tavily** for a connected key until you replace it.
 - With OAuth, Tavily chooses which of your Tavily API keys pays for the calls: a key named `mcp_auth_default`, or else your `default` key. See [Tavily's MCP documentation](https://docs.tavily.com/documentation/mcp).
 - The plugin never writes the key to config or logs. See [SECURITY.md](../SECURITY.md) for where OpenCode keeps it.
 
@@ -177,7 +177,7 @@ This stops the service; the next `opencode` command starts it with the key. Open
 
 ## Errors
 
-The plugin's own errors and warnings have one shape: `CODE: what happened. Next step: what to do.` Errors from OpenCode and from Tavily pass through unchanged, except in the tools RPC for scripts, whose codes are in [Scripting](scripting.md#errors). No error contains a key or a token.
+The plugin's own errors and warnings have one shape: `CODE: what happened. Next step: what to do.` Other errors from OpenCode and from Tavily pass through unchanged, except in the tools RPC for scripts, whose codes are in [Scripting](scripting.md#errors). No error contains a key or a token.
 
 | Code | When | Example |
 | --- | --- | --- |
@@ -187,5 +187,6 @@ The plugin's own errors and warnings have one shape: `CODE: what happened. Next 
 | `KEY_UNAVAILABLE` | Log warning; OpenCode could not read the key | `KEY_UNAVAILABLE: OpenCode could not read the Tavily API key (<reason>). Next step: Run /connect and choose Tavily, then connect the key again.` |
 | `KEY_WATCH_STOPPED` | Log warning; key changes are no longer picked up | `KEY_WATCH_STOPPED: The plugin stopped watching for Tavily key changes (<reason>). Next step: Restart OpenCode after you change the key.` |
 | `STATUS_UNAVAILABLE` | `/tavily-status`, the dialog and the RPC | `STATUS_UNAVAILABLE: Could not read Tavily's status (<reason>). Next step: Run /tavily-status again, and restart OpenCode if it keeps failing.` |
+| `UPSTREAM_ERROR` | A Tavily tool's result is Tavily's error object, which its server answers as an ordinary result; the model gets this text instead | `UPSTREAM_ERROR: tavily_tavily_map failed: Tavily answered with error 429: Map failed: Your request has been blocked…. This is an error from Tavily, not a result. Next step: Wait a minute, then retry; if it keeps happening, check your Tavily plan and API key at https://app.tavily.com.` |
 
 A start-up error is in OpenCode's log, `~/.local/share/opencode/log/opencode.log`, on a "failed to load plugin" line, and `/tavily-status` is missing.

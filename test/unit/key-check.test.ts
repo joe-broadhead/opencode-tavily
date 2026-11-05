@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test"
-import { checkKey, keyChecker, USAGE_URL } from "../../src/key-check.js"
+import { checkKey, keyChecker } from "../../src/key-check.js"
 import { terminalKeyText, type Status } from "../../src/rpc/index.js"
 
 /** A fetch that answers each request with the next status, or throws for `"throw"`. */
@@ -18,8 +18,7 @@ describe("checkKey", () => {
   test("asks Tavily's usage endpoint with the key as a bearer token", async () => {
     const { fetcher, requests } = fakeFetch([200])
     expect(await checkKey("tvly-secret", fetcher)).toBe("accepted")
-    expect(requests).toEqual([{ url: USAGE_URL, authorization: "Bearer tvly-secret" }])
-    expect(USAGE_URL).toBe("https://api.tavily.com/usage")
+    expect(requests).toEqual([{ url: "https://api.tavily.com/usage", authorization: "Bearer tvly-secret" }])
   })
 
   test("401 and 403 reject the key; anything else, or no answer, leaves it unchecked", async () => {

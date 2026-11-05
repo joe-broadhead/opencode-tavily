@@ -2,6 +2,26 @@
 
 All notable changes to this project are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.5] - 2026-11-05
+
+### Added
+
+- Status names a skill of yours that has the id `tavily` or `tavily-research` and so loads instead of the plugin's: a `Skills` row, `shadowedSkills` in the status RPC, and a next step that says which file to rename or move.
+
+### Fixed
+
+- Tavily's 403 now gets the sign-in next step, as its 401 does: `/tavily-status` already counts a 403 as a rejected key, and the old "check the input" advice sent the model the wrong way.
+- Tavily's plan and usage limits (432, 433) no longer say "then retry": the next step now says a retry fails until the limit resets or the plan changes.
+- The docs describe a wrong key as it arrives, an `UPSTREAM_ERROR` with Tavily's 401, and list `UPSTREAM_ERROR` among the plugin's errors in the README and `docs/configuration.md`.
+
+### Changed
+
+- The `tavily` skill is shorter and cheaper to follow: it reads a known URL with OpenCode's free `webfetch` and keeps `tavily_extract` for pages `webfetch` cannot read; it sets `search_depth: "basic"` explicitly (Tavily may otherwise choose `advanced`, at 2 credits); it gives the full credit table, the cost of a default Crawl and `include_usage`; it checks the setup by reading the free status RPC, never with a test search; and it writes scripts and cron jobs against the tools RPC, with no key.
+- The `tavily-research` skill always shows the draft `input`, its scope, the model, the credit range and the time, and asks first. If the user doesn't answer or declines, it stops, instead of spending credits on its own searches. It describes the result as the report's text, lists the `files` input, and fires only for in-depth web research, not for one fact or a report on your own files.
+- Status's agent fix uses the wording all the plugins share: "Put the default rules shown by /tavily-status first in each listed agent's own permissions, in opencode.json or the agent's Markdown file, followed by your top-level rules for Tavily tools." The `Agents without default rules` row lists only the names, followed by the rules.
+- Docs: `docs/configuration.md` is the one place for the permission rule order and the fix for agents defined only in your config; the README and SECURITY link there.
+- Tools RPC: a `PERMISSION_DENIED` from a deny rule names the denied action, such as `tavily_tavily_search`, and its next step says to remove or narrow that deny rule, or add a later allow rule to the session.
+
 ## [0.0.4] - 2026-11-04
 
 ### Added

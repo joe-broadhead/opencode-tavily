@@ -1,9 +1,8 @@
 import { describe, expect, test } from "bun:test"
 import { readdirSync, readFileSync } from "node:fs"
-import { KEY_REJECTED, OAUTH_NAME } from "../../src/connect.js"
 import { INTEGRATION_ID } from "../../src/credential.js"
 import { SERVER_NAME } from "../../src/mcp.js"
-import { DEFAULT_RULES, KNOWN_READS } from "../../src/permissions.js"
+import { DEFAULT_RULES, KNOWN_ACTIONS } from "../../src/permissions.js"
 
 /**
  * The `jelly` section of package.json, which Jelly reads without loading the plugin. Jelly's agents have no base
@@ -29,7 +28,7 @@ describe("the jelly declaration", () => {
   })
 
   test("declares exactly the known tools, each read-only", () => {
-    expect(jelly.tools.map((tool) => tool.permission).sort()).toEqual([...KNOWN_READS].sort())
+    expect(jelly.tools.map((tool) => tool.permission).sort()).toEqual([...KNOWN_ACTIONS].sort())
     for (const tool of jelly.tools) expect(tool.readOnly, tool.name).toBe(true)
   })
 
@@ -49,7 +48,7 @@ describe("the jelly declaration", () => {
     expect(jelly.signIns).toHaveLength(2)
     expect(key).toMatchObject({ integration: INTEGRATION_ID, label: "Tavily" })
     expect(key?.server).toBeUndefined()
-    expect(account).toMatchObject({ server: SERVER_NAME, label: OAUTH_NAME })
+    expect(account).toMatchObject({ server: SERVER_NAME, label: "Tavily MCP" })
     expect(account?.integration).toBeUndefined()
     expect(key?.group).toBe(account?.group)
   })
@@ -90,7 +89,7 @@ describe("docs/jelly.md", () => {
   })
 
   test("quotes the message /connect shows for a rejected key", () => {
-    expect(doc).toContain(`> ${KEY_REJECTED}`)
+    expect(doc).toContain("> Tavily did not accept this API key. Replace it, or remove it to sign in with Tavily MCP.")
   })
 
   test("names no version, so that it stays true after a release", () => {

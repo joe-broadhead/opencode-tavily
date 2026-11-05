@@ -3,7 +3,7 @@ import type { TavilyKey } from "./credential.js"
 import { HOST_RANGE, TESTED_TEXT, type HostCheck } from "./host-version.js"
 import type { KeyCheck, KeyChecker } from "./key-check.js"
 import { SERVER_NAME, SERVER_URL, type ServerState } from "./mcp.js"
-import { DEFAULT_RULES, isUnguarded, KNOWN_READS, type Rule } from "./permissions.js"
+import { DEFAULT_RULES, isUnguarded, KNOWN_ACTIONS, type Rule } from "./permissions.js"
 import {
   ACCESS_TEXT,
   accountText,
@@ -11,6 +11,7 @@ import {
   authText,
   blockLines,
   hostText,
+  skillsText,
   STATE_LABELS,
   toolsText,
   websearchText,
@@ -20,12 +21,13 @@ import { PLUGIN_VERSION } from "./version.js"
 import type { WebsearchState } from "./websearch.js"
 
 /**
- * The fix for agents that miss the inserted rules: the block first in each agent's own `permissions`, then the
- * user's top-level Tavily rules again, because an agent's own rules come after the top-level ones. The top-level
- * `permissions` are no fix: they come after Explore's `* * deny` too, so they would loosen Explore.
+ * The fix for agents that miss the inserted rules, in the wording all the plugins share: the block first in each
+ * agent's own `permissions`, then the user's top-level Tavily rules again, because an agent's own rules come after
+ * the top-level ones. The top-level `permissions` are no fix: they come after Explore's `* * deny` too, so they would
+ * loosen Explore.
  */
 const AGENT_FIX =
-  "Put the block first in each listed agent's own permissions, in opencode.json or the agent's Markdown file, followed by your top-level permissions rules for tavily_* actions."
+  "Put the default rules shown by /tavily-status first in each listed agent's own permissions, in opencode.json or the agent's Markdown file, followed by your top-level rules for Tavily tools."
 
 /**
  * The tools RPC calls only a server the plugin can vouch for: its own, or the user's own at Tavily's URL. Any other
@@ -45,7 +47,7 @@ const STATE_OF: Record<ServerStatus, Status["state"]> = {
 }
 
 /** Everything status depends on, gathered from public host APIs and the plugin's own state. */
-export interface StatusFacts {
+interface StatusFacts {
   readonly server?: { readonly status: ServerStatus }
   readonly userServer: boolean
   /** The user's own server is at Tavily's URL, so scripts can use it. */
@@ -60,6 +62,21 @@ export interface StatusFacts {
   readonly websearchDefault: boolean
   readonly host: HostCheck
   readonly agents: readonly { readonly id: string; readonly permissions: readonly Rule[] }[]
+  /** The plugin's own skills, and the skills OpenCode lists; the listed one wins when both have an id. */
+  readonly skills?: { readonly own: readonly SkillPath[]; readonly listed: readonly SkillPath[] }
+}
+
+interface SkillPath {
+  readonly id: string
+  readonly path: string
+}
+
+/** The plugin's skills that OpenCode lists from another file: a skill with the same id, such as a user's, replaced it. */
+function shadowedOf(facts: StatusFacts): SkillPath[] {
+  return (facts.skills?.own ?? []).flatMap((own) => {
+    const listed = facts.skills?.listed.find((skill) => skill.id === own.id)
+    return listed && listed.path !== own.path ? [{ id: own.id, path: listed.path }] : []
+  })
 }
 
 const TOOL_PREFIX = `${SERVER_NAME}_`
@@ -69,7 +86,7 @@ const SAFE_NAME = /^[a-z][a-z0-9_]{0,63}$/
 
 function toolsOf(facts: StatusFacts): Status["tools"] {
   const ids = facts.tools.map((tool) => tool.id).filter((id) => id.startsWith(TOOL_PREFIX))
-  const unknown = ids.filter((id) => !KNOWN_READS.includes(id)).map((id) => id.slice(TOOL_PREFIX.length))
+  const unknown = ids.filter((id) => !KNOWN_ACTIONS.includes(id)).map((id) => id.slice(TOOL_PREFIX.length))
   const unknownNames = unknown.filter((name) => SAFE_NAME.test(name)).slice(0, LISTED_UNKNOWN)
   return { visible: ids.length, unknown: unknown.length, unknownNames }
 }
@@ -81,7 +98,7 @@ function authOf(facts: StatusFacts): Status["auth"] {
   return facts.key.source === "env" ? "key_env" : "key_connected"
 }
 
-function nextStepOf(state: Status["state"], auth: Status["auth"], facts: StatusFacts, unguarded: string[]) {
+function nextStepOf(state: Status["state"], auth: Status["auth"], facts: StatusFacts, unguarded: string[], shadowed: SkillPath[]) {
   const replaceKey =
     auth === "key_env"
       ? `run /connect, choose Tavily and connect a working key (it wins over TAVILY_API_KEY), or replace TAVILY_API_KEY with "opencode service set env TAVILY_API_KEY <key>"`
@@ -105,6 +122,8 @@ function nextStepOf(state: Status["state"], auth: Status["auth"], facts: StatusF
     return `Tavily did not accept the API key: ${replaceKey}.`
   if (unguarded.length > 0) return AGENT_FIX
   if (auth === "user_server" && !facts.userServerAtTavily) return USER_SERVER_SCRIPTS
+  if (shadowed.length > 0)
+    return `Rename or move ${shadowed.map((skill) => `the "${skill.id}" skill at ${skill.path}`).join(" and ")}, which OpenCode loads instead of the plugin's skill of the same name.`
   // An untested release inside the range changes nothing; outside it, the plugin runs only with allowUntestedHost.
   if (!facts.host.inRange) return `If Tavily misbehaves, use OpenCode ${TESTED_TEXT}.`
   return "Nothing to do."
@@ -115,7 +134,8 @@ export function buildStatus(facts: StatusFacts): Status {
   const auth = authOf(facts)
   const account = auth === "key_connected" ? facts.key?.label : auth === "key_env" ? undefined : facts.oauthAccount
   const unguarded = facts.agents.filter((agent) => isUnguarded(agent.permissions)).map((agent) => agent.id)
-  const nextStep = nextStepOf(state, auth, facts, unguarded)
+  const shadowed = shadowedOf(facts)
+  const nextStep = nextStepOf(state, auth, facts, unguarded, shadowed)
   const keyCheck = auth === "key_env" || auth === "key_connected" ? facts.keyCheck : undefined
   return {
     version: PLUGIN_VERSION,
@@ -128,6 +148,7 @@ export function buildStatus(facts: StatusFacts): Status {
     host: { version: facts.host.version, range: HOST_RANGE, tested: facts.host.tested },
     unguardedAgents: unguarded,
     ...(unguarded.length === 0 ? {} : { permissionsBlock: DEFAULT_RULES.map((rule) => ({ ...rule })) }),
+    ...(shadowed.length === 0 ? {} : { shadowedSkills: shadowed }),
     nextStep,
   }
 }
@@ -137,6 +158,8 @@ interface StatusState {
   readonly websearch: WebsearchState
   readonly host: HostCheck
   readonly checkKey: KeyChecker
+  /** The skills the plugin registers, with their paths. */
+  readonly skills: readonly SkillPath[]
 }
 
 export async function readStatus(
@@ -145,16 +168,22 @@ export async function readStatus(
     readonly integration: Pick<Plugin.Context["integration"], "connection">
     readonly agent: Pick<Plugin.Context["agent"], "list">
     readonly tool: Pick<Plugin.Context["tool"], "list">
+    readonly skill: Pick<Plugin.Context["skill"], "list">
   },
   state: StatusState,
 ) {
   // One key for the whole read: the watcher can switch it while the reads below are in flight.
   const key = state.server.key
-  const [servers, agents, tools, keyCheck] = await Promise.all([
+  const [servers, agents, tools, keyCheck, listed] = await Promise.all([
     ctx.mcp.list(),
     ctx.agent.list(),
     ctx.tool.list(),
     key && !state.server.userServer && state.checkKey(key.key),
+    // The skill check is advice; a failed list must not hide the rest of the status.
+    ctx.skill.list().then(
+      (result) => result.data,
+      () => undefined,
+    ),
   ])
   const server = servers.data.find((entry) => entry.name === SERVER_NAME)
   // The account label is optional; a failed lookup must not hide the rest of the status.
@@ -172,6 +201,7 @@ export async function readStatus(
     websearchDefault: state.websearch.tavilyDefault,
     host: state.host,
     agents: agents.data,
+    ...(listed ? { skills: { own: state.skills, listed } } : {}),
   })
 }
 
@@ -184,6 +214,7 @@ export function formatStatus(status: Status) {
     `- Access: ${ACCESS_TEXT}`,
     `- Sign-in: ${authText(status)}`,
     `- Web search: ${websearchText(status)}`,
+    `- Skills: ${skillsText(status)}`,
     `- Tools: ${toolsText(status)}`,
     `- Agents without default rules: ${agentsText(status)}`,
     ...blockLines(status.permissionsBlock ?? []).map((line) => `  ${line}`),

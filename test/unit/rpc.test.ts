@@ -1,7 +1,9 @@
 import { describe, expect, test } from "bun:test"
 import { DEFAULT_RULES } from "../../src/permissions.js"
 import { Tavily, type Status } from "../../src/rpc/index.js"
-import { buildStatus, type StatusFacts } from "../../src/status.js"
+import { buildStatus } from "../../src/status.js"
+
+type StatusFacts = Parameters<typeof buildStatus>[0]
 import { schemaErrors } from "../schema.js"
 
 const valid = (schema: Parameters<typeof schemaErrors>[0], value: unknown) => schemaErrors(schema, value).length === 0
@@ -40,6 +42,7 @@ describe("RPC contract", () => {
       "host",
       "unguardedAgents",
       "permissionsBlock",
+      "shadowedSkills",
       "nextStep",
     ])
   })
@@ -69,12 +72,19 @@ describe("RPC contract", () => {
       buildStatus({ ...base, server: { status: "connected" }, agents: [{ id: "reviewer", permissions: [{ action: "*", resource: "*", effect: "allow" }] }] }),
       buildStatus({ ...base, server: { status: "connected" }, host: { version: "3.0.0", tested: false, inRange: false } }),
       buildStatus({ ...base, server: { status: "connected" }, host: { version: null, tested: false, inRange: false } }),
+      buildStatus({
+        ...base,
+        server: { status: "connected" },
+        skills: { own: [{ id: "tavily", path: "/pkg/SKILL.md" }], listed: [{ id: "tavily", path: "/home/SKILL.md" }] },
+      }),
     ]
     for (const entry of statuses) expect(valid(status.output, entry)).toBe(true)
     expect(valid(status.output, { ...statuses[1], key: "k" })).toBe(false)
     expect(valid(status.output, { ...statuses[1], connection: "connected" })).toBe(false)
     expect(valid(status.output, { ...statuses[1], state: "pending" })).toBe(false)
     expect(valid(status.output, { ...statuses[1], keyCheck: "maybe" })).toBe(false)
+    expect(statuses.at(-1)).toHaveProperty("shadowedSkills")
+    expect(valid(status.output, { ...statuses[1], shadowedSkills: [{ id: "tavily" }] })).toBe(false)
     expect(valid(status.output, { ...statuses[1], tools: { visible: 1.5, unknown: 0, unknownNames: [] } })).toBe(false)
   })
 
