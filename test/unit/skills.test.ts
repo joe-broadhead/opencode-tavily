@@ -3,7 +3,7 @@ import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { dirname, join } from "node:path"
 import { fileURLToPath } from "node:url"
-import { loadSkills, parseSkill, registerSkills, SKILLS_DIR } from "../../src/skills.js"
+import { loadSkills, parseSkill, registerSkills } from "../../src/skills.js"
 import { transforms, type EditorOf } from "./fake.js"
 import { Skill, type Plugin } from "@opencode/plugin"
 
@@ -66,9 +66,13 @@ describe("loadSkills", () => {
     )
   })
 
-  test("reads skills/ at the package root", () => {
+  test("loads the shipped skills from skills/ at the package root", async () => {
     const packageRoot = dirname(dirname(dirname(fileURLToPath(import.meta.url))))
-    expect(SKILLS_DIR).toBe(join(packageRoot, "skills") + "/")
+    const shipped = await loadSkills()
+    expect(shipped.map((info): string[] => [info.id, info.path]).sort()).toEqual(
+      ["tavily", "tavily-research"].map((id) => [id, join(packageRoot, "skills", id, "SKILL.md")]),
+    )
+    for (const info of shipped) expect(info.content.length, info.id).toBeGreaterThan(0)
   })
 })
 

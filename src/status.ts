@@ -3,7 +3,7 @@ import type { TavilyKey } from "./credential.js"
 import { HOST_RANGE, TESTED_TEXT, type HostCheck } from "./host-version.js"
 import type { KeyCheck, KeyChecker } from "./key-check.js"
 import { SERVER_NAME, SERVER_URL, type ServerState } from "./mcp.js"
-import { DEFAULT_RULES, isUnguarded, KNOWN_READS, type Rule } from "./permissions.js"
+import { DEFAULT_RULES, isUnguarded, KNOWN_ACTIONS, type Rule } from "./permissions.js"
 import {
   ACCESS_TEXT,
   accountText,
@@ -47,7 +47,7 @@ const STATE_OF: Record<ServerStatus, Status["state"]> = {
 }
 
 /** Everything status depends on, gathered from public host APIs and the plugin's own state. */
-export interface StatusFacts {
+interface StatusFacts {
   readonly server?: { readonly status: ServerStatus }
   readonly userServer: boolean
   /** The user's own server is at Tavily's URL, so scripts can use it. */
@@ -86,7 +86,7 @@ const SAFE_NAME = /^[a-z][a-z0-9_]{0,63}$/
 
 function toolsOf(facts: StatusFacts): Status["tools"] {
   const ids = facts.tools.map((tool) => tool.id).filter((id) => id.startsWith(TOOL_PREFIX))
-  const unknown = ids.filter((id) => !KNOWN_READS.includes(id)).map((id) => id.slice(TOOL_PREFIX.length))
+  const unknown = ids.filter((id) => !KNOWN_ACTIONS.includes(id)).map((id) => id.slice(TOOL_PREFIX.length))
   const unknownNames = unknown.filter((name) => SAFE_NAME.test(name)).slice(0, LISTED_UNKNOWN)
   return { visible: ids.length, unknown: unknown.length, unknownNames }
 }

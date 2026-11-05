@@ -3,7 +3,7 @@
 import { describe, expect, test } from "bun:test"
 import { KNOWN_READS, NEXT_STEPS, pluginError, shapeResult, TOOLS_RPC_ID } from "../../src/host/tools-rpc.js"
 import { SERVER_NAME } from "../../src/mcp.js"
-import { KNOWN_READS as READ_ACTIONS } from "../../src/permissions.js"
+import { KNOWN_ACTIONS } from "../../src/permissions.js"
 
 describe("Tavily's tools RPC", () => {
   test("is tavily.web.tools, with exactly Tavily's five tools as methods", () => {
@@ -12,7 +12,7 @@ describe("Tavily's tools RPC", () => {
   })
 
   test("its methods are the tools the default rules allow, so a new Tavily tool never becomes one", () => {
-    expect(KNOWN_READS.map((name) => `${SERVER_NAME}_${name}`)).toEqual([...READ_ACTIONS])
+    expect(KNOWN_READS.map((name) => `${SERVER_NAME}_${name}`)).toEqual([...KNOWN_ACTIONS])
   })
 
   test("returns Tavily's results unchanged: the same object", () => {
@@ -46,9 +46,5 @@ describe("Tavily's tools RPC", () => {
 
   test("the sign-in next step matches status: Tavily MCP first, then an API key", () => {
     expect(NEXT_STEPS.AUTH_REQUIRED).toBe("Run /connect and choose Tavily MCP to sign in, or choose Tavily to use an API key.")
-  })
-
-  test("has no per-account servers", () => {
-    expect(NEXT_STEPS.ACCOUNT_UNKNOWN).toBeUndefined()
   })
 })

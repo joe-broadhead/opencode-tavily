@@ -1,7 +1,9 @@
 import { describe, expect, test } from "bun:test"
 import { DEFAULT_RULES } from "../../src/permissions.js"
 import { Tavily, type Status } from "../../src/rpc/index.js"
-import { buildStatus, type StatusFacts } from "../../src/status.js"
+import { buildStatus } from "../../src/status.js"
+
+type StatusFacts = Parameters<typeof buildStatus>[0]
 import { schemaErrors } from "../schema.js"
 
 const valid = (schema: Parameters<typeof schemaErrors>[0], value: unknown) => schemaErrors(schema, value).length === 0

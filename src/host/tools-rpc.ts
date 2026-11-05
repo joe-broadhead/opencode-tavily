@@ -29,7 +29,7 @@ import { Rpc } from "@opencode/plugin/rpc"
 // >>> PLUGIN-SPECIFIC >>>
 
 import { SERVER_NAME } from "../mcp.js"
-import { KNOWN_READS as READ_ACTIONS } from "../permissions.js"
+import { KNOWN_ACTIONS } from "../permissions.js"
 import { tavilyErrorIn, tavilyErrorLine, type TavilyError } from "../tavily-error.js"
 
 /** The plugin's id. The RPC id is `<PLUGIN_ID>.tools`. */
@@ -40,7 +40,7 @@ export const PLUGIN_ID = "tavily.web"
  * reads belong here: an allowlist, so a tool the server adds later is never a method. Tavily's are the five tools
  * that the default rules allow.
  */
-export const KNOWN_READS: readonly string[] = READ_ACTIONS.map((action) => action.slice(`${SERVER_NAME}_`.length))
+export const KNOWN_READS: readonly string[] = KNOWN_ACTIONS.map((action) => action.slice(`${SERVER_NAME}_`.length))
 
 /** Tavily's error object in a result, which `shapeResult` throws so that `pluginError` names it. */
 class TavilyResultError extends Error {

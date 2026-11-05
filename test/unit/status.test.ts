@@ -1,6 +1,8 @@
 import { describe, expect, test } from "bun:test"
 import type { TavilyKey } from "../../src/credential.js"
 import { DEFAULT_RULES, type Rule } from "../../src/permissions.js"
+
+type StatusFacts = Parameters<typeof buildStatus>[0]
 import type { Status } from "../../src/rpc/index.js"
 import {
   buildStatus,
@@ -8,7 +10,6 @@ import {
   readStatus,
   registerStatusCommand,
   unavailable,
-  type StatusFacts,
 } from "../../src/status.js"
 import {
   agent,
