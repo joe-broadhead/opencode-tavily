@@ -92,10 +92,8 @@ export const websearchText = (status: Status) =>
 
 export const accountText = (status: Status) => status.account ?? "none"
 
-export const agentsText = (status: Status) =>
-  status.unguardedAgents.length === 0
-    ? "none"
-    : `${status.unguardedAgents.join(", ")}. New Tavily tools run there without asking. The block:`
+/** The agents row: names only; the block to paste follows it. */
+export const agentsText = (status: Status) => (status.unguardedAgents.length === 0 ? "none" : status.unguardedAgents.join(", "))
 
 export const hostText = ({ host }: Status) =>
   `${host.version ?? "unknown version"} (${host.tested ? "tested" : `untested; supported range ${host.range}`})`

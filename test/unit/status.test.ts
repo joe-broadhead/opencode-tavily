@@ -107,7 +107,7 @@ describe("buildStatus", () => {
     expect(buildStatus(facts({ userServer: true, server: { status: "needs_auth" } })).nextStep).toBe(
       "Run /connect and choose tavily to sign in to your own server.",
     )
-    expect(buildStatus(facts({ userServer: true, agents: [{ id: "reviewer", permissions: [BASE] }] })).nextStep).toStartWith("Put the block first")
+    expect(buildStatus(facts({ userServer: true, agents: [{ id: "reviewer", permissions: [BASE] }] })).nextStep).toStartWith("Put the default rules shown by /tavily-status first")
   })
 
   test("a user's own server at Tavily's URL serves scripts: nothing to do", () => {
@@ -159,7 +159,7 @@ describe("buildStatus", () => {
     expect(status.unguardedAgents).toEqual(["reviewer", "docs/writer"])
     expect(status.permissionsBlock).toEqual(DEFAULT_RULES)
     expect(status.nextStep).toBe(
-      "Put the block first in each listed agent's own permissions, in opencode.json or the agent's Markdown file, followed by your top-level permissions rules for tavily_* actions.",
+      "Put the default rules shown by /tavily-status first in each listed agent's own permissions, in opencode.json or the agent's Markdown file, followed by your top-level rules for Tavily tools.",
     )
     // Sign-in comes first; the agents and the block stay listed.
     const signIn = buildStatus(facts({ server: { status: "needs_auth" }, agents: [configOnly] }))
@@ -331,7 +331,7 @@ describe("formatStatus", () => {
         "- Sign-in: OAuth (/connect → Tavily MCP)",
         `- Web search: Tavily, unless opencode.json sets "websearch"`,
         "- Tools: 6 available, 1 unknown (they ask first): tavily_feedback",
-        "- Agents without default rules: reviewer. New Tavily tools run there without asking. The block:",
+        "- Agents without default rules: reviewer",
         `  {"action":"tavily_*","resource":"*","effect":"ask"},`,
         `  {"action":"tavily_tavily_search","resource":"*","effect":"allow"}`,
         "- OpenCode: 2.2.3 (tested)",
