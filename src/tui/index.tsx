@@ -8,6 +8,7 @@ import {
   authText,
   blockLines,
   hostText,
+  skillsText,
   STATE_LABELS,
   Tavily,
   terminalKeyText,
@@ -124,6 +125,12 @@ function StatusDialog(props: {
               {(text) => <Row label="Terminal key" value={text()} fg={tone("warning")} muted={theme().text.muted} />}
             </Show>
             <Row label="Web search" value={websearchText(status())} fg={theme().text.base} muted={theme().text.muted} />
+            <Row
+              label="Skills"
+              value={skillsText(status())}
+              fg={status().shadowedSkills === undefined ? theme().text.base : tone("warning")}
+              muted={theme().text.muted}
+            />
             <Row
               label="Tools"
               value={toolsText(status())}

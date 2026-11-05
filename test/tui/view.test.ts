@@ -171,6 +171,7 @@ describe("Tavily TUI status view", () => {
       row("Access", "read only"),
       row("Sign-in", "OAuth (/connect → Tavily MCP)"),
       row("Web search", "not set by this plugin"),
+      row("Skills", "the plugin's own"),
       row("Tools", "6 available, 1 unknown (they ask first): tavily_feedback"),
       row("Agents without default rules", "reviewer"),
       `{"action":"tavily_*","resource":"*","effect":"ask"},`,

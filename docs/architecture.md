@@ -79,16 +79,18 @@ One status object feeds `/tavily-status`, the RPC and the dialog:
   state: "connected" | "sign_in_required" | "connecting" | "failed" | "disabled" | "not_configured"
   auth: "oauth" | "key_connected" | "key_env" | "user_server" | "none"
   account?: string            // a credential label, never a secret
+  keyCheck?: "accepted" | "rejected" | "unchecked" // with an API key: Tavily's answer from /usage
   tools: { visible: number; unknown: number; unknownNames: string[] } // the tavily server's tools OpenCode lists
   websearchDefault: boolean   // the plugin chose Tavily; opencode.json can still override it
   host: { version: string | null; range: string; tested: boolean } // tested: 2.2.3, 2.2.4 or 2.2.5
   unguardedAgents: string[]   // agents without the default rules; empty when none
   permissionsBlock?: Rule[]   // the block to paste, when unguardedAgents is not empty
+  shadowedSkills?: { id: string; path: string }[] // the plugin's skills that a same-id skill replaces, and its file
   nextStep: string            // one next step; "Nothing to do." when ready
 }
 ```
 
-The plugin reads it from `ctx.mcp.list()`, `ctx.tool.list()`, `ctx.agent.list()`, `ctx.integration.connection.active()` and its own state. It holds no key or token. An agent counts as guarded when the block appears anywhere after its first base allow: other plugins insert their blocks at the same place. An agent is listed in `unguardedAgents` only when it has a base allow, lacks the block, and its own rules would let a new Tavily tool run without asking; one whose rules ask or deny for every Tavily tool needs no fix. `unknownNames` lists at most 20 plain names.
+The plugin reads it from `ctx.mcp.list()`, `ctx.tool.list()`, `ctx.agent.list()`, `ctx.skill.list()`, `ctx.integration.connection.active()` and its own state. It holds no key or token. An agent counts as guarded when the block appears anywhere after its first base allow: other plugins insert their blocks at the same place. An agent is listed in `unguardedAgents` only when it has a base allow, lacks the block, and its own rules would let a new Tavily tool run without asking; one whose rules ask or deny for every Tavily tool needs no fix. `unknownNames` lists at most 20 plain names. OpenCode lists one skill per id, and a user's or project's skill with the plugin's id wins, so the plugin's own never loads; `ctx.skill.list()` then gives the other file's path.
 
 `version`, `host`, `state`, `unguardedAgents` and `nextStep` are the fields every plugin of this family shares in its status RPC. `state` is the server's state; a release inside the range that is not a tested one changes only `host.tested` and the `OpenCode` row, never `state` or the next step. The plugin does not start outside the range unless `allowUntestedHost` is set, and then runs normally, so `state` is never `host_untested`.
 
