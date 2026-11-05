@@ -38,6 +38,8 @@ export interface Status {
   readonly unguardedAgents: readonly string[]
   /** The default rules to paste into each unguarded agent's own permissions; present with `unguardedAgents`. */
   readonly permissionsBlock?: readonly PermissionRule[]
+  /** The plugin's skills that OpenCode loads from another file with the same id, and that file; absent when none. */
+  readonly shadowedSkills?: readonly { readonly id: string; readonly path: string }[]
   /** The one next step; `Nothing to do.` when everything is ready. */
   readonly nextStep: string
 }
@@ -95,6 +97,11 @@ export const accountText = (status: Status) => status.account ?? "none"
 /** The agents row: names only; the block to paste follows it. */
 export const agentsText = (status: Status) => (status.unguardedAgents.length === 0 ? "none" : status.unguardedAgents.join(", "))
 
+export const skillsText = (status: Status) =>
+  status.shadowedSkills === undefined
+    ? "the plugin's own"
+    : status.shadowedSkills.map((skill) => `${skill.id} replaced by ${skill.path}`).join("; ")
+
 export const hostText = ({ host }: Status) =>
   `${host.version ?? "unknown version"} (${host.tested ? "tested" : `untested; supported range ${host.range}`})`
 
@@ -138,6 +145,15 @@ const status = {
     },
     unguardedAgents: strings,
     permissionsBlock: { type: "array", items: rule },
+    shadowedSkills: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: { id: { type: "string" }, path: { type: "string" } },
+        required: ["id", "path"],
+        additionalProperties: false,
+      },
+    },
     nextStep: { type: "string" },
   },
   required: ["version", "state", "auth", "tools", "websearchDefault", "host", "unguardedAgents", "nextStep"],

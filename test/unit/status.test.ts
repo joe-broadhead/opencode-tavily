@@ -224,6 +224,9 @@ describe("readStatus", () => {
   const server = (entry: McpServer) => ({ list: async () => ({ location: LOCATION, data: [entry] }) })
   const agents = (data: AgentInfo[]) => ({ list: async () => ({ location: LOCATION, data }) })
   const tool = { list: async () => [...KNOWN, { id: "tavily_tavily_feedback" }] as never }
+  const OWN = [{ id: "tavily", path: "/pkg/skills/tavily/SKILL.md" }]
+  const skillList = (data: { id: string; path: string }[]) => ({ list: async () => ({ location: LOCATION, data }) as never })
+  const skill = skillList(OWN)
   const checked: string[] = []
   const checkKey = async (key: string) => (checked.push(key), "rejected" as const)
   const state = {
@@ -231,6 +234,7 @@ describe("readStatus", () => {
     websearch: { tavilyDefault: true },
     host: CHECK,
     checkKey,
+    skills: OWN,
   }
 
   test("reads the server, the OAuth account and the agents through public APIs", async () => {
@@ -241,6 +245,7 @@ describe("readStatus", () => {
         integration: credentials.domain,
         agent: agents([agent("reviewer")]),
         tool,
+        skill,
       },
       state,
     )
@@ -262,6 +267,7 @@ describe("readStatus", () => {
         integration: credentials.domain,
         agent: agents([]),
         tool,
+        skill,
       },
       state,
     )
@@ -276,6 +282,7 @@ describe("readStatus", () => {
       integration: integration({}).domain,
       agent: agents([]),
       tool,
+      skill,
     }
     const key = { key: "tvly-k", source: "env" } as const
     expect(await readStatus(ctx, { ...state, server: { key, userServer: false, userServerAtTavily: false } })).toMatchObject({ keyCheck: "rejected" })
@@ -296,13 +303,26 @@ describe("readStatus", () => {
       return "rejected" as const
     }
     const mcp = { list: async () => ({ location: LOCATION, data: [{ name: "tavily", status: { status: "connected" } } as McpServer] }) }
-    const status = await readStatus({ mcp, integration: integration({}).domain, agent: agents([]), tool }, { ...state, server, checkKey: switching })
+    const status = await readStatus({ mcp, integration: integration({}).domain, agent: agents([]), tool, skill }, { ...state, server, checkKey: switching })
     expect(status).toMatchObject({ auth: "key_connected", account: "Old", keyCheck: "rejected" })
+  })
+
+  test("names a skill with the plugin's id that OpenCode loads from another file, and the next step moves it", async () => {
+    const ctx = { mcp: server({ name: "tavily", status: { status: "connected" } }), integration: integration({}).domain, agent: agents([]), tool }
+    const user = { id: "tavily", path: "/home/jo/.config/opencode/skills/tavily/SKILL.md" }
+    expect(await readStatus({ ...ctx, skill: skillList([user]) }, state)).toMatchObject({
+      shadowedSkills: [user],
+      nextStep: `Rename or move the "tavily" skill at ${user.path}, which OpenCode loads instead of the plugin's skill of the same name.`,
+    })
+    expect(await readStatus({ ...ctx, skill }, state)).not.toHaveProperty("shadowedSkills")
+    // A failed skill list leaves the rest of the status intact.
+    const failing = { list: async () => Promise.reject(new Error("no skills")) } as never
+    expect(await readStatus({ ...ctx, skill: failing }, state)).toMatchObject({ state: "connected", nextStep: "Nothing to do." })
   })
 
   test("another server name is not Tavily", async () => {
     const status = await readStatus(
-      { mcp: server({ name: "other", status: { status: "connected" } }), integration: integration({}).domain, agent: agents([]), tool },
+      { mcp: server({ name: "other", status: { status: "connected" } }), integration: integration({}).domain, agent: agents([]), tool, skill },
       state,
     )
     expect(status.state).toBe("not_configured")
@@ -330,6 +350,7 @@ describe("formatStatus", () => {
         "- Access: read only: search, extract, map, crawl and research",
         "- Sign-in: OAuth (/connect → Tavily MCP)",
         `- Web search: Tavily, unless opencode.json sets "websearch"`,
+        "- Skills: the plugin's own",
         "- Tools: 6 available, 1 unknown (they ask first): tavily_feedback",
         "- Agents without default rules: reviewer",
         `  {"action":"tavily_*","resource":"*","effect":"ask"},`,

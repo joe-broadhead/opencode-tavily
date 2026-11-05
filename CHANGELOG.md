@@ -4,6 +4,10 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+### Added
+
+- Status names a skill of yours that has the id `tavily` or `tavily-research` and so loads instead of the plugin's: a `Skills` row, `shadowedSkills` in the status RPC, and a next step that says which file to rename or move.
+
 ### Fixed
 
 - Tavily's 403 now gets the sign-in next step, as its 401 does: `/tavily-status` already counts a 403 as a rejected key, and the old "check the input" advice sent the model the wrong way.

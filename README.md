@@ -141,6 +141,8 @@ Sign-in `…, rejected by Tavily` means that Tavily does not accept the key, tho
 
 Sign-in `OAuth` although you set `TAVILY_API_KEY` means that the variable is in your shell but not in the OpenCode server's environment. The **Tavily: Status** dialog then shows a **Terminal key** row. Run `/connect` and choose **Tavily** to connect the key, or see [TAVILY_API_KEY and the background service](https://github.com/joe-broadhead/opencode-tavily/blob/HEAD/docs/configuration.md#tavily_api_key-and-the-background-service).
 
+Skills `tavily replaced by <path>` means that a skill of yours with the same id, for example in `~/.config/opencode/skills/`, loads instead of the plugin's. Rename or move that file.
+
 Sign-in `your own tavily server in opencode.json` means that your config already defines an MCP server named `tavily`. The plugin leaves it unchanged; its key handling and timeout do not apply to it, but the permission block does. Scripts can use it only when its `url` is Tavily's, `https://mcp.tavily.com/mcp/`: the tools RPC calls no other server, and answers `SERVER_CONFLICT`. Status then says so in its next step. Point the server at that URL, or remove it from `opencode.json`, to use the tools RPC.
 
 A 401 or 403 from a Tavily tool means the sign-in expired or the key is wrong. A 429 is Tavily's rate limit; 432 and 433 are your plan's limits. Tavily's server sends some of these as an ordinary result, an object such as `{"error":"Map failed","status":429,…}`. The plugin turns that into an `UPSTREAM_ERROR` with a next step, for the model and for scripts. It does not retry.

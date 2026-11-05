@@ -31,7 +31,7 @@ export default Plugin.define({
     await registerDefaultRules(ctx.agent)
     if (options.websearch) await selectWebsearchDefault(ctx.websearch, websearch)
     await registerSkills(ctx.skill, skills)
-    const read = () => readStatus(ctx, { server, websearch, host, checkKey })
+    const read = () => readStatus(ctx, { server, websearch, host, checkKey, skills })
     await registerStatusCommand(ctx, read)
     await ctx.rpc.register(Tavily, {
       status: (_input, { error }) =>

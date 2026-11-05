@@ -2,6 +2,8 @@
 // through the host's own evaluation, the web search default, the user's own server, and both sign-ins: OAuth, and an
 // API key that the server sends to the fake Tavily as a bearer header, switched without a restart.
 import { afterAll, beforeAll, describe, expect, setDefaultTimeout, test } from "bun:test"
+import { mkdirSync, writeFileSync } from "node:fs"
+import { join } from "node:path"
 import { Tavily, type Status } from "../../src/rpc/index.js"
 import { OAUTH_INTEGRATION_ID } from "../../src/connect.js"
 import { formatStatus } from "../../src/status.js"
@@ -11,7 +13,7 @@ import { NAMESPACE_DESCRIPTION } from "../../src/tools.js"
 import { MODEL_ID, startFakeModel, type ChatRequest, type FakeModel } from "./fake-model.js"
 import { NEW_TOOL as FAKE_NEW_TOOL, RECORDED_TOOLS } from "./catalog.js"
 import { startFakeTavily, type FakeTavily } from "./fake-tavily.js"
-import { cleanup, HOST_VERSION, hostedTavily, REJECTED, startHost, until, type Host } from "./harness.js"
+import { cleanup, HOST_VERSION, hostedTavily, REJECTED, root, startHost, until, type Host } from "./harness.js"
 import { schemaErrors } from "../schema.js"
 
 // Starting a host takes seconds on a laptop and minutes in a slow container (see READY_MS in harness.ts).
@@ -266,10 +268,15 @@ describe(`user config on ${HOST}`, () => {
   const userRules = [rule(NEW_TOOL, "allow")]
   let fake: FakeTavily
   let host: Host
+  // A user's own skill named tavily, which OpenCode loads instead of the plugin's.
+  const userSkills = join(root, "user-skills")
   beforeAll(async () => {
     fake = await startFakeTavily([...RECORDED_TOOLS, FAKE_NEW_TOOL])
+    mkdirSync(join(userSkills, "tavily"), { recursive: true })
+    writeFileSync(join(userSkills, "tavily", "SKILL.md"), "---\nname: tavily\ndescription: The user's own.\n---\nThe user's own.\n")
     host = await startHost({
       config: {
+        skills: [userSkills],
         mcp: { servers: { tavily: { type: "remote", url: fake.url, oauth: false, headers: { "x-tavily-host-test": "user" } } } },
         permissions: userRules,
         websearch: { provider: "fakeprobe" },
@@ -307,6 +314,13 @@ describe(`user config on ${HOST}`, () => {
     expect(await effect(host, "reviewer", NEW_TOOL)).toBe("allow")
     expect(await effect(host, "reviewer", "tavily_tavily_search")).toBe("allow")
     expect((await status(host)).unguardedAgents).toEqual([])
+  })
+
+  test("status names a user's skill that OpenCode loads instead of the plugin's", async () => {
+    const path = join(userSkills, "tavily", "SKILL.md")
+    expect(await status(host)).toMatchObject({ shadowedSkills: [{ id: "tavily", path }] })
+    const listed = (await host.client.skill.list({ location: host.location })).data.filter((skill) => skill.id.startsWith("tavily"))
+    expect(listed.map((skill) => skill.id).sort()).toEqual(["tavily", "tavily-research"])
   })
 
   test("a websearch choice in config still serves web search", async () => {

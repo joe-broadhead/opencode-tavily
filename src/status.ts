@@ -11,6 +11,7 @@ import {
   authText,
   blockLines,
   hostText,
+  skillsText,
   STATE_LABELS,
   toolsText,
   websearchText,
@@ -61,6 +62,21 @@ export interface StatusFacts {
   readonly websearchDefault: boolean
   readonly host: HostCheck
   readonly agents: readonly { readonly id: string; readonly permissions: readonly Rule[] }[]
+  /** The plugin's own skills, and the skills OpenCode lists; the listed one wins when both have an id. */
+  readonly skills?: { readonly own: readonly SkillPath[]; readonly listed: readonly SkillPath[] }
+}
+
+interface SkillPath {
+  readonly id: string
+  readonly path: string
+}
+
+/** The plugin's skills that OpenCode lists from another file: a skill with the same id, such as a user's, replaced it. */
+function shadowedOf(facts: StatusFacts): SkillPath[] {
+  return (facts.skills?.own ?? []).flatMap((own) => {
+    const listed = facts.skills?.listed.find((skill) => skill.id === own.id)
+    return listed && listed.path !== own.path ? [{ id: own.id, path: listed.path }] : []
+  })
 }
 
 const TOOL_PREFIX = `${SERVER_NAME}_`
@@ -82,7 +98,7 @@ function authOf(facts: StatusFacts): Status["auth"] {
   return facts.key.source === "env" ? "key_env" : "key_connected"
 }
 
-function nextStepOf(state: Status["state"], auth: Status["auth"], facts: StatusFacts, unguarded: string[]) {
+function nextStepOf(state: Status["state"], auth: Status["auth"], facts: StatusFacts, unguarded: string[], shadowed: SkillPath[]) {
   const replaceKey =
     auth === "key_env"
       ? `run /connect, choose Tavily and connect a working key (it wins over TAVILY_API_KEY), or replace TAVILY_API_KEY with "opencode service set env TAVILY_API_KEY <key>"`
@@ -106,6 +122,8 @@ function nextStepOf(state: Status["state"], auth: Status["auth"], facts: StatusF
     return `Tavily did not accept the API key: ${replaceKey}.`
   if (unguarded.length > 0) return AGENT_FIX
   if (auth === "user_server" && !facts.userServerAtTavily) return USER_SERVER_SCRIPTS
+  if (shadowed.length > 0)
+    return `Rename or move ${shadowed.map((skill) => `the "${skill.id}" skill at ${skill.path}`).join(" and ")}, which OpenCode loads instead of the plugin's skill of the same name.`
   // An untested release inside the range changes nothing; outside it, the plugin runs only with allowUntestedHost.
   if (!facts.host.inRange) return `If Tavily misbehaves, use OpenCode ${TESTED_TEXT}.`
   return "Nothing to do."
@@ -116,7 +134,8 @@ export function buildStatus(facts: StatusFacts): Status {
   const auth = authOf(facts)
   const account = auth === "key_connected" ? facts.key?.label : auth === "key_env" ? undefined : facts.oauthAccount
   const unguarded = facts.agents.filter((agent) => isUnguarded(agent.permissions)).map((agent) => agent.id)
-  const nextStep = nextStepOf(state, auth, facts, unguarded)
+  const shadowed = shadowedOf(facts)
+  const nextStep = nextStepOf(state, auth, facts, unguarded, shadowed)
   const keyCheck = auth === "key_env" || auth === "key_connected" ? facts.keyCheck : undefined
   return {
     version: PLUGIN_VERSION,
@@ -129,6 +148,7 @@ export function buildStatus(facts: StatusFacts): Status {
     host: { version: facts.host.version, range: HOST_RANGE, tested: facts.host.tested },
     unguardedAgents: unguarded,
     ...(unguarded.length === 0 ? {} : { permissionsBlock: DEFAULT_RULES.map((rule) => ({ ...rule })) }),
+    ...(shadowed.length === 0 ? {} : { shadowedSkills: shadowed }),
     nextStep,
   }
 }
@@ -138,6 +158,8 @@ interface StatusState {
   readonly websearch: WebsearchState
   readonly host: HostCheck
   readonly checkKey: KeyChecker
+  /** The skills the plugin registers, with their paths. */
+  readonly skills: readonly SkillPath[]
 }
 
 export async function readStatus(
@@ -146,16 +168,22 @@ export async function readStatus(
     readonly integration: Pick<Plugin.Context["integration"], "connection">
     readonly agent: Pick<Plugin.Context["agent"], "list">
     readonly tool: Pick<Plugin.Context["tool"], "list">
+    readonly skill: Pick<Plugin.Context["skill"], "list">
   },
   state: StatusState,
 ) {
   // One key for the whole read: the watcher can switch it while the reads below are in flight.
   const key = state.server.key
-  const [servers, agents, tools, keyCheck] = await Promise.all([
+  const [servers, agents, tools, keyCheck, listed] = await Promise.all([
     ctx.mcp.list(),
     ctx.agent.list(),
     ctx.tool.list(),
     key && !state.server.userServer && state.checkKey(key.key),
+    // The skill check is advice; a failed list must not hide the rest of the status.
+    ctx.skill.list().then(
+      (result) => result.data,
+      () => undefined,
+    ),
   ])
   const server = servers.data.find((entry) => entry.name === SERVER_NAME)
   // The account label is optional; a failed lookup must not hide the rest of the status.
@@ -173,6 +201,7 @@ export async function readStatus(
     websearchDefault: state.websearch.tavilyDefault,
     host: state.host,
     agents: agents.data,
+    ...(listed ? { skills: { own: state.skills, listed } } : {}),
   })
 }
 
@@ -185,6 +214,7 @@ export function formatStatus(status: Status) {
     `- Access: ${ACCESS_TEXT}`,
     `- Sign-in: ${authText(status)}`,
     `- Web search: ${websearchText(status)}`,
+    `- Skills: ${skillsText(status)}`,
     `- Tools: ${toolsText(status)}`,
     `- Agents without default rules: ${agentsText(status)}`,
     ...blockLines(status.permissionsBlock ?? []).map((line) => `  ${line}`),
