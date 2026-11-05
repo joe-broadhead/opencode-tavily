@@ -41,7 +41,7 @@ Report `state`, `auth`, `tools.visible` and any `unguardedAgents`, then quote `n
 
 ## Scripts and cron jobs
 
-A script calls the tools RPC as a session and its agent, with no model and no key (never `TAVILY_API_KEY` or `api.tavily.com`). Create the session once and keep its `id`:
+A script calls the tools RPC as a session and its agent, with no model and no key (never `TAVILY_API_KEY` or `api.tavily.com`). Create the session once; it answers `{"data":{"id":"ses_…",…}}`, so keep `data.id`:
 
 ```sh
 opencode api post /api/session -d '{"title":"news digest","agent":"build"}'
