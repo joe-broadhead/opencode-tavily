@@ -10,8 +10,8 @@ Tavily's tools are `tavily_search`, `tavily_extract`, `tavily_map`, `tavily_craw
 ## Choose the cheapest path
 
 1. **A URL you already have:** `webfetch` it. Use `tavily_extract` when `webfetch` fails (script-heavy pages, PDFs; `extract_depth: "advanced"` for protected sites), for several URLs at once, or with `query` to keep only a long page's relevant passages.
-2. **A fact:** one `tavily_search` with `search_depth: "basic"` and `max_results` of 5 or fewer. Unset, Tavily may pick `advanced` at twice the cost, whatever the tool text suggests; use `advanced` only after `basic` missed. Excerpts are short: read the page before relying on a detail.
-3. **A page on a known site:** `tavily_search` with `include_domains: ["docs.example.com"]`, or `tavily_map` with `select_paths` or `instructions` and a `limit`. Map lists URLs without reading them.
+2. **A fact:** if it has an obvious official page (a changelog, a releases or pricing page), `webfetch` that first. Otherwise one `tavily_search` with `search_depth: "basic"` and `max_results` of 5 or fewer. Unset, Tavily may pick `advanced` at twice the cost, whatever the tool text suggests; use `advanced` only after `basic` missed. Excerpts are short: read the page before relying on a detail.
+3. **Which page on a known site:** first `webfetch` the site's `/llms.txt` (many docs sites publish this index of their pages, such as `https://docs.example.com/llms.txt`) or the site's official page for the topic. Both are free. Only if neither answers, `tavily_search` with `include_domains: ["docs.example.com"]`, or `tavily_map` with `select_paths` or `instructions` and a `limit`. Map lists URLs without reading them.
 4. **Several pages' content:** `tavily_crawl`. By default it reads up to 50 pages (about 15 credits), so set `limit` (say 10) and narrow with `select_paths` or `instructions`; `chunks_per_source` needs `instructions`.
 5. **A multi-source report:** `tavily_research`, only via the `tavily-research` skill and the user's approval. The word "research" alone doesn't mean this.
 
@@ -41,7 +41,7 @@ Report `state`, `auth`, `tools.visible` and any `unguardedAgents`, then quote `n
 
 ## Scripts and cron jobs
 
-A script calls the tools RPC as a session and its agent, with no model and no key (never `TAVILY_API_KEY` or `api.tavily.com`). Create the session once; it answers `{"data":{"id":"ses_…",…}}`, so keep `data.id`:
+A script calls the tools RPC as a session and its agent, with no model and no key (never `TAVILY_API_KEY` or `api.tavily.com`). Create a session for the script, and for any test run of it, once; it answers `{"data":{"id":"ses_…",…}}`, so keep `data.id`. Never borrow a session found in history or a session list: the script would run as that session's agent, under its rules.
 
 ```sh
 opencode api post /api/session -d '{"title":"news digest","agent":"build"}'
@@ -49,7 +49,7 @@ opencode api post /api/rpc/tavily.web.tools/tavily_search \
   -d '{"input":{"sessionID":"ses_…","input":{"query":"…","search_depth":"basic","max_results":3}}}'
 ```
 
-The result is `{"output":{"output":{"results":[{"title","url","content"},…],…},"text":…}}`. `opencode api` exits 1 on an RPC error (`UPSTREAM_ERROR`; `PERMISSION_DENIED` when the agent's rules ask or deny). Each run spends credits. Reference: https://github.com/joe-broadhead/opencode-tavily/blob/HEAD/docs/scripting.md
+The result is `{"output":{"output":{"results":[{"title","url","content"},…],…},"text":…}}`. `opencode api` exits 1 on an RPC error (`UPSTREAM_ERROR`; `PERMISSION_DENIED` when the agent's rules ask or deny). Each run spends credits. Reference: https://raw.githubusercontent.com/joe-broadhead/opencode-tavily/HEAD/docs/scripting.md
 
 ## Declines, sources and untrusted content
 
