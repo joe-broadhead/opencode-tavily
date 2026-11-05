@@ -16,6 +16,8 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ### Changed
 
+- The `tavily` skill is shorter and cheaper to follow: it reads a known URL with OpenCode's free `webfetch` and keeps `tavily_extract` for pages `webfetch` cannot read; it sets `search_depth: "basic"` explicitly (Tavily may otherwise choose `advanced`, at 2 credits); it gives the full credit table, the cost of a default Crawl and `include_usage`; it checks the setup by reading the free status RPC, never with a test search; and it writes scripts and cron jobs against the tools RPC, with no key.
+- The `tavily-research` skill always shows the draft `input`, its scope, the model, the credit range and the time, and asks first. If the user doesn't answer or declines, it stops, instead of spending credits on its own searches. It describes the result as the report's text, lists the `files` input, and fires only for in-depth web research, not for one fact or a report on your own files.
 - Status's agent fix uses the wording all the plugins share: "Put the default rules shown by /tavily-status first in each listed agent's own permissions, in opencode.json or the agent's Markdown file, followed by your top-level rules for Tavily tools." The `Agents without default rules` row lists only the names, followed by the rules.
 - Docs: `docs/configuration.md` is the one place for the permission rule order and the fix for agents defined only in your config; the README and SECURITY link there.
 - Tools RPC: a `PERMISSION_DENIED` from a deny rule names the denied action, such as `tavily_tavily_search`, and its next step says to remove or narrow that deny rule, or add a later allow rule to the session.
