@@ -61,7 +61,7 @@ The plugin adds the block only when the agent does not already have it, so rebui
 
 An escalating permission hook was rejected. It would run after the rules and saved approvals, so it would override a user's explicit allow.
 
-**Limit.** OpenCode creates agents that are defined only in user config after plugins run, so those agents never get the block. Status finds every agent that does not have the block and would allow an unknown Tavily tool. It lists the agent in `unguardedAgents` and gives the fix: put the block first in that agent's own `permissions`, then the user's top-level `tavily_*` rules. Putting the block in the top-level `permissions` is no fix: top-level rules come after Explore's `* * deny`, so they would let Explore use Tavily tools.
+**Limit.** OpenCode creates agents that are defined only in user config after plugins run, so those agents never get the block. Status finds every agent that does not have the block and would allow an unknown Tavily tool. It lists the agent in `unguardedAgents` and gives the fix: the block first in that agent's own `permissions`, then the user's top-level rules for Tavily tools ([Configuration](configuration.md#agents-defined-only-in-your-config)). Putting the block in the top-level `permissions` is no fix: top-level rules come after Explore's `* * deny`, so they would let Explore use Tavily tools.
 
 ## Web search
 

@@ -12,6 +12,7 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ### Changed
 
+- Status's agent fix uses the wording all the plugins share: "Put the default rules shown by /tavily-status first in each listed agent's own permissions, in opencode.json or the agent's Markdown file, followed by your top-level rules for Tavily tools." The `Agents without default rules` row lists only the names, followed by the rules.
 - Tools RPC: a `PERMISSION_DENIED` from a deny rule names the denied action, such as `tavily_tavily_search`, and its next step says to remove or narrow that deny rule, or add a later allow rule to the session.
 
 ## [0.0.4] - 2026-11-04

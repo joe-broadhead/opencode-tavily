@@ -96,7 +96,7 @@ To turn off every Tavily tool:
 
 OpenCode creates the agents that you define only in your config after plugins run, so these agents do not get the plugin's rules. Without the rules, a new Tavily tool runs there without a prompt. `/tavily-status` and the **Tavily: Status** dialog name these agents and show the block to paste. An agent counts as covered when the block appears anywhere after its first `* * allow` rule.
 
-Put the block first in that agent's own `permissions`, followed by your top-level `permissions` rules for `tavily_*` actions, because the agent's own rules come after the top-level ones and would otherwise win. For example, for an agent named `reviewer`, when your top-level `permissions` allow `tavily_tavily_feedback`:
+Put the default rules shown by `/tavily-status` first in each listed agent's own permissions, in `opencode.json` or the agent's Markdown file, followed by your top-level rules for Tavily tools: the agent's own rules come after the top-level ones and would otherwise win. For example, for an agent named `reviewer`, when your top-level `permissions` allow `tavily_tavily_feedback`:
 
 ```jsonc
 {

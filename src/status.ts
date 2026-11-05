@@ -20,12 +20,13 @@ import { PLUGIN_VERSION } from "./version.js"
 import type { WebsearchState } from "./websearch.js"
 
 /**
- * The fix for agents that miss the inserted rules: the block first in each agent's own `permissions`, then the
- * user's top-level Tavily rules again, because an agent's own rules come after the top-level ones. The top-level
- * `permissions` are no fix: they come after Explore's `* * deny` too, so they would loosen Explore.
+ * The fix for agents that miss the inserted rules, in the wording all the plugins share: the block first in each
+ * agent's own `permissions`, then the user's top-level Tavily rules again, because an agent's own rules come after
+ * the top-level ones. The top-level `permissions` are no fix: they come after Explore's `* * deny` too, so they would
+ * loosen Explore.
  */
 const AGENT_FIX =
-  "Put the block first in each listed agent's own permissions, in opencode.json or the agent's Markdown file, followed by your top-level permissions rules for tavily_* actions."
+  "Put the default rules shown by /tavily-status first in each listed agent's own permissions, in opencode.json or the agent's Markdown file, followed by your top-level rules for Tavily tools."
 
 /**
  * The tools RPC calls only a server the plugin can vouch for: its own, or the user's own at Tavily's URL. Any other
