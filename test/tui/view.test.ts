@@ -171,8 +171,9 @@ describe("Tavily TUI status view", () => {
       row("Access", "read only"),
       row("Sign-in", "OAuth (/connect → Tavily MCP)"),
       row("Web search", "not set by this plugin"),
+      row("Skills", "the plugin's own"),
       row("Tools", "6 available, 1 unknown (they ask first): tavily_feedback"),
-      row("Agents without default rules", "reviewer. New Tavily tools run there without asking. The block:"),
+      row("Agents without default rules", "reviewer"),
       `{"action":"tavily_*","resource":"*","effect":"ask"},`,
       `{"action":"tavily_tavily_search","resource":"*","effect":"allow"}`,
       row("OpenCode", "2.2.4 (tested)"),
@@ -181,6 +182,8 @@ describe("Tavily TUI status view", () => {
     const positions = order.map((text) => frame.indexOf(text))
     expect(positions.filter((position) => position < 0)).toEqual([])
     expect(positions).toEqual([...positions].sort((a, b) => a - b))
+    // The agents row holds only the names; the block follows it.
+    expect(frame).not.toContain("without asking")
   })
 
   test("shows the next step the RPC error carries", async () => {

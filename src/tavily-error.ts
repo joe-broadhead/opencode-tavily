@@ -25,8 +25,10 @@ const words = (value: unknown): string | undefined => {
 /** The next step for Tavily's status codes, as its API reference documents them. */
 function nextStep(status: number) {
   if (status === 429) return "Wait a minute, then retry; if it keeps happening, check your Tavily plan and API key at https://app.tavily.com."
-  if (status === 432 || status === 433) return "Check your Tavily plan's usage and limits at https://app.tavily.com, then retry."
-  if (status === 401) return "Run /tavily-status and follow its next step to sign in again or replace the key."
+  if (status === 432 || status === 433)
+    return "Check your Tavily plan's usage and limits at https://app.tavily.com; a retry fails until the limit resets or the plan changes."
+  // 403 too: the key check (src/key-check.ts) counts it as a rejected key.
+  if (status === 401 || status === 403) return "Run /tavily-status and follow its next step to sign in again or replace the key."
   if (status >= 500) return "Wait a minute, then retry; Tavily had a problem on its side."
   return "Check the input against the tool's schema, then retry with a corrected input."
 }

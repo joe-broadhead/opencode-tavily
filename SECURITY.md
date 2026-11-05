@@ -41,7 +41,7 @@ Search results, page text from Extract and Crawl, and Research reports come from
 - The plugin adds default rules to each agent: Tavily's five read-only tools run without a prompt, and every other tool on the `tavily` server asks. See [Configuration](https://github.com/joe-broadhead/opencode-tavily/blob/HEAD/docs/configuration.md#permissions).
 - **A saved "Always allow" applies to the whole project and to every agent in it, Plan included.** OpenCode saves the approval for the project, not for the agent or the session. A `deny` rule in your config still wins over it.
 - A git repository with no commits yet belongs to OpenCode's shared `global` project. An approval saved there also applies in every other repository that has no commits.
-- Agents that you define only in your config do not get the plugin's rules, so a new Tavily tool runs there without a prompt. `/tavily-status` names these agents and gives the fix.
+- Agents that you define only in your config do not get the plugin's rules, so a new Tavily tool runs there without a prompt. `/tavily-status` names these agents and gives the fix; see [Configuration](https://github.com/joe-broadhead/opencode-tavily/blob/HEAD/docs/configuration.md#agents-defined-only-in-your-config).
 - The `tavily_*` rule also matches tools of any other MCP server whose name starts with `tavily_`.
 - In a Code Mode program on OpenCode 2.2.3, a declined call becomes an error that the program can catch, and the program continues. The `tavily` skill tells the model to accept a decline and not to try another route. See [Architecture](https://github.com/joe-broadhead/opencode-tavily/blob/HEAD/docs/architecture.md#code-mode-and-declined-calls).
 

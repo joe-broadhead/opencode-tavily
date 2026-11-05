@@ -4,14 +4,14 @@
 //
 // Usage: bun tools/check-upstream.mjs [endpoint]    (default: the plugin's server URL)
 import { SERVER_NAME, SERVER_URL } from "../src/mcp.ts"
-import { KNOWN_READS } from "../src/permissions.ts"
+import { KNOWN_ACTIONS } from "../src/permissions.ts"
 
 const PROTOCOL = "2025-03-26"
 /** Bounds the whole check, however many pages the tool list has. */
 const LIMIT_MS = 30_000
 
 const endpoint = process.argv[2] ?? SERVER_URL
-const known = KNOWN_READS.map((action) => action.slice(`${SERVER_NAME}_`.length))
+const known = KNOWN_ACTIONS.map((action) => action.slice(`${SERVER_NAME}_`.length))
 
 /** Reads the JSON-RPC reply with `id` from a JSON or Server-Sent Events response. */
 async function reply(response, id) {
@@ -65,9 +65,9 @@ try {
   console.log(`Server: ${server?.name ?? "unknown"} ${server?.version ?? ""}, ${names.length} tools: ${names.join(", ")}`)
   if (added.length === 0 && removed.length === 0) console.log(`No drift: Tavily lists exactly the ${known.length} tools the plugin knows.`)
   if (added.length > 0)
-    console.log(`Warning: added upstream: ${added.join(", ")}. They ask before running; review them and add the reads to KNOWN_READS in src/permissions.ts.`)
+    console.log(`Warning: added upstream: ${added.join(", ")}. They ask before running; review them and add the reads to KNOWN_ACTIONS in src/permissions.ts.`)
   if (removed.length > 0)
-    console.log(`Warning: removed upstream: ${removed.join(", ")}. Remove them from KNOWN_READS in src/permissions.ts and the skills.`)
+    console.log(`Warning: removed upstream: ${removed.join(", ")}. Remove them from KNOWN_ACTIONS in src/permissions.ts and the skills.`)
 } catch (error) {
   const reason = error instanceof Error ? error.message : String(error)
   console.log(`Warning: could not list Tavily's tools (${reason}). Try again later; this check never fails.`)

@@ -163,6 +163,36 @@ describe("watchKey", () => {
     return { stream, credentials, state, controller, done, warnings, reloads: () => reloads }
   }
 
+  test("a failed event stream warns KEY_WATCH_STOPPED with its next step; an abort does not warn", async () => {
+    const failing = (error: Error, controller: AbortController) => ({
+      subscribe: () => ({
+        [Symbol.asyncIterator]: () => ({
+          next: async () => {
+            controller.abort()
+            throw error
+          },
+        }),
+      }),
+    })
+    const run = async (abortFirst: boolean) => {
+      const warnings: string[] = []
+      const controller = new AbortController()
+      const events = abortFirst ? failing(new Error("aborted"), controller) : { subscribe: () => { throw new Error("stream closed") } }
+      const state: ServerState = { key: undefined, userServer: false, userServerAtTavily: false }
+      await watchKey(
+        { event: events as never, integration: integration({}).domain, mcp: { reload: async () => {} } },
+        state,
+        controller.signal,
+        (message) => warnings.push(message),
+      )
+      return warnings
+    }
+    expect(await run(false)).toEqual([
+      "KEY_WATCH_STOPPED: The plugin stopped watching for Tavily key changes (stream closed). Next step: Restart OpenCode after you change the key.",
+    ])
+    expect(await run(true)).toEqual([])
+  })
+
   test("a key change reloads exactly once, however many events announce it", async () => {
     const watch = setup({ connection: keyConnection(), value: keyValue("tvly-new") }, undefined)
     watch.stream.push("credential.updated")

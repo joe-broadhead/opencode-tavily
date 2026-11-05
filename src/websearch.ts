@@ -1,7 +1,7 @@
 import type { Plugin } from "@opencode/plugin"
 
 /** OpenCode's built-in Tavily web search provider. The plugin adds no provider of its own. */
-export const PROVIDER_ID = "tavily"
+const PROVIDER_ID = "tavily"
 
 export interface WebsearchState {
   /** This plugin selected Tavily, or found it already selected by an earlier plugin. */

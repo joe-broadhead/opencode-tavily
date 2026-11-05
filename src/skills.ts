@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url"
 import { Skill, type Plugin } from "@opencode/plugin"
 
 /** `skills/` at the package root, next to `dist/` (and next to `src/` in the repository). */
-export const SKILLS_DIR = fileURLToPath(new URL("../skills/", import.meta.url))
+const SKILLS_DIR = fileURLToPath(new URL("../skills/", import.meta.url))
 
 const invalid = (what: string) => new Error(`SKILLS_INVALID: ${what}. Next step: Reinstall the plugin.`)
 
