@@ -45,3 +45,15 @@ describe("the skills' tool and parameter names", () => {
       expect(found.filter((name) => !known.has(name))).toEqual([])
     })
 })
+
+describe("the skills' links", () => {
+  // An agent reads a link with webfetch: the plain file, not GitHub's HTML page around it.
+  for (const id of ["tavily", "tavily-research"])
+    test(`skills/${id} links to this repository's files only as raw files`, () => {
+      const text = readFileSync(new URL(`../../skills/${id}/SKILL.md`, import.meta.url), "utf8")
+      const links = [...text.matchAll(/https:\/\/[^\s)`>]+/g)].map((match) => match[0])
+      expect(links.filter((link) => /^https:\/\/github\.com\/joe-broadhead\//.test(link))).toEqual([])
+      for (const link of links.filter((link) => link.includes("joe-broadhead/opencode-tavily")))
+        expect(link).toMatch(/^https:\/\/raw\.githubusercontent\.com\/joe-broadhead\/opencode-tavily\/HEAD\/[\w./-]+$/)
+    })
+})

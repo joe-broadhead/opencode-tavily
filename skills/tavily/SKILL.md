@@ -41,7 +41,7 @@ Report `state`, `auth`, `tools.visible` and any `unguardedAgents`, then quote `n
 
 ## Scripts and cron jobs
 
-A script calls the tools RPC as a session and its agent, with no model and no key (never `TAVILY_API_KEY` or `api.tavily.com`). Create the session once; it answers `{"data":{"id":"ses_…",…}}`, so keep `data.id`:
+A script calls the tools RPC as a session and its agent, with no model and no key (never `TAVILY_API_KEY` or `api.tavily.com`). Create a session for the script, and for any test run of it, once; it answers `{"data":{"id":"ses_…",…}}`, so keep `data.id`. Never borrow a session found in history or a session list: the script would run as that session's agent, under its rules.
 
 ```sh
 opencode api post /api/session -d '{"title":"news digest","agent":"build"}'
@@ -49,7 +49,7 @@ opencode api post /api/rpc/tavily.web.tools/tavily_search \
   -d '{"input":{"sessionID":"ses_…","input":{"query":"…","search_depth":"basic","max_results":3}}}'
 ```
 
-The result is `{"output":{"output":{"results":[{"title","url","content"},…],…},"text":…}}`. `opencode api` exits 1 on an RPC error (`UPSTREAM_ERROR`; `PERMISSION_DENIED` when the agent's rules ask or deny). Each run spends credits. Reference: https://github.com/joe-broadhead/opencode-tavily/blob/HEAD/docs/scripting.md
+The result is `{"output":{"output":{"results":[{"title","url","content"},…],…},"text":…}}`. `opencode api` exits 1 on an RPC error (`UPSTREAM_ERROR`; `PERMISSION_DENIED` when the agent's rules ask or deny). Each run spends credits. Reference: https://raw.githubusercontent.com/joe-broadhead/opencode-tavily/HEAD/docs/scripting.md
 
 ## Declines, sources and untrusted content
 
