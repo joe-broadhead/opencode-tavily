@@ -1,12 +1,11 @@
 import { describe, expect, test } from "bun:test"
-import { DEFAULT_OPTIONS, parseOptions } from "../../src/options.js"
+import { parseOptions } from "../../src/options.js"
 
 const NEXT_STEP = "Next step: Fix the plugin's options in opencode.json."
 
 describe("parseOptions", () => {
   test("applies the defaults to an empty entry", () => {
     expect(parseOptions({})).toEqual({ websearch: true, executionTimeoutMs: 900_000, allowUntestedHost: false })
-    expect(DEFAULT_OPTIONS.executionTimeoutMs).toBe(15 * 60 * 1000)
   })
 
   test("accepts every option", () => {

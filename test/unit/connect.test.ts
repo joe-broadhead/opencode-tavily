@@ -1,6 +1,10 @@
 import { describe, expect, test } from "bun:test"
 import type { Plugin } from "@opencode/plugin"
-import { OAUTH_INTEGRATION_ID, OAUTH_NAME, watchConnect } from "../../src/connect.js"
+import { watchConnect } from "../../src/connect.js"
+
+/** OpenCode's id for the tavily server's OAuth integration, from its name and URL, and the name the plugin gives it. */
+const OAUTH_INTEGRATION_ID = "mcp_11c61e033a3156b2"
+const OAUTH_NAME = "Tavily MCP"
 import type { KeyCheck } from "../../src/key-check.js"
 import type { ServerState } from "../../src/mcp.js"
 import { envConnection, events, keyConnection, LOCATION, settle, type Connection, type EditorOf, type McpServer } from "./fake.js"

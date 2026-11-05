@@ -105,9 +105,7 @@ The plugin adds this block to every agent, right after the agent's first `{ "act
 ]
 ```
 
-- The last matching rule wins, so the agent's own later rules, your `permissions` in `opencode.json` and your saved "Always allow" answers all win over the block. Plan and Explore keep their own limits.
-- In `opencode run`, nobody can answer a prompt, so the five tools run and any other Tavily tool is refused.
-- **Agents that you define only in your config do not get the block**, because OpenCode creates them after plugins run. `/tavily-status` and the dialog name these agents and show the block. Put the default rules shown by `/tavily-status` first in each listed agent's own permissions, in `opencode.json` or the agent's Markdown file, followed by your top-level rules for Tavily tools. Do not add them to the top-level `permissions`: that would let Explore use Tavily tools. [Configuration](https://github.com/joe-broadhead/opencode-tavily/blob/HEAD/docs/configuration.md#agents-defined-only-in-your-config) has an example.
+The last matching rule wins, so your own rules and saved "Always allow" answers win over the block. **Agents that you define only in your config do not get it**: `/tavily-status` names them, and its next step says what to paste where. [Configuration](https://github.com/joe-broadhead/opencode-tavily/blob/HEAD/docs/configuration.md#permissions) has the rule order and an example.
 
 ## Configure
 

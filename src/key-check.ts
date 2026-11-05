@@ -3,7 +3,7 @@
  * cannot tell: it accepts any bearer token at `initialize` and `tools/list`, and reports a rejected key only inside
  * each tool result, so a server with a wrong key still shows as connected.
  */
-export const USAGE_URL = "https://api.tavily.com/usage"
+const USAGE_URL = "https://api.tavily.com/usage"
 
 /** `unchecked`: Tavily's API could not be reached, or gave an answer that says nothing about the key. */
 export type KeyCheck = "accepted" | "rejected" | "unchecked"

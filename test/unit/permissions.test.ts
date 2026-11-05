@@ -4,7 +4,7 @@ import {
   evaluate,
   hasDefaultRules,
   insertDefaultRules,
-  KNOWN_READS,
+  KNOWN_ACTIONS,
   registerDefaultRules,
   type Rule,
 } from "../../src/permissions.js"
@@ -19,14 +19,14 @@ const BASE = allow("*")
 describe("default rules", () => {
   test("unknown tavily tools ask and the five documented tools are allowed", () => {
     expect(DEFAULT_RULES[0]).toEqual(ask("tavily_*"))
-    expect(KNOWN_READS).toEqual([
+    expect(KNOWN_ACTIONS).toEqual([
       "tavily_tavily_search",
       "tavily_tavily_extract",
       "tavily_tavily_map",
       "tavily_tavily_crawl",
       "tavily_tavily_research",
     ])
-    expect(DEFAULT_RULES.slice(1)).toEqual(KNOWN_READS.map(allow))
+    expect(DEFAULT_RULES.slice(1)).toEqual(KNOWN_ACTIONS.map(allow))
   })
 })
 
@@ -56,7 +56,7 @@ describe("insertDefaultRules", () => {
   test("known reads are allowed, unknown tools ask", () => {
     const rules = [BASE]
     insertDefaultRules(rules)
-    for (const action of KNOWN_READS) expect(evaluate(rules, action)).toBe("allow")
+    for (const action of KNOWN_ACTIONS) expect(evaluate(rules, action)).toBe("allow")
     expect(evaluate(rules, "tavily_feedback")).toBe("ask")
     expect(evaluate(rules, "tavily_unknown")).toBe("ask")
     expect(evaluate(rules, "read")).toBe("allow")

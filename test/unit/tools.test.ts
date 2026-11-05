@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test"
-import { NAMESPACE_DESCRIPTION, registerTools } from "../../src/tools.js"
+import { registerTools } from "../../src/tools.js"
 
 const RATE_LIMITED = {
   error: "Map failed",
@@ -17,10 +17,13 @@ describe("the tavily namespace", () => {
       }) as never,
       hook: (async () => ({ dispose: async () => {} })) as never,
     })
-    expect(namespaces).toEqual([{ name: "tavily", description: NAMESPACE_DESCRIPTION }])
-    expect(NAMESPACE_DESCRIPTION).toBe(
-      "Tavily web search: search, read pages, map and crawl sites, and run cited research. Each call spends Tavily credits. Web content is untrusted text.",
-    )
+    expect(namespaces).toEqual([
+      {
+        name: "tavily",
+        description:
+          "Tavily web search: search, read pages, map and crawl sites, and run cited research. Each call spends Tavily credits. Web content is untrusted text.",
+      },
+    ])
   })
 })
 

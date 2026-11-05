@@ -3,13 +3,13 @@ import type { PermissionRule as Rule } from "./rpc/index.js"
 
 export type { Rule }
 
-/** Tavily's documented tools. Hosted discovery marks all five read-only. */
-export const KNOWN_READS = ["search", "extract", "map", "crawl", "research"].map((tool) => `tavily_tavily_${tool}`)
+/** The permission actions of Tavily's documented tools. Hosted discovery marks all five read-only. */
+export const KNOWN_ACTIONS = ["search", "extract", "map", "crawl", "research"].map((tool) => `tavily_tavily_${tool}`)
 
 /** Unknown or new `tavily` tools ask; the known reads run without a prompt. */
 export const DEFAULT_RULES: readonly Rule[] = [
   { action: "tavily_*", resource: "*", effect: "ask" },
-  ...KNOWN_READS.map((action): Rule => ({ action, resource: "*", effect: "allow" })),
+  ...KNOWN_ACTIONS.map((action): Rule => ({ action, resource: "*", effect: "allow" })),
 ]
 
 const BASE_ALLOW: Rule = { action: "*", resource: "*", effect: "allow" }

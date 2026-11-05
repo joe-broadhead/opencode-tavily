@@ -56,7 +56,7 @@ export const STATE_LABELS: Record<Status["state"], string> = {
 /** Every Tavily tool only reads from the web. */
 export const ACCESS_TEXT = "read only: search, extract, map, crawl and research"
 
-export const AUTH_LABELS: Record<Status["auth"], string> = {
+const AUTH_LABELS: Record<Status["auth"], string> = {
   oauth: "OAuth (/connect → Tavily MCP)",
   key_connected: "API key (/connect → Tavily)",
   key_env: "API key from TAVILY_API_KEY",

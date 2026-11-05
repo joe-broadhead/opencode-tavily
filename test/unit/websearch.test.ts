@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test"
-import { PROVIDER_ID, selectWebsearchDefault, type WebsearchState } from "../../src/websearch.js"
+import { selectWebsearchDefault, type WebsearchState } from "../../src/websearch.js"
 import { transforms, websearchEditor, type EditorOf } from "./fake.js"
 import type { Plugin } from "@opencode/plugin"
 
@@ -15,7 +15,6 @@ async function run(selected: string | false | undefined) {
 describe("selectWebsearchDefault", () => {
   test("selects the built-in Tavily provider when nothing chose one", async () => {
     const { state, editorState } = await run(undefined)
-    expect(PROVIDER_ID).toBe("tavily")
     expect(editorState).toEqual({ selected: "tavily", sets: 1 })
     expect(state.tavilyDefault).toBe(true)
   })
