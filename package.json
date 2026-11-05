@@ -1,6 +1,6 @@
 {
   "name": "@joe-broadhead/opencode-tavily",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "description": "Unofficial OpenCode plugin for Tavily web search, extract, map, crawl and research",
   "keywords": [
     "opencode",
