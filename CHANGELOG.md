@@ -2,6 +2,13 @@
 
 All notable changes to this project are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.6] - 2026-11-05
+
+### Changed
+
+- The `tavily` skill tries a free read before a paid call: to find a page on a known site, it reads the site's `/llms.txt` index or its official page with `webfetch` before a Tavily Search or Map, and for a fact with an obvious official page it reads that page first.
+- The `tavily` skill's scripts create their own session, also for a test run, and never borrow one found in history or a session list, which would run as that session's agent under its rules. Its link to `docs/scripting.md` points at the plain file on `raw.githubusercontent.com`, which an agent can read, not GitHub's page.
+
 ## [0.0.5] - 2026-11-05
 
 ### Added
