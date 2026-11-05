@@ -2,6 +2,12 @@
 
 All notable changes to this project are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+- The `tavily` skill tries a free read before a paid call: to find a page on a known site, it reads the site's `/llms.txt` index or its official page with `webfetch` before a Tavily Search or Map, and for a fact with an obvious official page it reads that page first.
+
 ## [0.0.5] - 2026-11-05
 
 ### Added
