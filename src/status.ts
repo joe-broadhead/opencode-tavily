@@ -111,7 +111,7 @@ function nextStepOf(state: Status["state"], auth: Status["auth"], facts: StatusF
     case "connecting":
       return `Wait a few seconds, then run /tavily-status again.`
     case "sign_in_required":
-      if (auth === "oauth") return `Run /connect and choose Tavily MCP to sign in, or choose Tavily to use an API key.`
+      if (auth === "oauth") return `Run /connect and choose Tavily account to sign in, or choose Tavily to use an API key.`
       if (auth === "user_server") return `Run /connect and choose tavily to sign in to your own server.`
       return `Tavily did not accept the API key: ${replaceKey}.`
     case "failed":

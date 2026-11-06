@@ -5,13 +5,13 @@ import type { KeyChecker } from "./key-check.js"
 import { SERVER_NAME, SERVER_URL, type ServerState } from "./mcp.js"
 
 /** OpenCode's built-in key integration is "Tavily" in /connect; the server's OAuth integration gets this name. */
-const OAUTH_NAME = "Tavily MCP"
+const OAUTH_NAME = "Tavily account"
 
 /** OpenCode's id for a remote server's OAuth integration: `mcp_` and 16 hex digits of the SHA-1 of name, NUL, URL. */
 const OAUTH_INTEGRATION_ID = `mcp_${createHash("sha1").update(`${SERVER_NAME}\u0000${SERVER_URL}`).digest("hex").slice(0, 16)}`
 
 /** What /connect shows on the Tavily entry for a connected key that Tavily rejects. */
-const KEY_REJECTED = "Tavily did not accept this API key. Replace it, or remove it to sign in with Tavily MCP."
+const KEY_REJECTED = "Tavily did not accept this API key. Replace it, or remove it to sign in with your Tavily account."
 
 // OpenCode registers the OAuth integration only after plugin setup, and a subscription has no start
 // acknowledgement, so the first seconds are also polled.
@@ -26,7 +26,7 @@ type Ctx = {
 
 /**
  * Keeps what /connect shows right:
- * - the server's OAuth integration is named "Tavily MCP", not "tavily". OpenCode's own transform sets the name, and it
+ * - the server's OAuth integration is named "Tavily account", not "tavily". OpenCode's own transform sets the name, and it
  *   registers that transform again on every MCP reload, after the plugin's. So the plugin registers its rename again,
  *   after OpenCode's, whenever it finds the name reset.
  * - a connected key that Tavily rejects shows "Sign in required" on the Tavily entry, until the key is replaced. Tavily's

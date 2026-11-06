@@ -118,7 +118,7 @@ describe("buildStatus", () => {
   test("needs sign-in, for each auth source", () => {
     const needsAuth = { server: { status: "needs_auth" } } as const
     expect(buildStatus(facts(needsAuth)).nextStep).toBe(
-      "Run /connect and choose Tavily MCP to sign in, or choose Tavily to use an API key.",
+      "Run /connect and choose Tavily account to sign in, or choose Tavily to use an API key.",
     )
     expect(buildStatus(facts({ ...needsAuth, userServer: true })).nextStep).toBe(
       "Run /connect and choose tavily to sign in to your own server.",
@@ -165,7 +165,7 @@ describe("buildStatus", () => {
     // Sign-in comes first; the agents and the block stay listed.
     const signIn = buildStatus(facts({ server: { status: "needs_auth" }, agents: [configOnly] }))
     expect(signIn).toMatchObject({ unguardedAgents: ["reviewer"], permissionsBlock: DEFAULT_RULES })
-    expect(signIn.nextStep).toStartWith("Run /connect and choose Tavily MCP")
+    expect(signIn.nextStep).toStartWith("Run /connect and choose Tavily account")
   })
 
   test("the block counts anywhere after the base allow, even after another plugin's block, but not before it", () => {
@@ -349,7 +349,7 @@ describe("formatStatus", () => {
         "- Connection: sign-in required",
         "- Account: none",
         "- Access: read only: search, extract, map, crawl and research",
-        "- Sign-in: OAuth (/connect → Tavily MCP)",
+        "- Sign-in: OAuth (/connect → Tavily account)",
         `- Web search: Tavily, unless opencode.json sets "websearch"`,
         "- Skills: the plugin's own",
         "- Tools: 6 available, 1 unknown (they ask first): tavily_feedback",

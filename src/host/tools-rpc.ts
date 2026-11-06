@@ -20,7 +20,8 @@
  * hooks do on the model path.
  *
  * Shared module. Each plugin keeps its own copy, because each bundle is self-contained. Edit only the block between
- * the PLUGIN-SPECIFIC markers; everything else stays identical to the shared copy (`check-copy.mjs` compares).
+ * the PLUGIN-SPECIFIC markers. Everything else is identical in every plugin: the plugin's `check-copies.mjs` fails
+ * its check when it is not, so change it in every plugin at once.
  */
 import { randomUUID } from "node:crypto"
 import type { Plugin } from "@opencode/plugin"
@@ -66,7 +67,7 @@ export const NEXT_STEPS: NextSteps = {
   SESSION_UNKNOWN: `Create a session that names an agent, such as POST /api/session with {"agent":"build"}, and pass its id.`,
   SESSION_AGENT_REQUIRED: `Create a session that names an agent, such as POST /api/session with {"agent":"build"}, and pass its id.`,
   PERMISSION_DENIED: "Add an allow rule for the tool to the session's agent or to the session, or use a session whose agent allows it.",
-  AUTH_REQUIRED: "Run /connect and choose Tavily MCP to sign in, or choose Tavily to use an API key.",
+  AUTH_REQUIRED: "Run /connect and choose Tavily account to sign in, or choose Tavily to use an API key.",
   CONNECTING: "Wait a few seconds, then call the method again.",
   CONNECTION_FAILED: "Run /tavily-status and follow its next step.",
   DISABLED: `Enable the tavily server in /mcps, or remove "disabled": true from mcp.servers.tavily in opencode.json.`,
