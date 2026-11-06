@@ -13,7 +13,7 @@ Tavily's tools are `tavily_search`, `tavily_extract`, `tavily_map`, `tavily_craw
 2. **A fact:** if it has an obvious official page (a changelog, a releases or pricing page), `webfetch` that first. Otherwise one `tavily_search` with `search_depth: "basic"` and `max_results` of 5 or fewer. Unset, Tavily may pick `advanced` at twice the cost, whatever the tool text suggests; use `advanced` only after `basic` missed. Excerpts are short: read the page before relying on a detail.
 3. **Which page on a known site:** first `webfetch` the site's `/llms.txt` (many docs sites publish this index of their pages, such as `https://docs.example.com/llms.txt`) or the site's official page for the topic. Both are free. Only if neither answers, `tavily_search` with `include_domains: ["docs.example.com"]`, or `tavily_map` with `select_paths` or `instructions` and a `limit`. Map lists URLs without reading them.
 4. **Several pages' content:** `tavily_crawl`. By default it reads up to 50 pages (about 15 credits), so set `limit` (say 10) and narrow with `select_paths` or `instructions`; `chunks_per_source` needs `instructions`.
-5. **A multi-source report:** `tavily_research`, only via the `tavily-research` skill and the user's approval. The word "research" alone doesn't mean this.
+5. **A multi-source report:** `tavily_research`, only via the `tavily-research` skill, which proposes the scope and cost to the user first. The word "research" alone doesn't mean this.
 
 Stop as soon as you can answer.
 

@@ -1,15 +1,15 @@
 ---
 name: tavily-research
-description: Run a Tavily Research task - a cited, multi-source web report that takes minutes and 4-250 credits, and needs the user's approval first. Use when the user asks for in-depth web research, or a researched report or comparison that needs many web sources. Not for one fact (a single search answers it), and not for reports on the user's own files, code, issues or meetings.
+description: Run a Tavily Research task - a cited, multi-source web report that takes minutes and costs 4-250 credits. Use when the user asks for in-depth web research, or a researched report or comparison that needs many web sources. Not for one fact (a single search answers it), and not for reports on the user's own files, code, issues or meetings.
 ---
 
 # Tavily Research
 
 `tavily_research` (`tools.tavily.tavily_research` in Code Mode) searches many sources and writes one report. It takes several minutes, shows no progress until it ends, and costs 4 to 250 credits. One fact is one `tavily_search` with `search_depth: "basic"` (1 credit), even when the user says "research".
 
-## Ask first, every time
+## Propose it first
 
-Before a Research task, end your turn with a proposal and a question, so the user agrees to the scope and the cost:
+The tool runs without a permission prompt, so you propose it. Before a Research task, end your turn with a proposal and a question, so the user agrees to the scope and the cost:
 
 - **the draft `input`** you would send: the question, the items to cover, the time period, the criteria, sources to prefer or avoid, and the shape of the report;
 - **the scope to confirm**: which items, which period, which criteria;
@@ -20,9 +20,9 @@ Example:
 
 > I'd run Tavily Research with `pro` (15–250 credits, several minutes, no progress until it ends) and this input: "Compare the leading open-source feature-flag services in 2026 for a 50-engineer team: SDK languages, licence, self-hosting effort, pricing of the hosted plans. Prefer official docs and pricing pages. End with a comparison table and a short recommendation." Shall I start it, change the scope, or use `mini` (4–110 credits)?
 
-**Start only after the user says yes**, with the input they confirmed. No answer, a cancelled or dismissed question, or a "no" is not approval: stop and leave the proposal. Never replace the task with your own run of searches and extracts, because that spends credits the user did not agree to. If the user wants a cheaper route, propose it with its number of calls and credits, and wait again.
+**Start only after the user says yes**, with the input they confirmed. No answer, a cancelled or dismissed question, or a "no" is not a yes: stop and leave the proposal. Never replace the task with your own run of searches and extracts, because that spends credits the user did not agree to. If the user wants a cheaper route, propose it with its number of calls and credits, and wait again.
 
-Each further task needs its own approval. Tavily allows 20 Research requests a minute.
+Propose each further task in the same way. Tavily allows 20 Research requests a minute.
 
 ## Input
 

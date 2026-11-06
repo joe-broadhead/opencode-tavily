@@ -44,7 +44,7 @@ describe("Tavily's tools RPC", () => {
     expect(pluginError(new Error("Map failed"))).toBeUndefined()
   })
 
-  test("the sign-in next step matches status: Tavily MCP first, then an API key", () => {
-    expect(NEXT_STEPS.AUTH_REQUIRED).toBe("Run /connect and choose Tavily MCP to sign in, or choose Tavily to use an API key.")
+  test("the sign-in next step matches status: Tavily account first, then an API key", () => {
+    expect(NEXT_STEPS.AUTH_REQUIRED).toBe("Run /connect and choose Tavily account to sign in, or choose Tavily to use an API key.")
   })
 })

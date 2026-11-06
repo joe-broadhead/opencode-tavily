@@ -57,7 +57,7 @@ export const STATE_LABELS: Record<Status["state"], string> = {
 export const ACCESS_TEXT = "read only: search, extract, map, crawl and research"
 
 const AUTH_LABELS: Record<Status["auth"], string> = {
-  oauth: "OAuth (/connect → Tavily MCP)",
+  oauth: "OAuth (/connect → Tavily account)",
   key_connected: "API key (/connect → Tavily)",
   key_env: "API key from TAVILY_API_KEY",
   user_server: "your own tavily server in opencode.json",

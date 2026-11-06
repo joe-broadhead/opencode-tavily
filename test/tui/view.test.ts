@@ -43,7 +43,7 @@ const needsAuth: Status = {
     { action: "tavily_*", resource: "*", effect: "ask" },
     { action: "tavily_tavily_search", resource: "*", effect: "allow" },
   ],
-  nextStep: "Run /connect and choose Tavily MCP to sign in, or choose Tavily to use an API key.",
+  nextStep: "Run /connect and choose Tavily account to sign in, or choose Tavily to use an API key.",
 }
 
 /** A dialog row: the label in its 29-column field, a gap, then the value. */
@@ -122,7 +122,7 @@ describe("Tavily TUI status view", () => {
       ["Connection", "connected"],
       ["Account", "jo@example.com"],
       ["Access", "read only: search, extract, map, crawl and research"],
-      ["Sign-in", "OAuth (/connect → Tavily MCP)"],
+      ["Sign-in", "OAuth (/connect → Tavily account)"],
       ["Web search", `Tavily, unless opencode.json sets "websearch"`],
       ["Tools", "5 available"],
       ["Agents without default rules", "none"],
@@ -169,7 +169,7 @@ describe("Tavily TUI status view", () => {
       row("Connection", "sign-in required"),
       row("Account", "none"),
       row("Access", "read only"),
-      row("Sign-in", "OAuth (/connect → Tavily MCP)"),
+      row("Sign-in", "OAuth (/connect → Tavily account)"),
       row("Web search", "not set by this plugin"),
       row("Skills", "the plugin's own"),
       row("Tools", "6 available, 1 unknown (they ask first): tavily_feedback"),
@@ -177,7 +177,7 @@ describe("Tavily TUI status view", () => {
       `{"action":"tavily_*","resource":"*","effect":"ask"},`,
       `{"action":"tavily_tavily_search","resource":"*","effect":"allow"}`,
       row("OpenCode", "2.2.4 (tested)"),
-      row("Next step", "Run /connect and choose Tavily MCP to sign in"),
+      row("Next step", "Run /connect and choose Tavily account to sign in"),
     ]
     const positions = order.map((text) => frame.indexOf(text))
     expect(positions.filter((position) => position < 0)).toEqual([])
