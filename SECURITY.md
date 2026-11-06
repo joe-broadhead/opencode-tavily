@@ -14,7 +14,7 @@ Include the plugin version, the OpenCode version, what you did, and what happene
 
 ### Your Tavily key and sign-in
 
-- OpenCode keeps your credentials, not the plugin. A key that you connect with `/connect` → **Tavily** or `opencode auth login tavily`, and the OAuth token from `/connect` → **Tavily MCP**, are stored in OpenCode's credential store. `TAVILY_API_KEY` stays in the OpenCode server's environment. `opencode service set env TAVILY_API_KEY <key>` stores the key in plain text in OpenCode's service settings file, readable only by you, and puts it in your shell history; `/connect` avoids both.
+- OpenCode keeps your credentials, not the plugin. A key that you connect with `/connect` → **Tavily** or `opencode auth login tavily`, and the OAuth token from `/connect` → **Tavily account**, are stored in OpenCode's credential store. `TAVILY_API_KEY` stays in the OpenCode server's environment. `opencode service set env TAVILY_API_KEY <key>` stores the key in plain text in OpenCode's service settings file, readable only by you, and puts it in your shell history; `/connect` avoids both.
 - Never put a key in the plugin's options or in `opencode.json`. The plugin has no option for one.
 - The plugin reads the key from OpenCode when it starts and when a credential changes. It keeps the key in memory, in the `Authorization` header of the `tavily` server's settings. It never logs the key, writes it to disk or returns it in its status.
 - The key never goes in a URL. Tavily accepts `?tavilyApiKey=` in the server URL, but OpenCode shows a server's URL in its status errors and logs.

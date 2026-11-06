@@ -179,15 +179,15 @@ for (const version of STOCK_VERSIONS)
       expect(output).toMatchObject({ version: manifest.version, state: "failed", auth: "oauth", host: { version, range: ">=2.2.3 <2.3.0", tested: true }, unguardedAgents: [] })
     })
 
-    test("/connect lists the built-in key entry as Tavily and the server's OAuth entry as Tavily MCP", async () => {
+    test("/connect lists the built-in key entry as Tavily and the server's OAuth entry as Tavily account", async () => {
       const { data: servers } = await host.client.mcp.list({ location: host.location })
       const oauth = servers.find((server) => server.name === "tavily")?.integrationID
-      const names = await until("the OAuth entry is named Tavily MCP", async () => {
+      const names = await until("the OAuth entry is named Tavily account", async () => {
         const { data } = await host.client.integration.list({ location: host.location })
         const found = Object.fromEntries(data.filter((entry) => entry.id === "tavily" || entry.id === oauth).map((entry) => [entry.id, entry.name]))
-        return oauth && found[oauth] === "Tavily MCP" ? found : undefined
+        return oauth && found[oauth] === "Tavily account" ? found : undefined
       })
-      expect(names).toEqual({ tavily: "Tavily", [oauth!]: "Tavily MCP" })
+      expect(names).toEqual({ tavily: "Tavily", [oauth!]: "Tavily account" })
     })
 
     test("puts the default rules right after each built-in agent's base allow, and the host enforces them", async () => {
