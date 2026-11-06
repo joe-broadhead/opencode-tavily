@@ -1,6 +1,6 @@
 {
   "name": "@joe-broadhead/opencode-tavily",
-  "version": "0.0.6",
+  "version": "0.0.7",
   "description": "Unofficial OpenCode plugin for Tavily web search, extract, map, crawl and research",
   "keywords": [
     "opencode",
@@ -36,7 +36,7 @@
     "test:tui": "bun test --preload @opentui/solid/preload test/tui",
     "test:host": "bun test test/host",
     "test:pack": "bun test test/pack",
-    "lint": "bun test test/forbidden",
+    "lint": "bun test test/forbidden && node tools/check-copies.mjs",
     "check": "npm run typecheck && npm run build && npm test && npm run test:tui && npm run test:host && npm run test:pack && npm run lint",
     "check:upstream": "bun tools/check-upstream.mjs"
   },
@@ -113,7 +113,7 @@
       },
       {
         "id": "account",
-        "label": "Tavily MCP",
+        "label": "Tavily account",
         "server": "tavily",
         "group": "tavily"
       }

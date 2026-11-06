@@ -38,9 +38,9 @@ None yet.
 
 ## Signing in
 
-`jelly.signIns` declares two alternatives in one group, `tavily`: `key`, OpenCode's key integration `tavily` (an API key; the row links to Tavily's key page), or `account`, the `tavily` MCP server's own OAuth ("Tavily MCP"). Either one connects the card, and once one is connected the card shows only that one. The plugin checks each key once with Tavily's usage endpoint, which costs no credits. A key saved through `/connect` or `opencode auth login tavily` that Tavily turns down shows this plugin's `needs_auth` message on the key row, with Replace the key:
+`jelly.signIns` declares two alternatives in one group, `tavily`: `key`, OpenCode's key integration `tavily` (an API key; the row links to Tavily's key page), or `account`, the `tavily` MCP server's own OAuth ("Tavily account"). Either one connects the card, and once one is connected the card shows only that one. The plugin checks each key once with Tavily's usage endpoint, which costs no credits. A key saved through `/connect` or `opencode auth login tavily` that Tavily turns down shows this plugin's `needs_auth` message on the key row, with Replace the key:
 
-> Tavily did not accept this API key. Replace it, or remove it to sign in with Tavily MCP.
+> Tavily did not accept this API key. Replace it, or remove it to sign in with your Tavily account.
 
 A rejected `TAVILY_API_KEY` has no saved connection to mark, so the key row does not show it; the plugin's status names the rejection and the next step.
 
@@ -50,3 +50,5 @@ Jelly folds the declared sign-ins into this plugin's one card, which shows each 
 
 Jelly's curated catalogue pins an exact version. Publish each release under a new version, so
 that a review in Jelly can tell two releases apart.
+
+The declaration test runs the shared kit, `test/support/jelly-kit.ts`, which checks the declaration and this page against Jelly's plugin authors' standard. `tools/check-copies.mjs` holds the kit, and the shared part of the tools RPC (`src/host/tools-rpc.ts`), equal to the copy every plugin carries.

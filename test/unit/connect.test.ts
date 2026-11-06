@@ -4,7 +4,7 @@ import { watchConnect } from "../../src/connect.js"
 
 /** OpenCode's id for the tavily server's OAuth integration, from its name and URL, and the name the plugin gives it. */
 const OAUTH_INTEGRATION_ID = "mcp_11c61e033a3156b2"
-const OAUTH_NAME = "Tavily MCP"
+const OAUTH_NAME = "Tavily account"
 import type { KeyCheck } from "../../src/key-check.js"
 import type { ServerState } from "../../src/mcp.js"
 import { envConnection, events, keyConnection, LOCATION, settle, type Connection, type EditorOf, type McpServer } from "./fake.js"
@@ -63,7 +63,7 @@ function start(fake: ReturnType<typeof host>, server: ServerState, check: { resu
 
 const oauth: ServerState = { key: undefined, userServer: false, userServerAtTavily: false }
 
-describe("the Tavily MCP name in /connect", () => {
+describe("the Tavily account name in /connect", () => {
   test("names the server's OAuth integration, and names it again after OpenCode re-registers it", async () => {
     const fake = host()
     fake.reregister()
@@ -109,7 +109,7 @@ describe("a rejected key in /connect", () => {
       {
         integrationID: "tavily",
         connection: keyConnection(),
-        status: { status: "needs_auth", message: "Tavily did not accept this API key. Replace it, or remove it to sign in with Tavily MCP." },
+        status: { status: "needs_auth", message: "Tavily did not accept this API key. Replace it, or remove it to sign in with your Tavily account." },
       },
     ])
     fake.state.server = "connected"
@@ -128,7 +128,7 @@ describe("a rejected key in /connect", () => {
     await settle()
     expect(check.keys).toEqual(["tvly-bad"])
     expect(fake.statuses.map((entry) => entry.status)).toEqual([
-      { status: "needs_auth", message: "Tavily did not accept this API key. Replace it, or remove it to sign in with Tavily MCP." },
+      { status: "needs_auth", message: "Tavily did not accept this API key. Replace it, or remove it to sign in with your Tavily account." },
     ])
     check.result = "accepted"
     watch.stream.push("mcp.status.changed", { server: "tavily" })

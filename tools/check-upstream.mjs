@@ -57,7 +57,7 @@ async function listTools(signal) {
   return { server: init.serverInfo, names: tools.map((tool) => tool.name) }
 }
 
-console.log(`Tavily MCP drift check: ${endpoint} (keyless)`)
+console.log(`Tavily server drift check: ${endpoint} (keyless)`)
 try {
   const { server, names } = await listTools(AbortSignal.timeout(LIMIT_MS))
   const added = names.filter((name) => !known.includes(name))
