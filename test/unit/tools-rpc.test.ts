@@ -17,7 +17,6 @@ import {
   upstreamText,
   type MethodSpec,
   type PluginMethod,
-  type ShapeCall,
   type ToolCall,
   type ToolsRpcOptions,
   // The module's own types stay internal, since no plugin imports them; the typecheck checks it.
