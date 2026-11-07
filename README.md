@@ -6,7 +6,7 @@ Unofficial; not affiliated with Tavily.
 
 ## Requirements
 
-- OpenCode `>=2.2.3 <2.3.0`, tested on 2.2.3, 2.2.4 and 2.2.5. A later 2.2 release works, and `/tavily-status` calls it untested. Outside `>=2.2.3 <2.3.0` the plugin does not start, unless you set [`allowUntestedHost`](https://github.com/joe-broadhead/opencode-tavily/blob/HEAD/docs/configuration.md#options).
+- OpenCode `>=2.2.3 <2.3.0`, tested on 2.2.3, 2.2.4, 2.2.5 and 2.2.6. A later 2.2 release works, and `/tavily-status` calls it untested. Outside `>=2.2.3 <2.3.0` the plugin does not start, unless you set [`allowUntestedHost`](https://github.com/joe-broadhead/opencode-tavily/blob/HEAD/docs/configuration.md#options).
 - macOS or Linux.
 - A Tavily account. The plugin adds no tools of its own; each call uses your Tavily credits.
 
@@ -152,7 +152,7 @@ The plugin's errors and warnings start with a code. Each ends with one next step
 
 | Code | When | Next step |
 | --- | --- | --- |
-| `HOST_UNTESTED` | Start-up, outside `>=2.2.3 <2.3.0` | Use OpenCode 2.2.3, 2.2.4 or 2.2.5, or set `allowUntestedHost`. With it, this is a warning. |
+| `HOST_UNTESTED` | Start-up, outside `>=2.2.3 <2.3.0` | Use OpenCode 2.2.3, 2.2.4, 2.2.5 or 2.2.6, or set `allowUntestedHost`. With it, this is a warning. |
 | `OPTIONS_INVALID` | Start-up | Fix the plugin's options in `opencode.json`. The message names the option. |
 | `SKILLS_INVALID` | Start-up | Reinstall the plugin. |
 | `KEY_UNAVAILABLE` | Log warning | Run `/connect` and choose **Tavily**, then connect the key again. |

@@ -182,7 +182,7 @@ The plugin's own errors and warnings have one shape: `CODE: what happened. Next 
 | Code | When | Example |
 | --- | --- | --- |
 | `OPTIONS_INVALID` | Start-up; the plugin does not start | `OPTIONS_INVALID: Unknown option "foo"; the options are websearch, executionTimeoutMs, allowUntestedHost. Next step: Fix the plugin's options in opencode.json.` |
-| `HOST_UNTESTED` | Start-up, outside `>=2.2.3 <2.3.0`; a warning with `allowUntestedHost` | `HOST_UNTESTED: This plugin supports OpenCode >=2.2.3 <2.3.0, and this is 2.3.0. Next step: Use OpenCode 2.2.3, 2.2.4 or 2.2.5, or set "allowUntestedHost": true to run anyway.` |
+| `HOST_UNTESTED` | Start-up, outside `>=2.2.3 <2.3.0`; a warning with `allowUntestedHost` | `HOST_UNTESTED: This plugin supports OpenCode >=2.2.3 <2.3.0, and this is 2.3.0. Next step: Use OpenCode 2.2.3, 2.2.4, 2.2.5 or 2.2.6, or set "allowUntestedHost": true to run anyway.` |
 | `SKILLS_INVALID` | Start-up; a packaged skill is missing or damaged | `SKILLS_INVALID: skills/tavily has no SKILL.md. Next step: Reinstall the plugin.` |
 | `KEY_UNAVAILABLE` | Log warning; OpenCode could not read the key | `KEY_UNAVAILABLE: OpenCode could not read the Tavily API key (<reason>). Next step: Run /connect and choose Tavily, then connect the key again.` |
 | `KEY_WATCH_STOPPED` | Log warning; key changes are no longer picked up | `KEY_WATCH_STOPPED: The plugin stopped watching for Tavily key changes (<reason>). Next step: Restart OpenCode after you change the key.` |

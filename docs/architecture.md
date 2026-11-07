@@ -2,7 +2,7 @@
 
 The plugin is a thin layer over OpenCode's public plugin API. Tavily's hosted MCP server provides the tools, and OpenCode runs them: OAuth, the MCP connection, permission prompts and tool results. The plugin chooses the server's settings, adds default permission rules, chooses the web search default and reports status. It adds no tools of its own. It changes one kind of result only: Tavily's error object, which Tavily's server sends as an ordinary result, becomes an error (see [Tavily's error objects](#tavilys-error-objects)).
 
-It uses only APIs that are public in OpenCode 2.2.3. It is tested on stock OpenCode 2.2.3, 2.2.4 and 2.2.5 (`TESTED_HOSTS` in `src/host-version.ts`). A later 2.2 release runs too, and status calls it untested. Outside `>=2.2.3 <2.3.0` the plugin does not start, unless `allowUntestedHost` is set.
+It uses only APIs that are public in OpenCode 2.2.3. It is tested on stock OpenCode 2.2.3, 2.2.4, 2.2.5 and 2.2.6 (`TESTED_HOSTS` in `src/host-version.ts`). A later 2.2 release runs too, and status calls it untested. Outside `>=2.2.3 <2.3.0` the plugin does not start, unless `allowUntestedHost` is set.
 
 `setup` runs in this order: options, host check, skills, key, then the MCP, agent, web search, skill and command transforms, the status RPC, the tool namespace and `execute.after` hook, the tools RPC, and last the key and `/connect` watchers. A failed check stops `setup` before the plugin registers anything.
 
@@ -59,7 +59,7 @@ One status object feeds `/tavily-status`, the RPC and the dialog:
   keyCheck?: "accepted" | "rejected" | "unchecked" // with an API key: Tavily's answer from /usage
   tools: { visible: number; unknown: number; unknownNames: string[] } // the tavily server's tools OpenCode lists
   websearchDefault: boolean   // the plugin chose Tavily; opencode.json can still override it
-  host: { version: string | null; range: string; tested: boolean } // tested: 2.2.3, 2.2.4 or 2.2.5
+  host: { version: string | null; range: string; tested: boolean } // tested: 2.2.3, 2.2.4, 2.2.5 or 2.2.6
   unguardedAgents: string[]   // agents without the default rules; empty when none
   permissionsBlock?: Rule[]   // the block to paste, when unguardedAgents is not empty
   shadowedSkills?: { id: string; path: string }[] // the plugin's skills that a same-id skill replaces, and its file

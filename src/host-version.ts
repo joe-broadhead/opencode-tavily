@@ -2,9 +2,9 @@
 export const HOST_RANGE = ">=2.2.3 <2.3.0"
 
 /** The releases the checks run on: the host, pack and stock stages, and CI. Every one is inside HOST_RANGE. */
-export const TESTED_HOSTS: readonly string[] = ["2.2.3", "2.2.4", "2.2.5"]
+export const TESTED_HOSTS: readonly string[] = ["2.2.3", "2.2.4", "2.2.5", "2.2.6"]
 
-/** The tested releases in words: "2.2.3, 2.2.4 or 2.2.5". */
+/** The tested releases in words: "2.2.3, 2.2.4, 2.2.5 or 2.2.6". */
 export const TESTED_TEXT = `${TESTED_HOSTS.slice(0, -1).join(", ")} or ${TESTED_HOSTS.at(-1)}`
 
 export interface HostCheck {
