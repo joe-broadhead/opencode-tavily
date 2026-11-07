@@ -49,9 +49,10 @@ Search results, page text from Extract and Crawl, and Research reports come from
 
 The tools RPC (`tavily.web.tools`, see [docs/scripting.md](https://github.com/joe-broadhead/opencode-tavily/blob/HEAD/docs/scripting.md)) runs Tavily's five tools for a script, with no model. It adds no authority:
 
-- A script names a session that names an agent, and runs as them. A tool that the agent's or the session's rules hide from the model is refused. OpenCode's own executor then checks the call against the agent's rules, the session's rules and saved approvals, as it does for the model.
-- An ask on a script's call is denied, not prompted: no one is there to answer it. The plugin's permission hook changes only an ask on one of its own script calls in flight, only to a deny, and leaves every other call alone.
-- Only the five known reads are methods. A tool that Tavily adds later is never one, even with an allow rule.
+- A script names a session that names an agent, and runs as them. The rule for the tool's permission action is resolved before it runs, in OpenCode's own order (the agent's rules, then the session's, the last match winning). Only an `allow` runs; an `ask` and a `deny` are refused with no tool call.
+- An ask is refused, not prompted: no one is there to answer it. A saved "Always allow" approval is not part of the agent's and the session's rules, so it does not authorize an ad-hoc script. The plugin's permission hook changes only an ask on one of its own script calls in flight, only to a deny, and leaves every other call alone.
+- Every known tool is a method, with its class (`read` for Tavily's five) shown by `describe`. A tool that Tavily adds later is not a method until this plugin classifies it.
+- OpenCode's own executor then checks the call against the agent's rules, the session's rules and saved approvals, as it does for the model.
 - The call goes through OpenCode's own MCP connection and sign-in. The plugin never sees the key or the token, and returns neither.
 - Tavily's error text reaches the script only as the first line, at most 300 characters, with tokens and URL query strings removed.
 - OpenCode's `execute.before` and `execute.after` tool hooks, from any plugin, do not run for a script's call, so another plugin's policy hook does not see it. A script's calls are not recorded in the session.

@@ -11,7 +11,7 @@ import { dirname, join, relative, resolve } from "node:path"
 import { Tavily } from "../../src/rpc/index.js"
 import { DEFAULT_RULES } from "../../src/permissions.js"
 import { SERVER_URL } from "../../src/mcp.js"
-import { KNOWN_READS as METHODS, TOOLS_RPC_ID } from "../../src/host/tools-rpc.js"
+import { METHODS, TOOLS_RPC_ID } from "../../src/host/tools-rpc.js"
 import { NEW_TOOL, RECORDED_TOOLS } from "../host/catalog.js"
 import { RATE_LIMITED, startFakeTavily, UPSTREAM_FAILURE, type FakeTavily } from "../host/fake-tavily.js"
 import { cleanup, npm, REPO, root, startStock, STOCK_VERSIONS, until, type Host } from "../host/harness.js"
@@ -362,10 +362,10 @@ for (const version of STOCK_VERSIONS)
       await fake?.close()
     })
 
-    test("describes exactly the five known reads, with their live schemas; a new tool is no method", async () => {
+    test("describes exactly the five known reads, with their class and live schemas; a new tool is no method", async () => {
       const description = await script(host, "describe", {})
-      expect(description.value.methods.map((method: { name: string }) => method.name)).toEqual([...METHODS])
-      for (const method of description.value.methods) expect(method).toMatchObject({ kind: "mcp", available: true, action: `tavily_${method.name}` })
+      expect(description.value.methods.map((method: { name: string }) => method.name)).toEqual(METHODS.map((method) => method.name))
+      for (const method of description.value.methods) expect(method).toMatchObject({ kind: "mcp", class: "read", available: true, action: `tavily_${method.name}` })
       expect(description.value.methods[0].input).toEqual(RECORDED_TOOLS[0]!.inputSchema)
       const refused = await script(host, NEW_TOOL.name, { sessionID: sessions.build, input: { query: "q" } })
       expect(refused.type).not.toBe("failed")
@@ -397,7 +397,7 @@ for (const version of STOCK_VERSIONS)
       const started = Date.now()
       const result = await call("careful", "tavily_search", { query: "q" })
       expect(result).toMatchObject({ type: "failed", code: "PERMISSION_DENIED" })
-      expect(result.message).toMatch(/cannot answer an approval prompt/)
+      expect(result.message).toMatch(/would ask for this session's agent, and a script cannot answer/)
       expect(Date.now() - started).toBeLessThan(5000)
       const { data: pending } = await host.client.permission.request.list({ location: host.location })
       expect(pending.filter((request) => JSON.stringify(request).includes(sessions.careful!))).toEqual([])

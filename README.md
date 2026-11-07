@@ -81,12 +81,15 @@ Tavily status
 
 ### Scripts
 
-A script or a cron job can call the five tools with no model, through `opencode api`. It runs as a session and its agent, under that agent's permission rules and the session's own, and spends credits as the tool does:
+A script or a cron job can call the five tools with no model, through `opencode api`. It runs as a session and its agent, under that agent's permission rules and the session's own, and spends credits as the tool does. The rule is resolved first, so only a prior explicit `allow` runs: an `ask` is refused, and a saved "Always allow" does not authorize an ad-hoc script:
 
 ```sh
 opencode api post /api/rpc/tavily.web.tools/tavily_search \
+  -H "x-opencode-directory:$PWD" \
   -d '{"input":{"sessionID":"ses_…","input":{"query":"OpenCode plugin API"}}}'
 ```
+
+Without `x-opencode-directory:$PWD` the call reaches the service's default location and fails `rpc.unavailable` when the plugin is not loaded there.
 
 See [Scripting](https://github.com/joe-broadhead/opencode-tavily/blob/HEAD/docs/scripting.md).
 

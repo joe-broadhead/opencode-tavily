@@ -2,6 +2,12 @@
 
 All notable changes to this project are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+- tools RPC v2: every known tool is scriptable under a prior explicit allow. `tavily.web.tools` keeps one method per known tool, each with its class (`read` for all five), and resolves the rule before dispatch: only an `allow` runs, and an `ask` is refused with no prompt and no tool call. `describe` reports each method's class, and — given a session — that session's permission, plus any live tool this plugin does not classify. A saved "Always allow" approval no longer authorizes an ad-hoc script: a script's grant is a rule in the agent's or the session's config, or a Jobs `jobs_run_script` run session. `opencode api` callers must send `-H "x-opencode-directory:$PWD"`, or the call reaches the service's default location and fails `rpc.unavailable`. Tavily's error-object handling is applied to a script's result by the same `shapeResult` the model's hook uses.
+
 ## [0.0.7] - 2026-11-06
 
 ### Changed
