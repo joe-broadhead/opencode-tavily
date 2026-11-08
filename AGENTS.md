@@ -5,7 +5,7 @@ This repository builds `@joe-broadhead/opencode-tavily`, an OpenCode plugin that
 ## Platform
 
 - Use only public `@opencode/plugin` APIs that exist in OpenCode 2.2.3. The host range is exactly `>=2.2.3 <2.3.0`, never `^2.2.3`.
-- Test against stock OpenCode 2.2.3, 2.2.4 and 2.2.5, the list in `src/host-version.ts` (`TESTED_HOSTS`). The host, pack and stock stages and CI take their versions from it.
+- Test against stock OpenCode 2.2.3, 2.2.4, 2.2.5 and 2.2.6, the list in `src/host-version.ts` (`TESTED_HOSTS`). The host, pack and stock stages and CI take their versions from it.
 - `npm run lint` (`test/forbidden`) scans `src/` and `dist/` and fails on any of these:
   - `ctx.generate.text` or `experimental.generate.text`;
   - `ctx.experimental.artifact`;
