@@ -2,7 +2,7 @@ import type { Plugin } from "@opencode/plugin/tui"
 import { TextAttributes, type RGBA } from "@opentui/core"
 import { createSignal, For, Show } from "solid-js"
 import {
-  ACCESS_TEXT,
+  accessText,
   accountText,
   agentsText,
   authText,
@@ -114,7 +114,7 @@ function StatusDialog(props: {
               muted={theme().text.muted}
             />
             <Row label="Account" value={accountText(status())} fg={theme().text.base} muted={theme().text.muted} />
-            <Row label="Access" value={ACCESS_TEXT} fg={theme().text.base} muted={theme().text.muted} />
+            <Row label="Access" value={accessText(status())} fg={theme().text.base} muted={theme().text.muted} />
             <Row
               label="Sign-in"
               value={authText(status())}

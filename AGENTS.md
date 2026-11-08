@@ -16,6 +16,12 @@ This repository builds `@joe-broadhead/opencode-tavily`, an OpenCode plugin that
 - `src/host/tools-rpc.ts` is a copy of a module shared by several plugins. Change only its block between the `PLUGIN-SPECIFIC` markers here; change the rest in the shared copy first.
 - Tests import no host source: only `@opencode/plugin`, `@opencode/sdk` and `@opencode/client` at 2.2.3. Write test doubles as narrow `Pick<Plugin.Context, ...>` fakes.
 
+## Permissions
+
+- Every tool is allowed by default. `src/permissions.ts` generates the block from the tool classes and the `access` option (`all`, the default; `ask-changes`; `read-only`) and inserts it after each agent's first base allow. A user's rules always win.
+- `defaultRules(access)` is printed in full in the README and in `docs/configuration.md` for each value; `test/unit/docs.test.ts` asserts the docs equal it.
+- The package declares `opencode.icons` and `opencode.vendor`, with `assets/icon.svg`, `icon-128.png` and `icon-256.png`; `scripts/check-icons.mjs` is the kit's copy, verbatim.
+
 ## Greenfield
 
 - No legacy or dead code, exports, dependencies, docs, tests or fixtures. Delete rather than deprecate.
@@ -31,6 +37,7 @@ This repository builds `@joe-broadhead/opencode-tavily`, an OpenCode plugin that
 - `dist/` holds exactly `index.js` and `tui.js`, each a self-contained esbuild bundle with no relative imports (`tools/build.mjs`). Only `@opencode/plugin*`, `@opentui/*`, `solid-js` and `node:*` stay external. `tsc` only typechecks.
 - `@opencode/plugin`, `@opencode/sdk`, `@opencode/client` and `@opencode/theme` are exact dev dependencies at 2.2.3. Do not add 2.2.4 to `package-lock.json`.
 - npm installs and runs the scripts (`npm ci`, `npm run check`); Bun 1.4.4 runs the tests.
+- The stages are `typecheck`, `build`, `unit`, `tui`, `host`, `pack`, `lint`, `icons` and `actionlint` (a notice when it is not on PATH). CI runs `actionlint` in its own job, and the host and pack stages run every release in `TESTED_HOSTS`.
 
 ## Contracts
 

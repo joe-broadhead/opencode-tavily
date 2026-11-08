@@ -6,7 +6,8 @@ import { mkdirSync, writeFileSync } from "node:fs"
 import { join } from "node:path"
 import { Tavily, type Status } from "../../src/rpc/index.js"
 import { formatStatus } from "../../src/status.js"
-import { TOOLS_RPC_ID } from "../../src/host/tools-rpc.js"
+import { METHODS, TOOLS_RPC_ID } from "../../src/host/tools-rpc.js"
+import { defaultRules } from "../../src/permissions.js"
 import { SERVER_URL } from "../../src/mcp.js"
 import { MODEL_ID, startFakeModel, type ChatRequest, type FakeModel } from "./fake-model.js"
 import { NEW_TOOL as FAKE_NEW_TOOL, RECORDED_TOOLS } from "./catalog.js"
@@ -22,8 +23,8 @@ type Rule = { action: string; resource: string; effect: "allow" | "ask" | "deny"
 const rule = (action: string, effect: Rule["effect"]): Rule => ({ action, resource: "*", effect })
 
 const KNOWN_ACTIONS = ["search", "extract", "map", "crawl", "research"].map((tool) => `tavily_tavily_${tool}`)
-/** The plugin's block: unknown Tavily tools ask, the five documented reads run. */
-const BLOCK = [rule("tavily_*", "ask"), ...KNOWN_ACTIONS.map((action) => rule(action, "allow"))]
+/** The plugin's block at the default access: every Tavily tool runs, the five documented reads and any later one. */
+const BLOCK = defaultRules()
 const BUILT_IN_AGENTS = ["build", "general", "explore", "compaction", "title", "summary", "plan"]
 const NEW_TOOL = "tavily_tavily_feedback"
 const OAUTH_INTEGRATION = /^mcp_[0-9a-f]{16}$/
@@ -185,23 +186,19 @@ describe(`defaults on ${HOST}`, () => {
     expect(rules.get("reviewer")?.some((entry) => entry.action.startsWith("tavily_"))).toBe(false)
   })
 
-  test("the host asks for a new Tavily tool, allows the known reads, and keeps Plan and Explore strict", async () => {
-    expect(await effect(host, "build", NEW_TOOL)).toBe("ask")
+  test("the host allows a new Tavily tool and the known reads, and keeps Explore strict", async () => {
+    expect(await effect(host, "build", NEW_TOOL)).toBe("allow")
     for (const action of KNOWN_ACTIONS) expect(await effect(host, "build", action)).toBe("allow")
-    expect(await effect(host, "plan", NEW_TOOL)).toBe("ask")
+    expect(await effect(host, "plan", NEW_TOOL)).toBe("allow")
     expect(await effect(host, "plan", "tavily_tavily_search")).toBe("allow")
     expect(await effect(host, "plan", "edit")).toBe("deny")
     expect(await effect(host, "explore", "tavily_tavily_search")).toBe("deny")
     expect(await effect(host, "explore", NEW_TOOL)).toBe("deny")
   })
 
-  test("a saved 'Always allow' for the new tool wins over the block, and Explore stays denied", async () => {
-    const sessionID = await session(host, "build")
-    const asked = await host.client.permission.create({ sessionID, agent: "build", action: NEW_TOOL, resources: ["*"], save: ["*"] })
-    expect(asked.effect).toBe("ask")
-    await host.client.permission.reply({ sessionID, requestID: asked.id, decision: "always" })
+  test("nothing asks at the default access, and Explore still denies", async () => {
     expect(await effect(host, "build", NEW_TOOL)).toBe("allow")
-    expect(await effect(host, "build", "tavily_tavily_other")).toBe("ask")
+    expect(await effect(host, "build", "tavily_tavily_other")).toBe("allow")
     expect(await effect(host, "explore", NEW_TOOL)).toBe("deny")
   })
 
@@ -266,6 +263,94 @@ describe(`defaults on ${HOST}`, () => {
   })
 })
 
+/**
+ * Runs `code` as Code Mode does, through a schedule's check program: OpenCode checks each tool's input and output and
+ * evaluates permissions with nobody present to answer a prompt. The program reports by throwing "SEEN <json>", so no
+ * schedule is ever created and no model is involved.
+ */
+async function codeMode(host: Host, sessionID: string, code: string): Promise<{ seen: unknown } | { refused: string }> {
+  let message: string
+  try {
+    const schedule = await host.client.experimental.schedule.create({
+      sessionID, name: "tavily-host-test", when: { in: "6 hours" }, prompt: "noop", if: { code }, location: host.location,
+    } as never)
+    await host.client.experimental.schedule.delete({ scheduleID: schedule.id, location: host.location } as never)
+    throw new Error("the check program finished without reporting")
+  } catch (error) {
+    message = error instanceof Error ? error.message : String(error)
+  }
+  const seen = /SEEN (.*)$/s.exec(message)
+  if (!seen) return { refused: message }
+  try {
+    return { seen: JSON.parse(seen[1]!) }
+  } catch {
+    return { seen: seen[1]! }
+  }
+}
+
+describe(`access on ${HOST}`, () => {
+  let host: Host
+  beforeAll(async () => {
+    host = await startHost({ config: { agents: { reviewer: { description: "Reviews changes", mode: "subagent" } } } })
+  })
+  afterAll(() => host?.close())
+
+  // R2: the same proofs on the Code Mode path, inside the host's `execute`, where nobody can answer a prompt.
+  test("R2 Code Mode: a read runs; an ask and a deny are refused with nothing sent; an unknown name is refused", async () => {
+    await connectKey(host, "tvly-code-mode-key", "Code Mode key")
+    await connectedWithKey(host)
+    const calls = (await hostedTavily()).requests.length
+    const run = (sessionID: string, tool: string) =>
+      codeMode(host, sessionID, `const r = await tools.tavily[${JSON.stringify(tool)}]({ query: "host test" }); throw new Error("SEEN " + JSON.stringify(r))`)
+    const created = async (permissions?: Rule[]) => (await host.client.session.create({ agent: "build", location: host.location, ...(permissions ? { permissions } : {}) } as never)).id
+
+    expect(await run(await created(), "tavily_search")).toHaveProperty("seen")
+    expect((await hostedTavily()).requests.length).toBeGreaterThan(calls)
+
+    const asking = (await hostedTavily()).requests.length
+    const asked = await run(await created([rule("tavily_tavily_search", "ask")]), "tavily_search")
+    expect(asked).toHaveProperty("refused")
+    expect((asked as { refused: string }).refused).toMatch(/needs approval|nobody is present|not permitted|declined|ask/i)
+    expect((await hostedTavily()).requests.length).toBe(asking)
+
+    expect(await run(await created([rule("tavily_tavily_search", "deny")]), "tavily_search")).toHaveProperty("refused")
+    expect(await run(await created(), "no_such_tool")).toHaveProperty("refused")
+    expect((await hostedTavily()).requests.length).toBe(asking)
+  })
+
+  // R18: one host test per value, on the tools RPC path, where a refusal must reach nothing.
+  for (const [access, effect] of [["ask-changes", "ask"], ["read-only", "deny"]] as const) {
+    test(`${access}: the block is the ${access} one, a read runs, and a ${effect} on the tools RPC path sends nothing`, async () => {
+      const restricted = await startHost({ options: { access }, config: { agents: { reviewer: { description: "Reviews changes", mode: "subagent" } } } })
+      try {
+        const current = await until(`${access} status is ready`, async () => {
+          const next = (await restricted.client.rpc(Tavily).status({}, { location: restricted.location })) as Status
+          return next.access === access ? next : undefined
+        })
+        expect(current.permissionsBlock).toEqual(defaultRules(access))
+        await connectKey(restricted, "tvly-access-test", "Access test key")
+        await connectedWithKey(restricted)
+        const { id } = await restricted.client.session.create({ agent: "build", location: restricted.location })
+        const before = (await hostedTavily()).requests.length
+        const read = await restricted.client.rpc.call({ rpcID: TOOLS_RPC_ID, method: "tavily_search", input: { sessionID: id, input: { query: "host test" } } as never, location: restricted.location })
+        expect(read.output).toMatchObject({ text: expect.any(String) })
+
+        const refused = await restricted.client.session.create({
+          agent: "build", location: restricted.location, permissions: [rule("tavily_tavily_search", effect)],
+        })
+        const after = (await hostedTavily()).requests.length
+        await expect(
+          restricted.client.rpc.call({ rpcID: TOOLS_RPC_ID, method: "tavily_search", input: { sessionID: refused.id, input: { query: "host test" } } as never, location: restricted.location }),
+        ).rejects.toMatchObject({ data: { code: "PERMISSION_DENIED" } })
+        expect((await hostedTavily()).requests.length).toBe(after)
+        expect(after).toBeGreaterThan(before)
+      } finally {
+        await restricted.close()
+      }
+    })
+  }
+})
+
 describe(`user config on ${HOST}`, () => {
   const userRules = [rule(NEW_TOOL, "allow")]
   let fake: FakeTavily
@@ -305,14 +390,14 @@ describe(`user config on ${HOST}`, () => {
     expect((await status(host)).tools).toEqual({ visible: 6, unknown: 1, unknownNames: ["tavily_feedback"] })
   })
 
-  test("a user permissions allow for a new tool wins; other new tools still ask", async () => {
+  test("a user permissions allow for a new tool wins; other new tools run too at the default access", async () => {
     expect(await effect(host, "build", NEW_TOOL)).toBe("allow")
-    expect(await effect(host, "build", "tavily_tavily_other")).toBe("ask")
+    expect(await effect(host, "build", "tavily_tavily_other")).toBe("allow")
     expect(await effect(host, "plan", "edit")).toBe("deny")
   })
 
   test("the per-agent fix guards a config-only agent and keeps the user's rule winning", async () => {
-    expect(await effect(host, "reviewer", "tavily_tavily_other")).toBe("ask")
+    expect(await effect(host, "reviewer", "tavily_tavily_other")).toBe("allow")
     expect(await effect(host, "reviewer", NEW_TOOL)).toBe("allow")
     expect(await effect(host, "reviewer", "tavily_tavily_search")).toBe("allow")
     expect((await status(host)).unguardedAgents).toEqual([])

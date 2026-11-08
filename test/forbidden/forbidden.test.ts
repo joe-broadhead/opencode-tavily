@@ -126,3 +126,31 @@ describe("tests import no host source", () => {
     expect(show(imports.filter(({ text }) => !PUBLIC.test(text)))).toEqual([])
   })
 })
+
+// Shipped text states behaviour, not who decided it. These words name internal review, so they never reach a user.
+const INTERNAL = [
+  { name: "owner decision", pattern: /owner'?s? (decision|ruling)/i, example: "the owner's decision" },
+  { name: "the lead", pattern: /\bthe lead\b/i, example: "the lead ruled" },
+  { name: "a lane name", pattern: /\blane\b/i, example: "the tavily lane" },
+  { name: "a tracker marker", pattern: /hey-jelly #/i, example: "hey-jelly #12" },
+]
+
+/** The text a user or the model reads: the README, the guides, the skills, the tests and the source comments. */
+function textFiles(): string[] {
+  return [...files("src"), ...files("test"), ...files("skills"), ...files("docs")]
+    .concat(["README.md", "SECURITY.md", "CONTRIBUTING.md", "AGENTS.md", "CHANGELOG.md"])
+    .filter((path) => /\.(md|ts|tsx)$/.test(path))
+    .filter((path) => path !== relative(REPO, fileURLToPath(import.meta.url)))
+    .sort()
+}
+
+describe("internal wording", () => {
+  for (const rule of INTERNAL) {
+    test(`${rule.name}: no shipped text uses it`, () => {
+      expect(rule.pattern.test(rule.example)).toBe(true)
+      const hits = textFiles().flatMap((path) => readFileSync(join(REPO, path), "utf8").split("\n")
+        .flatMap((line, index) => (rule.pattern.test(line) ? [`${path}:${index + 1}: ${line.trim()}`] : [])))
+      expect(hits).toEqual([])
+    })
+  }
+})

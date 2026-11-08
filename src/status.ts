@@ -3,9 +3,10 @@ import type { TavilyKey } from "./credential.js"
 import { HOST_RANGE, TESTED_TEXT, type HostCheck } from "./host-version.js"
 import type { KeyCheck, KeyChecker } from "./key-check.js"
 import { SERVER_NAME, SERVER_URL, type ServerState } from "./mcp.js"
-import { DEFAULT_RULES, isUnguarded, KNOWN_ACTIONS, type Rule } from "./permissions.js"
+import { defaultRules, isUnguarded, KNOWN_ACTIONS, type Rule } from "./permissions.js"
+import type { Access } from "./options.js"
 import {
-  ACCESS_TEXT,
+  accessText,
   accountText,
   agentsText,
   authText,
@@ -57,6 +58,8 @@ interface StatusFacts {
   readonly keyCheck?: KeyCheck
   /** The OAuth credential label of the server's integration. */
   readonly oauthAccount?: string
+  /** What the default rules allow: the `access` option; `all` when not given. */
+  readonly access?: Access
   /** Every tool OpenCode lists; status counts the `tavily` server's. */
   readonly tools: readonly { readonly id: string }[]
   readonly websearchDefault: boolean
@@ -133,13 +136,15 @@ export function buildStatus(facts: StatusFacts): Status {
   const state = facts.server ? STATE_OF[facts.server.status] : "not_configured"
   const auth = authOf(facts)
   const account = auth === "key_connected" ? facts.key?.label : auth === "key_env" ? undefined : facts.oauthAccount
-  const unguarded = facts.agents.filter((agent) => isUnguarded(agent.permissions)).map((agent) => agent.id)
+  const access = facts.access ?? "all"
+  const unguarded = facts.agents.filter((agent) => isUnguarded(agent.permissions, access)).map((agent) => agent.id)
   const shadowed = shadowedOf(facts)
   const nextStep = nextStepOf(state, auth, facts, unguarded, shadowed)
   const keyCheck = auth === "key_env" || auth === "key_connected" ? facts.keyCheck : undefined
   return {
     version: PLUGIN_VERSION,
     state,
+    access,
     auth,
     ...(account === undefined ? {} : { account }),
     ...(keyCheck === undefined ? {} : { keyCheck }),
@@ -147,13 +152,14 @@ export function buildStatus(facts: StatusFacts): Status {
     websearchDefault: facts.websearchDefault,
     host: { version: facts.host.version, range: HOST_RANGE, tested: facts.host.tested },
     unguardedAgents: unguarded,
-    ...(unguarded.length === 0 ? {} : { permissionsBlock: DEFAULT_RULES.map((rule) => ({ ...rule })) }),
+    ...(unguarded.length === 0 ? {} : { permissionsBlock: defaultRules(facts.access).map((rule) => ({ ...rule })) }),
     ...(shadowed.length === 0 ? {} : { shadowedSkills: shadowed }),
     nextStep,
   }
 }
 
 interface StatusState {
+  readonly access: Access
   readonly server: ServerState
   readonly websearch: WebsearchState
   readonly host: HostCheck
@@ -191,6 +197,7 @@ export async function readStatus(
     ? await ctx.integration.connection.active(server.integrationID).catch(() => undefined)
     : undefined
   return buildStatus({
+    access: state.access,
     server: server && { status: server.status.status },
     userServer: state.server.userServer,
     userServerAtTavily: state.server.userServerAtTavily,
@@ -211,7 +218,7 @@ export function formatStatus(status: Status) {
     "Tavily status",
     `- Connection: ${STATE_LABELS[status.state]}`,
     `- Account: ${accountText(status)}`,
-    `- Access: ${ACCESS_TEXT}`,
+    `- Access: ${accessText(status)}`,
     `- Sign-in: ${authText(status)}`,
     `- Web search: ${websearchText(status)}`,
     `- Skills: ${skillsText(status)}`,

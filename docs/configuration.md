@@ -24,15 +24,41 @@ All options are optional.
 | --- | --- | --- |
 | `websearch` | `true` | Make OpenCode's built-in Tavily provider the default for the `websearch` tool. A `websearch` setting in `opencode.json` still wins. See [Web search](#web-search). |
 | `executionTimeoutMs` | `900000` (15 minutes) | How long one call to a Tavily tool can run, in milliseconds. An integer from `60000` (1 minute) to `3600000` (1 hour). Research needs the most time. |
-| `allowUntestedHost` | `false` | Start on an OpenCode version outside `>=2.2.3 <2.3.0`. The plugin then logs a `HOST_UNTESTED` warning and runs. A later 2.2 release needs no option: it runs, and status calls it untested. |
+| `allowUntestedHost` | `false` | Start on an OpenCode version outside `>=2.2.3 <2.3.0`. The plugin then logs a `HOST_UNTESTED` warning and runs. A later 2.2 release, such as 2.2.99, needs no option: it runs, and status calls it untested. |
+| `access` | `"all"` | `"all"`, `"ask-changes"` or `"read-only"`. It generates the default rules: everything allowed, or the five reads allowed and a tool Tavily adds later asking or denied. See [The default rules](#the-default-rules). |
 
 An unknown option, or a value of the wrong type, stops the plugin at start-up with a [`OPTIONS_INVALID`](#errors) error.
 
 ## Permissions
 
+**Every tool is allowed by default.** An agent can search the web, read pages, map and crawl sites, and run cited research with no prompt, and every call spends your Tavily credits. Restrict it in any of these three ways.
+
 ### The default rules
 
-When OpenCode builds its agents, the plugin adds these rules to each one, right after the agent's first `{ "action": "*", "resource": "*", "effect": "allow" }` rule. An agent with no such rule gets none: the block's `ask` would loosen its default deny.
+The `access` option generates one block, which the plugin adds to each agent right after its first `{ "action": "*", "resource": "*", "effect": "allow" }` rule. An agent with no such rule gets none.
+
+| Value | What runs | What asks or is denied |
+| --- | --- | --- |
+| `"all"` (the default) | the five tools, and any tool Tavily adds later | nothing |
+| `"ask-changes"` | the five tools | a tool Tavily adds later: it asks |
+| `"read-only"` | the five tools | a tool Tavily adds later: it is **denied** |
+
+<!-- The three blocks below are generated from defaultRules(access); a test asserts each one equals it. -->
+
+`access: "all"`:
+
+```json
+[
+  { "action": "tavily_*", "resource": "*", "effect": "allow" },
+  { "action": "tavily_tavily_search", "resource": "*", "effect": "allow" },
+  { "action": "tavily_tavily_extract", "resource": "*", "effect": "allow" },
+  { "action": "tavily_tavily_map", "resource": "*", "effect": "allow" },
+  { "action": "tavily_tavily_crawl", "resource": "*", "effect": "allow" },
+  { "action": "tavily_tavily_research", "resource": "*", "effect": "allow" }
+]
+```
+
+`access: "ask-changes"`:
 
 ```json
 [
@@ -45,9 +71,20 @@ When OpenCode builds its agents, the plugin adds these rules to each one, right 
 ]
 ```
 
-- Tavily's five tools only read from the web, so they run without a prompt.
-- Any other tool on the `tavily` server asks first. That includes a tool that Tavily adds later.
-- The plugin adds each rule only once, however often OpenCode rebuilds its agents.
+`access: "read-only"`:
+
+```json
+[
+  { "action": "tavily_*", "resource": "*", "effect": "deny" },
+  { "action": "tavily_tavily_search", "resource": "*", "effect": "allow" },
+  { "action": "tavily_tavily_extract", "resource": "*", "effect": "allow" },
+  { "action": "tavily_tavily_map", "resource": "*", "effect": "allow" },
+  { "action": "tavily_tavily_crawl", "resource": "*", "effect": "allow" },
+  { "action": "tavily_tavily_research", "resource": "*", "effect": "allow" }
+]
+```
+
+Tavily's five tools only read from the web, so no value changes what they do; the option decides what a tool Tavily adds later does. The plugin adds each rule only once, however often OpenCode rebuilds its agents.
 
 OpenCode checks a Tavily call against the agent's rules, and **the last matching rule wins**. Rules are checked in this order:
 
@@ -60,7 +97,7 @@ A `deny` from rules 1 to 3 wins over a saved "Always allow". If no rule matches,
 
 So your own rules always win over the plugin's, and a stricter agent stays strict:
 
-- **Plan** can use the five Tavily tools, other Tavily tools ask, and Plan's own limits, such as no file edits, stay.
+- **Plan** can use the five Tavily tools, a tool Tavily adds later follows the access, and Plan's own limits, such as no file edits, stay.
 - **Explore** denies every tool that is not on its own list, so it cannot use Tavily tools.
 
 ### Change the defaults
@@ -78,7 +115,7 @@ Research and Crawl use the most credits. To make them ask first:
 }
 ```
 
-To allow a new Tavily tool without a prompt, add an `allow` rule for its name. Or answer **Always allow** when OpenCode asks. That saves an approval for the whole project; see [SECURITY.md](../SECURITY.md#permissions).
+To allow a tool that asks, or a tool a restricted `access` denies, add a later `allow` rule for its name. Or answer **Always allow** when OpenCode asks. That saves an approval for the whole project; see [SECURITY.md](../SECURITY.md#permissions).
 
 ```jsonc
 { "permissions": [{ "action": "tavily_tavily_feedback", "resource": "*", "effect": "allow" }] }
@@ -106,7 +143,7 @@ Put the default rules shown by `/tavily-status` first in each listed agent's own
       "description": "Reviews changes",
       "mode": "subagent",
       "permissions": [
-        { "action": "tavily_*", "resource": "*", "effect": "ask" },
+        { "action": "tavily_*", "resource": "*", "effect": "allow" },
         { "action": "tavily_tavily_search", "resource": "*", "effect": "allow" },
         { "action": "tavily_tavily_extract", "resource": "*", "effect": "allow" },
         { "action": "tavily_tavily_map", "resource": "*", "effect": "allow" },
@@ -181,7 +218,7 @@ The plugin's own errors and warnings have one shape: `CODE: what happened. Next 
 
 | Code | When | Example |
 | --- | --- | --- |
-| `OPTIONS_INVALID` | Start-up; the plugin does not start | `OPTIONS_INVALID: Unknown option "foo"; the options are websearch, executionTimeoutMs, allowUntestedHost. Next step: Fix the plugin's options in opencode.json.` |
+| `OPTIONS_INVALID` | Start-up; the plugin does not start | `OPTIONS_INVALID: Unknown option "foo"; the options are websearch, executionTimeoutMs, allowUntestedHost, access. Next step: Fix the plugin's options in opencode.json.` |
 | `HOST_UNTESTED` | Start-up, outside `>=2.2.3 <2.3.0`; a warning with `allowUntestedHost` | `HOST_UNTESTED: This plugin supports OpenCode >=2.2.3 <2.3.0, and this is 2.3.0. Next step: Use OpenCode 2.2.3, 2.2.4, 2.2.5 or 2.2.6, or set "allowUntestedHost": true to run anyway.` |
 | `SKILLS_INVALID` | Start-up; a packaged skill is missing or damaged | `SKILLS_INVALID: skills/tavily has no SKILL.md. Next step: Reinstall the plugin.` |
 | `KEY_UNAVAILABLE` | Log warning; OpenCode could not read the key | `KEY_UNAVAILABLE: OpenCode could not read the Tavily API key (<reason>). Next step: Run /connect and choose Tavily, then connect the key again.` |

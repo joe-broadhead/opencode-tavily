@@ -147,7 +147,7 @@ On OpenCode 2.2.3, when the user declines a tool call inside a Code Mode program
 
 ## Upstream drift
 
-`npm run check:upstream` (`tools/check-upstream.mjs`) is a check for maintainers. It lists the tools of Tavily's hosted server without a key and compares them with the five known reads. It prints added and removed tools, and always exits with 0. Nothing at runtime depends on it: a new tool asks before it runs, and a removed tool leaves an unused allow rule.
+`npm run check:upstream` (`tools/check-upstream.mjs`) is a check for maintainers. It lists the tools of Tavily's hosted server without a key and compares them with the five known reads. It prints added and removed tools, and always exits with 0. Nothing at runtime depends on it: a new tool follows the `access` rules until the plugin classifies it, and a removed tool leaves an unused allow rule.
 
 ## OpenCode facts the design relies on
 

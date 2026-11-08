@@ -1,4 +1,5 @@
 import { Rpc } from "@opencode/plugin/rpc"
+import type { Access } from "../options.js"
 
 /** The shared status states (S13) Tavily reports, in machine form; the status rows use STATE_LABELS. */
 const STATES = ["connected", "sign_in_required", "connecting", "failed", "disabled", "not_configured"] as const
@@ -17,6 +18,8 @@ export interface Status {
   readonly version: string
   /** The tavily server's state. */
   readonly state: (typeof STATES)[number]
+  /** What the default rules allow: `all`, `ask-changes` or `read-only`. */
+  readonly access: Access
   readonly auth: (typeof AUTH_SOURCES)[number]
   /** The credential's label, never a secret. */
   readonly account?: string
@@ -25,7 +28,7 @@ export interface Status {
    * connects with any key, so only this tells a wrong key apart.
    */
   readonly keyCheck?: (typeof KEY_CHECKS)[number]
-  /** The `tavily` server's tools that OpenCode lists; unknown ones are not among the five known reads and ask. */
+  /** The `tavily` server's tools that OpenCode lists; unknown ones are not among the five known reads and follow the access. */
   readonly tools: { readonly visible: number; readonly unknown: number; readonly unknownNames: readonly string[] }
   /** This plugin selected Tavily as the web search default. A `websearch` choice in opencode.json still wins. */
   readonly websearchDefault: boolean
@@ -53,8 +56,20 @@ export const STATE_LABELS: Record<Status["state"], string> = {
   not_configured: "not configured",
 }
 
-/** Every Tavily tool only reads from the web. */
-export const ACCESS_TEXT = "read only: search, extract, map, crawl and research"
+/** What the access value does here, one sentence each: every known tool only reads from the web. */
+export function accessText(status: Status) {
+  switch (status.access) {
+    case "all":
+      return "every tool runs without asking: the five reads and any tool Tavily adds later. "
+        + 'Set the access option to "ask-changes" or "read-only" to restrict a tool Tavily adds later.'
+    case "read-only":
+      return "the five reads run without asking, and any tool Tavily adds later is denied. "
+        + "All five only read from the web, so no value changes what they do."
+    case "ask-changes":
+      return "the five reads run without asking; any tool Tavily adds later asks first. "
+        + "All five only read from the web, so no value changes what they do."
+  }
+}
 
 const AUTH_LABELS: Record<Status["auth"], string> = {
   oauth: "OAuth (/connect → Tavily account)",
@@ -83,9 +98,11 @@ export function terminalKeyText(status: Status, terminalHasKey: boolean) {
   return "TAVILY_API_KEY is set in this terminal, but OpenCode's server does not see it, so Tavily uses OAuth. Run /connect and choose Tavily to connect the key."
 }
 
-export function toolsText({ tools }: Status) {
+export function toolsText(status: Status) {
+  const { tools } = status
   if (tools.visible === 0) return "none listed yet"
-  const unknown = tools.unknown === 0 ? "" : `, ${tools.unknown} unknown (they ask first): ${tools.unknownNames.join(", ")}`
+  const posture = status.access === "all" ? "new tools run too" : status.access === "read-only" ? "new tools are denied" : "they ask first"
+  const unknown = tools.unknown === 0 ? "" : `, ${tools.unknown} unknown (${posture}): ${tools.unknownNames.join(", ")}`
   return `${tools.visible} available${unknown}`
 }
 
@@ -127,6 +144,7 @@ const status = {
   properties: {
     version: { type: "string" },
     state: { type: "string", enum: [...STATES] },
+    access: { type: "string", enum: ["all", "ask-changes", "read-only"] },
     auth: { type: "string", enum: [...AUTH_SOURCES] },
     account: { type: "string" },
     keyCheck: { type: "string", enum: [...KEY_CHECKS] },
@@ -156,7 +174,7 @@ const status = {
     },
     nextStep: { type: "string" },
   },
-  required: ["version", "state", "auth", "tools", "websearchDefault", "host", "unguardedAgents", "nextStep"],
+  required: ["version", "state", "access", "auth", "tools", "websearchDefault", "host", "unguardedAgents", "nextStep"],
   additionalProperties: false,
 } as const
 

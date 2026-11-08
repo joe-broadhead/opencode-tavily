@@ -4,8 +4,18 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+### Added
+
+- **Every tool is allowed by default.** The generated block allows the five tools and the `tavily_*` namespace, so a tool Tavily adds later runs at once. The Jelly declaration's tools are all `allow`.
+- The `access` option: `"all"` (the default), `"ask-changes"` and `"read-only"`. All five tools only read, so the value decides what a tool Tavily adds later does: run, ask or be denied. It generates the default rules, and status and the dialog show it. The README, `docs/configuration.md` and `SECURITY.md` say what an all-allow default means and how to restrict it.
+- `opencode.icons` and `opencode.vendor`, with `assets/icon.svg`, `icon-128.png` and `icon-256.png` from the family icon kit, the three `exports` and `files` entries, and the `icons` stage of `npm run check`.
+- An `actionlint` stage, and an `actionlint` job in CI.
+- One typed code table, `src/codes.ts`, with a test that fails when a code in `src` is missing from it, or when a README or guide table drifts from it.
+- A test that parses every example in `docs/scripting.md` and the README: the method, the location header, the strict envelope and the tool's own fields.
+
 ### Changed
 
+- `docs/scripting.md` carries the family's envelope, location section, unload note, result wording and refusal table, word for word, and says which of `UPSTREAM_ERROR`'s two next steps applies.
 - tools RPC v2: every known tool is scriptable under a prior explicit allow. `tavily.web.tools` keeps one method per known tool, each with its class (`read` for all five), and resolves the rule before dispatch: only an `allow` runs, and an `ask` is refused with no prompt and no tool call. `describe` reports each method's class, and — given a session — that session's permission, plus any live tool this plugin does not classify. A saved "Always allow" approval no longer authorizes an ad-hoc script: a script's grant is a rule in the agent's or the session's config, or a Jobs `jobs_run_script` run session. `opencode api` callers must send `-H "x-opencode-directory:$PWD"`, or the call reaches the service's default location and fails `rpc.unavailable`. Tavily's error-object handling is applied to a script's result by the same `shapeResult` the model's hook uses.
 
 ## [0.0.7] - 2026-11-06

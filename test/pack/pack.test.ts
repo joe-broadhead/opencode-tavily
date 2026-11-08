@@ -9,7 +9,7 @@ import { afterAll, beforeAll, describe, expect, setDefaultTimeout, test } from "
 import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, symlinkSync, writeFileSync } from "node:fs"
 import { dirname, join, relative, resolve } from "node:path"
 import { Tavily } from "../../src/rpc/index.js"
-import { DEFAULT_RULES } from "../../src/permissions.js"
+import { defaultRules } from "../../src/permissions.js"
 import { SERVER_URL } from "../../src/mcp.js"
 import { METHODS, TOOLS_RPC_ID } from "../../src/host/tools-rpc.js"
 import { NEW_TOOL, RECORDED_TOOLS } from "../host/catalog.js"
@@ -25,13 +25,15 @@ const USAGE_URL = "https://api.tavily.com/usage"
 setDefaultTimeout(300_000)
 
 const NAME = "@joe-broadhead/opencode-tavily"
-const ALLOWED = /^(package\.json|README\.md|LICENSE|CHANGELOG\.md|assets\/icon\.svg|dist\/.+|skills\/.+)$/
+const ALLOWED = /^(package\.json|README\.md|LICENSE|CHANGELOG\.md|assets\/icon(-128|-256)?\.(svg|png)|dist\/.+|skills\/.+)$/
 const REQUIRED = [
   "package.json",
   "README.md",
   "LICENSE",
   "CHANGELOG.md",
   "assets/icon.svg",
+  "assets/icon-128.png",
+  "assets/icon-256.png",
   "dist/index.js",
   "dist/tui.js",
   "skills/tavily/SKILL.md",
@@ -91,8 +93,15 @@ describe("the tarball", () => {
     for (const field of ["dependencies", "optionalDependencies", "peerDependencies", "peerDependenciesMeta", "bundleDependencies", "bundledDependencies", "overrides"])
       expect(manifest[field]).toBeUndefined()
     expect(Object.keys(manifest.scripts ?? {}).filter((script) => LIFECYCLE.includes(script))).toEqual([])
-    expect(manifest.opencode).toEqual({ host: ">=2.2.3 <2.3.0" })
-    expect(manifest.exports).toEqual({ ".": "./dist/index.js", "./tui": "./dist/tui.js" })
+    expect(manifest.opencode).toMatchObject({ host: ">=2.2.3 <2.3.0", vendor: { id: "tavily", name: "Tavily", domain: "tavily.com" } })
+    expect(manifest.opencode.icons.map((icon: { src: string }) => icon.src)).toEqual(["assets/icon.svg", "assets/icon-128.png", "assets/icon-256.png"])
+    expect(manifest.exports).toEqual({
+      ".": "./dist/index.js",
+      "./tui": "./dist/tui.js",
+      "./icon.svg": "./assets/icon.svg",
+      "./icon-128.png": "./assets/icon-128.png",
+      "./icon-256.png": "./assets/icon-256.png",
+    })
     for (const target of Object.values(manifest.exports as Record<string, string>)) expect(existsSync(join(installed, target))).toBe(true)
   })
 })
@@ -194,9 +203,9 @@ for (const version of STOCK_VERSIONS)
       const { data: agents } = await host.client.agent.list({ location: host.location })
       for (const id of ["build", "plan", "explore"]) {
         const permissions = agents.find((agent) => agent.id === id)?.permissions
-        expect(permissions?.slice(0, 1 + DEFAULT_RULES.length)).toEqual([{ action: "*", resource: "*", effect: "allow" }, ...DEFAULT_RULES])
+        expect(permissions?.slice(0, 1 + defaultRules().length)).toEqual([{ action: "*", resource: "*", effect: "allow" }, ...defaultRules()])
       }
-      expect(await effect(host, "build", "tavily_tavily_feedback")).toBe("ask")
+      expect(await effect(host, "build", "tavily_tavily_feedback")).toBe("allow")
       expect(await effect(host, "build", "tavily_tavily_search")).toBe("allow")
       expect(await effect(host, "explore", "tavily_tavily_search")).toBe("deny")
     })

@@ -154,8 +154,12 @@ export interface Host {
 /** How long a host may take to load the plugin and settle the tavily server. Generous: CI and containers are slow. */
 const READY_MS = 180_000
 
-/** Keeps the built-in local providers from probing their default ports. */
+/**
+ * Keeps the built-in local providers from probing their default ports, and turns on schedules, which is how a host test
+ * runs Code Mode with nobody present to answer a prompt.
+ */
 const LOCAL_PROVIDERS_OFF = {
+  experimental: { schedules: true },
   providers: { lmstudio: { settings: { baseURL: "" } }, ollama: { settings: { baseURL: "" } }, vllm: { settings: { baseURL: "" } } },
 }
 

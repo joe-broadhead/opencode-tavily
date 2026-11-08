@@ -22,6 +22,7 @@ const REFRESH_ON = ["server.connected", "mcp.status.changed", "agent.updated", "
 const connected: Status = {
   version: "0.0.0",
   state: "connected",
+  access: "all",
   auth: "oauth",
   account: "jo@example.com",
   tools: { visible: 5, unknown: 0, unknownNames: [] },
@@ -34,13 +35,14 @@ const connected: Status = {
 const needsAuth: Status = {
   version: "0.0.0",
   state: "sign_in_required",
+  access: "all",
   auth: "oauth",
   tools: { visible: 6, unknown: 1, unknownNames: ["tavily_feedback"] },
   websearchDefault: false,
   host: { version: "2.2.4", range: ">=2.2.3 <2.3.0", tested: true },
   unguardedAgents: ["reviewer"],
   permissionsBlock: [
-    { action: "tavily_*", resource: "*", effect: "ask" },
+    { action: "tavily_*", resource: "*", effect: "allow" },
     { action: "tavily_tavily_search", resource: "*", effect: "allow" },
   ],
   nextStep: "Run /connect and choose Tavily account to sign in, or choose Tavily to use an API key.",
@@ -121,7 +123,7 @@ describe("Tavily TUI status view", () => {
     for (const [label, value] of [
       ["Connection", "connected"],
       ["Account", "jo@example.com"],
-      ["Access", "read only: search, extract, map, crawl and research"],
+      ["Access", "every tool runs without asking"],
       ["Sign-in", "OAuth (/connect → Tavily account)"],
       ["Web search", `Tavily, unless opencode.json sets "websearch"`],
       ["Tools", "5 available"],
@@ -168,13 +170,13 @@ describe("Tavily TUI status view", () => {
     const order = [
       row("Connection", "sign-in required"),
       row("Account", "none"),
-      row("Access", "read only"),
+      row("Access", "every tool runs without asking"),
       row("Sign-in", "OAuth (/connect → Tavily account)"),
       row("Web search", "not set by this plugin"),
       row("Skills", "the plugin's own"),
-      row("Tools", "6 available, 1 unknown (they ask first): tavily_feedback"),
+      row("Tools", "6 available, 1 unknown (new tools run too): tavily_feedback"),
       row("Agents without default rules", "reviewer"),
-      `{"action":"tavily_*","resource":"*","effect":"ask"},`,
+      `{"action":"tavily_*","resource":"*","effect":"allow"},`,
       `{"action":"tavily_tavily_search","resource":"*","effect":"allow"}`,
       row("OpenCode", "2.2.4 (tested)"),
       row("Next step", "Run /connect and choose Tavily account to sign in"),
@@ -183,7 +185,7 @@ describe("Tavily TUI status view", () => {
     expect(positions.filter((position) => position < 0)).toEqual([])
     expect(positions).toEqual([...positions].sort((a, b) => a - b))
     // The agents row holds only the names; the block follows it.
-    expect(frame).not.toContain("without asking")
+    expect(frame.split("\n").find((line) => line.includes("Agents without default rules"))).not.toContain("{")
   })
 
   test("shows the next step the RPC error carries", async () => {

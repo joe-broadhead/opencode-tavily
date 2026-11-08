@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test"
 import { readFileSync } from "node:fs"
 import { INTEGRATION_ID } from "../../src/credential.js"
 import { SERVER_NAME } from "../../src/mcp.js"
-import { DEFAULT_RULES, KNOWN_ACTIONS } from "../../src/permissions.js"
+import { defaultRules, KNOWN_ACTIONS } from "../../src/permissions.js"
 import { declarationProblems, docProblems, effectFromRules, readPackage } from "../support/jelly-kit.js"
 
 /**
@@ -17,7 +17,7 @@ const signIns = pkg.jelly?.signIns ?? []
 
 describe("the jelly declaration", () => {
   test("follows the plugin authors' standard, with the effects the plugin's own default rules give", () => {
-    expect(declarationProblems(ROOT, { effectOf: effectFromRules(DEFAULT_RULES), registered: KNOWN_ACTIONS })).toEqual([])
+    expect(declarationProblems(ROOT, { effectOf: effectFromRules(defaultRules()), registered: KNOWN_ACTIONS })).toEqual([])
   })
 
   test("declares each tool read-only", () => {

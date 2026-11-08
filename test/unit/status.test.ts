@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test"
 import type { TavilyKey } from "../../src/credential.js"
-import { DEFAULT_RULES, type Rule } from "../../src/permissions.js"
+import { defaultRules, type Rule } from "../../src/permissions.js"
 
 type StatusFacts = Parameters<typeof buildStatus>[0]
 import type { Status } from "../../src/rpc/index.js"
@@ -25,7 +25,7 @@ import type { Plugin } from "@opencode/plugin"
 import pkg from "../../package.json" with { type: "json" }
 
 const BASE: Rule = { action: "*", resource: "*", effect: "allow" }
-const guarded = { id: "build", permissions: [BASE, ...DEFAULT_RULES] }
+const guarded = { id: "build", permissions: [BASE, ...defaultRules()] }
 /** The host check for a tested release, and the same host as status reports it. */
 const CHECK = { version: "2.2.3", tested: true, inRange: true }
 const HOST = { version: "2.2.3", range: ">=2.2.3 <2.3.0", tested: true }
@@ -37,6 +37,7 @@ const NONE = { visible: 0, unknown: 0, unknownNames: [] }
 const ENV_REPLACE = `run /connect, choose Tavily and connect a working key (it wins over TAVILY_API_KEY), or replace TAVILY_API_KEY with "opencode service set env TAVILY_API_KEY <key>"`
 
 const facts = (overrides: Partial<StatusFacts> = {}): StatusFacts => ({
+  access: "all",
   server: { status: "connected" },
   userServer: false,
   userServerAtTavily: false,
@@ -52,6 +53,7 @@ describe("buildStatus", () => {
     expect(buildStatus(facts({ oauthAccount: "jo@example.com" }))).toEqual({
       version: pkg.version,
       state: "connected",
+      access: "all",
       auth: "oauth",
       account: "jo@example.com",
       tools: FIVE,
@@ -158,27 +160,27 @@ describe("buildStatus", () => {
     const strict = { id: "readonly", permissions: [BASE, { action: "*", resource: "*", effect: "deny" } as const] }
     const status = buildStatus(facts({ agents: [guarded, configOnly, other, strict] }))
     expect(status.unguardedAgents).toEqual(["reviewer", "docs/writer"])
-    expect(status.permissionsBlock).toEqual(DEFAULT_RULES)
+    expect(status.permissionsBlock).toEqual(defaultRules())
     expect(status.nextStep).toBe(
       "Put the default rules shown by /tavily-status first in each listed agent's own permissions, in opencode.json or the agent's Markdown file, followed by your top-level rules for Tavily tools.",
     )
     // Sign-in comes first; the agents and the block stay listed.
     const signIn = buildStatus(facts({ server: { status: "needs_auth" }, agents: [configOnly] }))
-    expect(signIn).toMatchObject({ unguardedAgents: ["reviewer"], permissionsBlock: DEFAULT_RULES })
+    expect(signIn).toMatchObject({ unguardedAgents: ["reviewer"], permissionsBlock: defaultRules() })
     expect(signIn.nextStep).toStartWith("Run /connect and choose Tavily account")
   })
 
   test("the block counts anywhere after the base allow, even after another plugin's block, but not before it", () => {
     const other = { action: "linear_*", resource: "*", effect: "ask" } as const
-    const behind = { id: "build", permissions: [BASE, other, ...DEFAULT_RULES] }
-    const before = { id: "custom", permissions: [...DEFAULT_RULES, BASE] }
+    const behind = { id: "build", permissions: [BASE, other, ...defaultRules()] }
+    const before = { id: "custom", permissions: [...defaultRules(), BASE] }
     expect(buildStatus(facts({ agents: [behind, before] })).unguardedAgents).toEqual(["custom"])
   })
 
   test("an agent fixed through its own permissions is no longer named", () => {
     // The host's order for a config-only agent: the base rules, the top-level rules, then the agent's own rules.
     const topLevel = { action: "tavily_tavily_research", resource: "*", effect: "ask" } as const
-    const fixed = { id: "reviewer", permissions: [BASE, { action: "read", resource: "*.env", effect: "ask" } as const, topLevel, ...DEFAULT_RULES, topLevel] }
+    const fixed = { id: "reviewer", permissions: [BASE, { action: "read", resource: "*.env", effect: "ask" } as const, topLevel, ...defaultRules(), topLevel] }
     const status = buildStatus(facts({ agents: [fixed] }))
     expect(status.unguardedAgents).toEqual([])
     expect(status).not.toHaveProperty("permissionsBlock")
@@ -231,6 +233,7 @@ describe("readStatus", () => {
   const checked: string[] = []
   const checkKey = async (key: string) => (checked.push(key), "rejected" as const)
   const state = {
+    access: "all" as const,
     server: { key: undefined, userServer: false, userServerAtTavily: false },
     websearch: { tavilyDefault: true },
     host: CHECK,
@@ -335,12 +338,13 @@ describe("formatStatus", () => {
     const status: Status = {
       version: "0.0.0",
       state: "sign_in_required",
+      access: "all",
       auth: "oauth",
       tools: { visible: 6, unknown: 1, unknownNames: ["tavily_feedback"] },
       websearchDefault: true,
       host: HOST,
       unguardedAgents: ["reviewer"],
-      permissionsBlock: DEFAULT_RULES.slice(0, 2),
+      permissionsBlock: defaultRules().slice(0, 2),
       nextStep: "Sign in.",
     }
     expect(formatStatus(status)).toBe(
@@ -348,13 +352,13 @@ describe("formatStatus", () => {
         "Tavily status",
         "- Connection: sign-in required",
         "- Account: none",
-        "- Access: read only: search, extract, map, crawl and research",
+        '- Access: every tool runs without asking: the five reads and any tool Tavily adds later. Set the access option to "ask-changes" or "read-only" to restrict a tool Tavily adds later.',
         "- Sign-in: OAuth (/connect → Tavily account)",
         `- Web search: Tavily, unless opencode.json sets "websearch"`,
         "- Skills: the plugin's own",
-        "- Tools: 6 available, 1 unknown (they ask first): tavily_feedback",
+        "- Tools: 6 available, 1 unknown (new tools run too): tavily_feedback",
         "- Agents without default rules: reviewer",
-        `  {"action":"tavily_*","resource":"*","effect":"ask"},`,
+        `  {"action":"tavily_*","resource":"*","effect":"allow"},`,
         `  {"action":"tavily_tavily_search","resource":"*","effect":"allow"}`,
         "- OpenCode: 2.2.3 (tested)",
         "- Next step: Sign in.",
@@ -366,6 +370,7 @@ describe("formatStatus", () => {
     const text = formatStatus({
       version: "0.0.0",
       state: "connected",
+      access: "all",
       auth: "key_connected",
       account: "Tavily",
       tools: NONE,
@@ -379,6 +384,7 @@ describe("formatStatus", () => {
     const rejected: Status = {
       version: "0.0.0",
       state: "connected",
+      access: "all",
       auth: "key_env",
       keyCheck: "rejected",
       tools: NONE,
@@ -420,6 +426,7 @@ describe("/tavily-status", () => {
     const ready: Status = {
       version: "0.0.0",
       state: "connected",
+      access: "all",
       auth: "oauth",
       tools: FIVE,
       websearchDefault: true,

@@ -6,7 +6,7 @@ Unofficial; not affiliated with Tavily.
 
 ## Requirements
 
-- OpenCode `>=2.2.3 <2.3.0`, tested on 2.2.3, 2.2.4, 2.2.5 and 2.2.6. A later 2.2 release works, and `/tavily-status` calls it untested. Outside `>=2.2.3 <2.3.0` the plugin does not start, unless you set [`allowUntestedHost`](https://github.com/joe-broadhead/opencode-tavily/blob/HEAD/docs/configuration.md#options).
+- OpenCode `>=2.2.3 <2.3.0`, tested on 2.2.3, 2.2.4, 2.2.5 and 2.2.6. A later 2.2 release, such as 2.2.99, works, and `/tavily-status` calls it untested. Outside `>=2.2.3 <2.3.0` the plugin does not start, unless you set [`allowUntestedHost`](https://github.com/joe-broadhead/opencode-tavily/blob/HEAD/docs/configuration.md#options).
 - macOS or Linux.
 - A Tavily account. The plugin adds no tools of its own; each call uses your Tavily credits.
 
@@ -95,24 +95,54 @@ See [Scripting](https://github.com/joe-broadhead/opencode-tavily/blob/HEAD/docs/
 
 ## Permissions
 
-The plugin adds this block to every agent, right after the agent's first `{ "action": "*", "resource": "*", "effect": "allow" }` rule. An agent without that rule gets nothing. Tavily's five tools only read from the web, so they run without a prompt. Any other tool on the `tavily` server, including one Tavily adds later, asks first.
+**Every tool is allowed by default.** An agent can search the web, read pages, map and crawl sites, and run cited research with no prompt, and every call spends your Tavily credits. Restrict it in any of these three ways.
 
-```json
-[
-  { "action": "tavily_*", "resource": "*", "effect": "ask" },
-  { "action": "tavily_tavily_search", "resource": "*", "effect": "allow" },
-  { "action": "tavily_tavily_extract", "resource": "*", "effect": "allow" },
-  { "action": "tavily_tavily_map", "resource": "*", "effect": "allow" },
-  { "action": "tavily_tavily_crawl", "resource": "*", "effect": "allow" },
-  { "action": "tavily_tavily_research", "resource": "*", "effect": "allow" }
-]
-```
+1. **The `access` option**, which drives the rules the plugin inserts:
 
-The last matching rule wins, so your own rules and saved "Always allow" answers win over the block. **Agents that you define only in your config do not get it**: `/tavily-status` names them, and its next step says what to paste where. [Configuration](https://github.com/joe-broadhead/opencode-tavily/blob/HEAD/docs/configuration.md#permissions) has the rule order and an example.
+   | Value | What runs | What asks or is denied |
+   | --- | --- | --- |
+   | `"all"` (the default) | the five tools, and any tool Tavily adds later | nothing |
+   | `"ask-changes"` | the five tools | a tool Tavily adds later: it asks |
+   | `"read-only"` | the five tools | a tool Tavily adds later: it is **denied** |
+
+   ```jsonc
+   { "plugins": [{ "package": "@joe-broadhead/opencode-tavily", "options": { "access": "ask-changes" } }] }
+   ```
+
+   The default block, generated from `defaultRules()` for `access: "all"`:
+
+   ```json
+   [
+     { "action": "tavily_*", "resource": "*", "effect": "allow" },
+     { "action": "tavily_tavily_search", "resource": "*", "effect": "allow" },
+     { "action": "tavily_tavily_extract", "resource": "*", "effect": "allow" },
+     { "action": "tavily_tavily_map", "resource": "*", "effect": "allow" },
+     { "action": "tavily_tavily_crawl", "resource": "*", "effect": "allow" },
+     { "action": "tavily_tavily_research", "resource": "*", "effect": "allow" }
+   ]
+   ```
+
+   [The default rules](https://github.com/joe-broadhead/opencode-tavily/blob/HEAD/docs/configuration.md#the-default-rules) prints the block for `ask-changes` and `read-only` too.
+
+2. **An agent that is read-only or asks**, with rules of its own, later than the plugin's:
+
+   ```jsonc
+   { "agents": { "researcher": { "permissions": [
+     { "action": "tavily_*", "resource": "*", "effect": "deny" },
+     { "action": "tavily_tavily_search", "resource": "*", "effect": "allow" },
+     { "action": "tavily_tavily_research", "resource": "*", "effect": "allow" }
+   ] } } }
+   ```
+
+3. **Per-tool rules**, in `permissions` or in an agent's own: `{ "action": "tavily_tavily_research", "resource": "*", "effect": "ask" }` makes research ask, and `deny` refuses it. `{ "action": "tavily_*", "resource": "*", "effect": "deny" }` denies every Tavily tool. A later rule wins, and a saved "Always allow" still applies after your rules.
+
+**Why the names read `tavily_tavily_search`.** Tavily's own server names its tools `tavily_<tool>`, and OpenCode prefixes an MCP tool with its server's name, which is `tavily`. The permission action is that full name, so a rule is `tavily_tavily_search`. It is the exact name to use in a rule; renaming it would break saved rules, so it stays.
+
+The last matching rule wins, so your own rules and saved "Always allow" answers win over the block. **Agents that you define only in your config do not get it**: `/tavily-status` names them, and its next step says what to paste where. [Configuration](https://github.com/joe-broadhead/opencode-tavily/blob/HEAD/docs/configuration.md#agents-defined-only-in-your-config) has the rule order and an example.
 
 ## Configure
 
-The plugin works without options. The [configuration guide](https://github.com/joe-broadhead/opencode-tavily/blob/HEAD/docs/configuration.md) covers the options (`websearch`, `executionTimeoutMs`, `allowUntestedHost`), changing the permission rules, the web search default, and API key or OAuth.
+The plugin works without options. The [configuration guide](https://github.com/joe-broadhead/opencode-tavily/blob/HEAD/docs/configuration.md) covers the options (`websearch`, `executionTimeoutMs`, `allowUntestedHost`, `access`), changing the permission rules, the web search default, and API key or OAuth.
 
 ## Organisation rollout
 

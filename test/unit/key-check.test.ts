@@ -54,6 +54,7 @@ describe("terminalKeyText", () => {
   const status = (auth: Status["auth"]): Status => ({
     version: "0.0.0",
     state: "connected",
+    access: "all",
     auth,
     tools: { visible: 5, unknown: 0, unknownNames: [] },
     websearchDefault: true,

@@ -28,10 +28,10 @@ export default Plugin.define({
     if (server.key) void checkKey(server.key.key)
 
     await registerServer(ctx.mcp, server, options.executionTimeoutMs)
-    await registerDefaultRules(ctx.agent)
+    await registerDefaultRules(ctx.agent, options.access)
     if (options.websearch) await selectWebsearchDefault(ctx.websearch, websearch)
     await registerSkills(ctx.skill, skills)
-    const read = () => readStatus(ctx, { server, websearch, host, checkKey, skills })
+    const read = () => readStatus(ctx, { server, websearch, host, checkKey, skills, access: options.access })
     await registerStatusCommand(ctx, read)
     await ctx.rpc.register(Tavily, {
       status: (_input, { error }) =>

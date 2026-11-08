@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test"
 import {
-  DEFAULT_RULES,
+  defaultRules,
   evaluate,
   hasDefaultRules,
   insertDefaultRules,
@@ -17,8 +17,8 @@ const ask = (action: string): Rule => ({ action, resource: "*", effect: "ask" })
 const BASE = allow("*")
 
 describe("default rules", () => {
-  test("unknown tavily tools ask and the five documented tools are allowed", () => {
-    expect(DEFAULT_RULES[0]).toEqual(ask("tavily_*"))
+  test("at the default access every tavily tool is allowed, the five documented ones and any later one", () => {
+    expect(defaultRules()[0]).toEqual(allow("tavily_*"))
     expect(KNOWN_ACTIONS).toEqual([
       "tavily_tavily_search",
       "tavily_tavily_extract",
@@ -26,7 +26,7 @@ describe("default rules", () => {
       "tavily_tavily_crawl",
       "tavily_tavily_research",
     ])
-    expect(DEFAULT_RULES.slice(1)).toEqual(KNOWN_ACTIONS.map(allow))
+    expect(defaultRules().slice(1)).toEqual(KNOWN_ACTIONS.map(allow))
   })
 })
 
@@ -34,7 +34,7 @@ describe("insertDefaultRules", () => {
   test("inserts right after the first base allow", () => {
     const rules = [BASE, ask("read"), BASE, deny("edit")]
     insertDefaultRules(rules)
-    expect(rules).toEqual([BASE, ...DEFAULT_RULES, ask("read"), BASE, deny("edit")])
+    expect(rules).toEqual([BASE, ...defaultRules(), ask("read"), BASE, deny("edit")])
   })
 
   test("leaves an agent without a base allow unchanged, so its default deny stays a deny", () => {
@@ -57,8 +57,8 @@ describe("insertDefaultRules", () => {
     const rules = [BASE]
     insertDefaultRules(rules)
     for (const action of KNOWN_ACTIONS) expect(evaluate(rules, action)).toBe("allow")
-    expect(evaluate(rules, "tavily_feedback")).toBe("ask")
-    expect(evaluate(rules, "tavily_unknown")).toBe("ask")
+    expect(evaluate(rules, "tavily_feedback")).toBe("allow")
+    expect(evaluate(rules, "tavily_unknown")).toBe("allow")
     expect(evaluate(rules, "read")).toBe("allow")
   })
 
@@ -80,6 +80,31 @@ describe("insertDefaultRules", () => {
   })
 })
 
+describe("the access values", () => {
+  test("ask-changes keeps the five reads and asks for a tool Tavily adds later", () => {
+    const rules = defaultRules("ask-changes")
+    expect(rules[0]).toEqual(ask("tavily_*"))
+    expect(rules.slice(1)).toEqual(KNOWN_ACTIONS.map(allow))
+  })
+
+  test("read-only keeps the five reads and denies a tool Tavily adds later", () => {
+    const rules = defaultRules("read-only")
+    expect(rules[0]).toEqual(deny("tavily_*"))
+    expect(rules.slice(1)).toEqual(KNOWN_ACTIONS.map(allow))
+  })
+
+  test("the block for each value is inserted, and a later rule still wins", () => {
+    for (const access of ["all", "ask-changes", "read-only"] as const) {
+      const rules = [BASE]
+      insertDefaultRules(rules, access)
+      expect({ access, block: rules.slice(1) }).toEqual({ access, block: defaultRules(access) })
+      expect(hasDefaultRules(rules, access)).toBe(true)
+      rules.push(deny("tavily_tavily_search"))
+      expect({ access, effect: evaluate(rules, "tavily_tavily_search") }).toEqual({ access, effect: "deny" })
+    }
+  })
+})
+
 describe("evaluate", () => {
   test("follows the host's wildcards and treats no match as ask", () => {
     expect(evaluate([allow("tavily_?avily_map")], "tavily_tavily_map")).toBe("allow")
@@ -98,7 +123,7 @@ describe("registerDefaultRules", () => {
     agentDomain.run(agentEditor(agents))
     for (const entry of agents) {
       expect(entry.permissions[0]).toEqual(BASE)
-      expect(entry.permissions.slice(1, 1 + DEFAULT_RULES.length)).toEqual([...DEFAULT_RULES])
+      expect(entry.permissions.slice(1, 1 + defaultRules().length)).toEqual([...defaultRules()])
       expect(entry.permissions.filter((rule) => rule.action === "tavily_*")).toHaveLength(1)
     }
     expect(evaluate(agents[1].permissions, "tavily_tavily_search")).toBe("deny")
