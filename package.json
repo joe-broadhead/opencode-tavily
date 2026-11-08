@@ -19,11 +19,16 @@
   "type": "module",
   "exports": {
     ".": "./dist/index.js",
-    "./tui": "./dist/tui.js"
+    "./tui": "./dist/tui.js",
+    "./icon.svg": "./assets/icon.svg",
+    "./icon-128.png": "./assets/icon-128.png",
+    "./icon-256.png": "./assets/icon-256.png"
   },
   "files": [
     "dist",
     "assets/icon.svg",
+    "assets/icon-128.png",
+    "assets/icon-256.png",
     "skills",
     "README.md",
     "LICENSE",
@@ -37,8 +42,10 @@
     "test:host": "bun test test/host",
     "test:pack": "bun test test/pack",
     "lint": "bun test test/forbidden && node tools/check-copies.mjs",
-    "check": "npm run typecheck && npm run build && npm test && npm run test:tui && npm run test:host && npm run test:pack && npm run lint",
-    "check:upstream": "bun tools/check-upstream.mjs"
+    "check": "npm run typecheck && npm run build && npm test && npm run test:tui && npm run test:host && npm run test:pack && npm run lint && npm run icons && npm run actionlint",
+    "check:upstream": "bun tools/check-upstream.mjs",
+    "icons": "node scripts/check-icons.mjs",
+    "actionlint": "node scripts/check-actionlint.mjs"
   },
   "devDependencies": {
     "@babel/core": "7.29.7",
@@ -56,7 +63,35 @@
     "typescript": "5.9.3"
   },
   "opencode": {
-    "host": ">=2.2.3 <2.3.0"
+    "host": ">=2.2.3 <2.3.0",
+    "icons": [
+      {
+        "src": "assets/icon.svg",
+        "mimeType": "image/svg+xml",
+        "sizes": [
+          "any"
+        ]
+      },
+      {
+        "src": "assets/icon-128.png",
+        "mimeType": "image/png",
+        "sizes": [
+          "128x128"
+        ]
+      },
+      {
+        "src": "assets/icon-256.png",
+        "mimeType": "image/png",
+        "sizes": [
+          "256x256"
+        ]
+      }
+    ],
+    "vendor": {
+      "id": "tavily",
+      "name": "Tavily",
+      "domain": "tavily.com"
+    }
   },
   "jelly": {
     "title": "Tavily",
