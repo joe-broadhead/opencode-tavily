@@ -18,7 +18,7 @@ import { createWriteStream, existsSync, mkdirSync, mkdtempSync, readFileSync, re
 import { createServer, type AddressInfo, type Server, type Socket } from "node:net"
 import { tmpdir } from "node:os"
 import { dirname, join } from "node:path"
-import { fileURLToPath } from "node:url"
+import { fileURLToPath, pathToFileURL } from "node:url"
 import { OpenCode as Client, type OpenCodeClient } from "@opencode/client"
 import { Plugin, type PluginOptions } from "@opencode/plugin"
 import plugin from "../../src/index.js"
@@ -89,9 +89,12 @@ for (const key of Object.keys(process.env)) if (key.startsWith("OPENCODE") || ke
 Object.assign(process.env, isolatedEnv(join(root, "home")))
 process.chdir(join(root, "home"))
 
-/** The embedded host's version, the dev pin of @opencode/sdk. */
-export const HOST_VERSION = (JSON.parse(readFileSync(join(REPO, "node_modules/@opencode/sdk/package.json"), "utf8")) as { version: string })
-  .version
+/** The locked @opencode/sdk, or another 2.2.x installed outside the lockfile in HOST_SDK_DIR's node_modules. */
+const SDK = process.env.HOST_SDK_DIR
+  ? join(realpathSync(process.env.HOST_SDK_DIR), "node_modules", "@opencode", "sdk")
+  : fileURLToPath(new URL("../../node_modules/@opencode/sdk", import.meta.url))
+/** The embedded host's version: the dev pin, or the release tools/host-tests.mjs installed. */
+export const HOST_VERSION = (JSON.parse(readFileSync(join(SDK, "package.json"), "utf8")) as { version: string }).version
 
 const offLoopback: string[] = []
 const realFetch = globalThis.fetch
@@ -190,7 +193,8 @@ export async function startHost(input: HostInput = {}): Promise<Host> {
     tmpdir: tmpdir(),
     cwd: process.cwd(),
   })
-  const { OpenCode } = await import("@opencode/sdk")
+  // The dev pin from this checkout, or the release tools/host-tests.mjs installed, which is why the path, not the name.
+  const { OpenCode } = (await import(pathToFileURL(join(SDK, "dist", "index.js")).href)) as typeof import("@opencode/sdk")
   const client = await OpenCode.create({
     plugins: [Plugin.define({ id: plugin.id, setup: (ctx) => plugin.setup({ ...ctx, options: input.options ?? {} }) }), probe],
     // An embedded host reports "unknown" unless told, and the plugin's host check refuses that.
