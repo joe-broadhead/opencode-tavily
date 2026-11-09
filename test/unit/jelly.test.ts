@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test"
 import { readFileSync } from "node:fs"
 import { INTEGRATION_ID } from "../../src/credential.js"
 import { SERVER_NAME } from "../../src/mcp.js"
+import { parseOptions } from "../../src/options.js"
 import { defaultRules, KNOWN_ACTIONS } from "../../src/permissions.js"
 import { declarationProblems, docProblems, effectFromRules, readPackage } from "../support/jelly-kit.js"
 
@@ -22,6 +23,15 @@ describe("the jelly declaration", () => {
 
   test("declares each tool read-only", () => {
     for (const tool of pkg.jelly?.tools ?? []) expect(tool.readOnly, tool.name).toBe(true)
+  })
+
+  test("exposes the flat access and websearch options", () => {
+    const settings = (pkg.jelly?.contributes as { settings: { key: string; type: string }[] }).settings
+    expect(settings.map(({ key, type }) => ({ key, type }))).toEqual([
+      { key: "access", type: "string" },
+      { key: "websearch", type: "boolean" },
+    ])
+    expect(parseOptions({ access: "read-only", websearch: false })).toMatchObject({ access: "read-only", websearch: false })
   })
 
   test("declares the two sign-ins: an API key through the built-in Tavily entry, or OAuth with a Tavily account", () => {
