@@ -3,6 +3,8 @@ name: tavily
 description: Search the web and read web pages with Tavily - current facts, news, documentation, finding the right page on a site, mapping or crawling a site, and gathering cited sources. Use when the answer is on the web, when a page is one that webfetch cannot read, when checking whether Tavily is set up, or when writing a script or cron job that searches the web without a model (Tavily's tools RPC, no API key in the script). Not for the project's files or the user's own tools.
 ---
 
+If Tavily's tools are absent, run `/connect` and choose Tavily account for OAuth (or Tavily for an API key), or on Jelly call jelly_connection_request.
+
 # Tavily
 
 Tavily's tools are `tavily_search`, `tavily_extract`, `tavily_map`, `tavily_crawl` and `tavily_research`: `tools.tavily.tavily_search({...})` in Code Mode, `tavily_tavily_search` and so on as direct tools. **Every call spends the user's Tavily credits.** OpenCode's own `webfetch` (one known URL) and `websearch` (a quick search) don't.

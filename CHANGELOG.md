@@ -13,6 +13,8 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ### Changed
 
+- Each Tavily skill's first line says how to sign in when the tools are absent: `/connect`, or on Jelly `jelly_connection_request`.
+
 - **Every tool is allowed by default.** The generated block allows the five tools and the `tavily_*` namespace, so a tool Tavily adds later runs at once. The Jelly declaration's tools are all `allow`. Restrict it with `access`, with an agent's own rules, or with a rule per tool; the README's Permissions section, `docs/configuration.md` and `SECURITY.md` say what an all-allow default means and how to restrict it.
 - The `access` option, `"all"` (the default), `"ask-changes"` and `"read-only"` (there is no earlier option to map). All five tools only read, so the value decides what a tool Tavily adds later does: run, ask or be denied. It generates the default rules, and status and the dialog show it.
 - The host stage runs the host suite on every tested OpenCode SDK, 2.2.3, 2.2.4, 2.2.5 and 2.2.6: each release but the dev pin is installed from npm outside the lockfile into a temp folder, and the stage fails when a release did not run, as it does in CI. The pack stage keeps running every tested stock binary.

@@ -3,6 +3,8 @@ name: tavily-research
 description: Run a Tavily Research task - a cited, multi-source web report that takes minutes and costs 4-250 credits. Use when the user asks for in-depth web research, or a researched report or comparison that needs many web sources. Not for one fact (a single search answers it), and not for reports on the user's own files, code, issues or meetings.
 ---
 
+If Tavily's tools are absent, run `/connect` and choose Tavily account for OAuth (or Tavily for an API key), or on Jelly call jelly_connection_request.
+
 # Tavily Research
 
 `tavily_research` (`tools.tavily.tavily_research` in Code Mode) searches many sources and writes one report. It takes several minutes, shows no progress until it ends, and costs 4 to 250 credits. One fact is one `tavily_search` with `search_depth: "basic"` (1 credit), even when the user says "research".
