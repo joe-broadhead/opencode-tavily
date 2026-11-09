@@ -37,7 +37,7 @@ npm run check
 ## Releasing
 
 1. Update `CHANGELOG.md` and the `version` in `package.json` on `master`.
-2. Push a `vX.Y.Z` tag for that commit.
+2. Create a signed, annotated `vX.Y.Z` tag for that commit (`git tag -s -a vX.Y.Z -m "vX.Y.Z"`), and push it.
 3. A reviewer approves the job in the `release` environment.
 
 `.github/workflows/release.yml` then refuses a private package or a tag that differs from the version. It runs `npm ci` and `npm run check`, packs the tree once, runs the package test on that exact tarball, and publishes it to npm with trusted publishing and provenance. If the version is already on npm, it publishes nothing and says so, so a re-run is safe.
