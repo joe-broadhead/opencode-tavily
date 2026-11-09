@@ -32,6 +32,10 @@ This repository builds `@joe-broadhead/opencode-tavily`, an OpenCode plugin that
 ## Package
 
 - Releases follow CONTRIBUTING. `release.yml` refuses a private package or a tag that differs from the version.
+- No personal email in anything we publish. Every commit, tag and package is authored and committed as
+  `joe-broadhead <91376460+joe-broadhead@users.noreply.github.com>`. Before committing or tagging, check that
+  `git config user.email` is that address: a fresh clone inherits the machine's global identity, which is not that
+  address. Never commit, tag or publish with a work or personal address, or with a local hostname.
 - The version appears only in `package.json` and `CHANGELOG.md`. `tools/build.mjs` defines `__PLUGIN_VERSION__` from `package.json` for `src/version.ts`, and `bunfig.toml` preloads `test/version.ts`, which does the same for the tests.
 - No `dependencies`, peer dependencies, lifecycle scripts or declaration files. `exports` lists only `.` → `./dist/index.js` and `./tui` → `./dist/tui.js`.
 - `dist/` holds exactly `index.js` and `tui.js`, each a self-contained esbuild bundle with no relative imports (`tools/build.mjs`). Only `@opencode/plugin*`, `@opentui/*`, `solid-js` and `node:*` stay external. `tsc` only typechecks.
