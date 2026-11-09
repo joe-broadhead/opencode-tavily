@@ -162,12 +162,14 @@
           "key": "access",
           "label": "Access",
           "type": "string",
+          "default": "all",
           "description": "all, ask-changes or read-only. Generates default rules for agents with a base allow rule; the five known reads remain allowed."
         },
         {
           "key": "websearch",
           "label": "Web search",
           "type": "boolean",
+          "default": true,
           "description": "Make OpenCode's built-in Tavily provider the default for the websearch tool when no websearch setting is configured."
         }
       ]

@@ -26,12 +26,14 @@ describe("the jelly declaration", () => {
   })
 
   test("exposes the flat access and websearch options", () => {
-    const settings = (pkg.jelly?.contributes as { settings: { key: string; type: string }[] }).settings
+    const settings = (pkg.jelly?.contributes as { settings: { key: string; type: string; default: unknown }[] }).settings
     expect(settings.map(({ key, type }) => ({ key, type }))).toEqual([
       { key: "access", type: "string" },
       { key: "websearch", type: "boolean" },
     ])
     expect(parseOptions({ access: "read-only", websearch: false })).toMatchObject({ access: "read-only", websearch: false })
+    const defaults = parseOptions({})
+    for (const setting of settings) expect(setting.default).toBe(defaults[setting.key as "access" | "websearch"])
   })
 
   test("declares the two sign-ins: an API key through the built-in Tavily entry, or OAuth with a Tavily account", () => {
