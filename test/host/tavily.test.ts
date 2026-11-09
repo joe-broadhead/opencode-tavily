@@ -2,6 +2,7 @@
 // through the host's own evaluation, the web search default, the user's own server, and both sign-ins: OAuth, and an
 // API key that the server sends to the fake Tavily as a bearer header, switched without a restart.
 import { afterAll, beforeAll, describe, expect, setDefaultTimeout, test } from "bun:test"
+import { Plugin } from "@opencode/plugin"
 import { mkdirSync, writeFileSync } from "node:fs"
 import { join } from "node:path"
 import { Tavily, type Status } from "../../src/rpc/index.js"
@@ -471,6 +472,14 @@ describe(`Tavily's results in a model turn on ${HOST}`, () => {
     model = await startFakeModel()
     host = await startHost({
       env: { TAVILY_API_KEY: "tvly-host-test-model-key" },
+      plugins: [Plugin.define({ id: "tavily.catalogue.filler", async setup(ctx) {
+        await ctx.tool.transform(editor => {
+          editor.namespace({ name: "filler", description: "Spends the inline budget." })
+          const schema = () => ({ type: "object", properties: { note: { type: "string", description: "x".repeat(9000) } }, required: ["note"] })
+          const input = { "~standard": { version: 1, vendor: "test", validate: (value: unknown) => ({ value }), jsonSchema: { input: schema, output: schema } } }
+          editor.add({ name: "pad", description: "pad", input, options: { namespace: "filler", permission: "filler_pad", pinned: true }, execute: async () => ({ content: "ok" }) } as never)
+        })
+      } })],
       // No model leaves the machine: LM Studio's local API is the scripted model; the other local providers are off.
       config: { providers: { lmstudio: { settings: { baseURL: model.baseURL } }, ollama: { settings: { baseURL: "" } }, vllm: { settings: { baseURL: "" } } } },
     })
@@ -505,7 +514,13 @@ describe(`Tavily's results in a model turn on ${HOST}`, () => {
 
   test("Code Mode's catalog, in what the model receives, describes the tavily namespace", async () => {
     await toolResults(`return 1`)
-    expect(JSON.stringify(model.requests.at(-1))).toContain(`- tavily (5 tools) // ${NAMESPACE_DESCRIPTION}`)
+    expect(JSON.stringify(model.requests.at(-1))).toContain(`- tavily (5 tools, none shown) // ${NAMESPACE_DESCRIPTION}`)
+    const messages = model.requests.at(-1)?.messages ?? []
+    const system = messages.filter(message => message.role === "system").map(message => typeof message.content === "string" ? message.content : "").join("\n")
+    const lines = system.split("\n"), start = lines.findIndex(line => line.startsWith("- tavily (")), section = start < 0 ? [] : [lines[start]!]
+    for (let i = start + 1; start >= 0 && i < lines.length && lines[i]!.startsWith("  "); i++) section.push(lines[i]!)
+    expect(section.length).toBeGreaterThan(0)
+    expect(Math.round(section.join("\n").length / 4)).toBeLessThanOrEqual(1000)
   })
 
   test("a successful result reaches the model unchanged", async () => {

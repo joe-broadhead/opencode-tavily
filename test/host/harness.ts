@@ -142,6 +142,7 @@ export interface HostInput {
   readonly config?: Record<string, unknown>
   /** Extra host environment, such as TAVILY_API_KEY. */
   readonly env?: Readonly<Record<string, string>>
+  readonly plugins?: readonly Plugin.Plugin[]
 }
 
 export type HostClient = Omit<OpenCodeClient, "plugin"> & { readonly plugin: Pick<OpenCodeClient["plugin"], "list"> }
@@ -196,7 +197,7 @@ export async function startHost(input: HostInput = {}): Promise<Host> {
   // The dev pin from this checkout, or the release tools/host-tests.mjs installed, which is why the path, not the name.
   const { OpenCode } = (await import(pathToFileURL(join(SDK, "dist", "index.js")).href)) as typeof import("@opencode/sdk")
   const client = await OpenCode.create({
-    plugins: [Plugin.define({ id: plugin.id, setup: (ctx) => plugin.setup({ ...ctx, options: input.options ?? {} }) }), probe],
+    plugins: [Plugin.define({ id: plugin.id, setup: (ctx) => plugin.setup({ ...ctx, options: input.options ?? {} }) }), probe, ...(input.plugins ?? [])],
     // An embedded host reports "unknown" unless told, and the plugin's host check refuses that.
     app: { version: HOST_VERSION },
     config: { content: JSON.stringify({ ...LOCAL_PROVIDERS_OFF, ...input.config }), directory: join(base, "config"), project: false, claude: false },
