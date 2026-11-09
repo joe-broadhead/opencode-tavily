@@ -209,6 +209,15 @@ Sign out first, while the plugin is installed: once it is removed, `opencode mcp
 
 `opencode auth list` should then list no Tavily entry, and `opencode mcp list` no `tavily` server.
 
+## Known limits
+
+- **Five tools.** The plugin knows the five Tavily tools. A tool Tavily adds later is not classed by the plugin: the `access` option decides whether it runs, asks or is denied, and `/tavily-status` counts it as unknown.
+- **Research and crawl cost the most.** Research takes minutes with no progress shown, and a call stops after 15 minutes. Crawl reads up to 50 pages by default. The plugin sets no spending limit: each call spends Tavily credits as the tool does.
+- **No retries.** A failed call returns `UPSTREAM_ERROR` with its next step. The plugin does not retry it.
+- **Web content is not trusted.** A page can carry instructions, and nothing asks by default. The `tavily` skill tells the model not to follow them, but that is a rule for the model, not a guard in the plugin.
+- **A shell key does not reach the server.** A `TAVILY_API_KEY` exported only in a terminal does not reach a running OpenCode server. See [Sign in](#sign-in).
+- **Hosts and platforms.** The plugin is tested on 2.2.3, 2.2.4, 2.2.5 and 2.2.6, and runs on macOS or Linux. A later 2.2 release starts and is reported as untested.
+
 ## Links
 
 - [Configuration](https://github.com/joe-broadhead/opencode-tavily/blob/HEAD/docs/configuration.md)
