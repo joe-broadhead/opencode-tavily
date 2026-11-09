@@ -70,7 +70,7 @@ Ask for what you need. The model uses the skills to choose a tool, or you can na
 Tavily status
 - Connection: sign-in required
 - Account: none
-- Access: read only: search, extract, map, crawl and research
+- Access: every tool runs without asking: the five reads and any tool Tavily adds later. Set the access option to "ask-changes" or "read-only" to restrict a tool Tavily adds later.
 - Sign-in: OAuth (/connect → Tavily account)
 - Web search: Tavily, unless opencode.json sets "websearch"
 - Tools: none listed yet
@@ -95,7 +95,7 @@ See [Scripting](https://github.com/joe-broadhead/opencode-tavily/blob/HEAD/docs/
 
 ## Permissions
 
-**Every tool is allowed by default.** An agent can search the web, read pages, map and crawl sites, and run cited research with no prompt, and every call spends your Tavily credits. Restrict it in any of these three ways.
+**Every tool is allowed by default.** The `access` option decides whether each tool runs, asks or is denied. At its default, `"all"`, an agent can search the web, read pages, map and crawl sites, and run cited research with no prompt, and every call spends your Tavily credits. Restrict it in any of these three ways.
 
 1. **The `access` option**, which drives the rules the plugin inserts:
 

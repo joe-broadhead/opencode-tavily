@@ -31,7 +31,7 @@ An unknown option, or a value of the wrong type, stops the plugin at start-up wi
 
 ## Permissions
 
-**Every tool is allowed by default.** An agent can search the web, read pages, map and crawl sites, and run cited research with no prompt, and every call spends your Tavily credits. Restrict it in any of these three ways.
+**Every tool is allowed by default.** The `access` option decides whether each tool runs, asks or is denied. At its default, `"all"`, an agent can search the web, read pages, map and crawl sites, and run cited research with no prompt, and every call spends your Tavily credits. Restrict it in any of these three ways.
 
 ### The default rules
 
