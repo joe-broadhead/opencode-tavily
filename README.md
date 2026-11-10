@@ -18,19 +18,15 @@ opencode plugin add github:joe-broadhead/opencode-tavily#v0.0.0
 
 Run `opencode reload`, or restart OpenCode. Then run `/tavily-status` in a session.
 
-A Git install is removed and updated by its installed spec: `opencode plugin remove github:joe-broadhead/opencode-tavily#v0.0.0`. `opencode plugin update` and `opencode plugin check` take the same spec.
-
 The install takes the GitHub release tag. Its commit carries the built `dist/`, so the install runs no build.
-A new release is a new tag: install it with its own `#v<version>` spec.
 
-### Update
+Each release has its own tag, and a Git install does not update by itself. To move to a newer release, remove the old entry with `opencode plugin remove github:joe-broadhead/opencode-tavily#v0.0.0`, then add the new tag with `opencode plugin add github:joe-broadhead/opencode-tavily#v<version>`.
 
-```sh
-opencode plugin update github:joe-broadhead/opencode-tavily#v0.0.0
-opencode reload
+Or add the plugin to `opencode.json` instead, with the same spec:
+
+```json
+{ "plugins": [{ "package": "github:joe-broadhead/opencode-tavily#v0.0.0" }] }
 ```
-
-An entry pinned to a tag, such as `github:joe-broadhead/opencode-tavily#v0.0.0`, does not update on its own: install the new release's tag, as above.
 
 ## Sign in
 
@@ -222,6 +218,7 @@ Sign out first, while the plugin is installed: once it is removed, `opencode mcp
 - **Web content is not trusted.** A page can carry instructions, and nothing asks by default. The `tavily` skill tells the model not to follow them, but that is a rule for the model, not a guard in the plugin.
 - **A shell key does not reach the server.** A `TAVILY_API_KEY` exported only in a terminal does not reach a running OpenCode server. See [Sign in](#sign-in).
 - **Hosts and platforms.** The plugin is tested on 2.2.3, 2.2.4, 2.2.5 and 2.2.6, and runs on macOS or Linux. A later 2.2 release starts and is reported as untested.
+- Updates are not automatic for a Git install, and `opencode plugin update` and `opencode plugin check` do not work on one: to move to a newer release, remove the old entry and add the new tag.
 
 ## Links
 
