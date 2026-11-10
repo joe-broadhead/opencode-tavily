@@ -16,10 +16,21 @@ Unofficial; not affiliated with Tavily.
 opencode plugin add github:joe-broadhead/opencode-tavily#v0.0.0
 ```
 
-Run `opencode reload`, or restart OpenCode, then run `/tavily-status`.
+Run `opencode reload`, or restart OpenCode. Then run `/tavily-status` in a session.
+
+A Git install is removed and updated by its installed spec: `opencode plugin remove github:joe-broadhead/opencode-tavily#v0.0.0`. `opencode plugin update` and `opencode plugin check` take the same spec.
 
 The install takes the GitHub release tag. Its commit carries the built `dist/`, so the install runs no build.
 A new release is a new tag: install it with its own `#v<version>` spec.
+
+### Update
+
+```sh
+opencode plugin update github:joe-broadhead/opencode-tavily#v0.0.0
+opencode reload
+```
+
+An entry pinned to a tag, such as `github:joe-broadhead/opencode-tavily#v0.0.0`, does not update on its own: install the new release's tag, as above.
 
 ## Sign in
 
