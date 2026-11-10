@@ -5,6 +5,7 @@ Repository rules for contributors and agents are in [AGENTS.md](AGENTS.md).
 ## Setup
 
 You need Node.js 24 or later, whose `npm` installs and runs the scripts, and [Bun](https://bun.sh) 1.4.4, which runs the tests.
+`npm ci` on Node 24 prints `EBADENGINE` warnings for `@opentui/core`, which asks for Node 26.4 or Bun 1.3.14. They are warnings only: the TUI tests run under Bun 1.4.4, and CI passes on Node 24.
 
 ```sh
 git clone https://github.com/joe-broadhead/opencode-tavily.git
