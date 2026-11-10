@@ -20,13 +20,15 @@ Run `opencode reload`, or restart OpenCode. Then run `/tavily-status` in a sessi
 
 The install takes the GitHub release tag. Its commit carries the built `dist/`, so the install runs no build.
 
-Each release has its own tag, and a Git install does not update by itself. To move to a newer release, remove the old entry with `opencode plugin remove github:joe-broadhead/opencode-tavily#v0.0.0`, then add the new tag with `opencode plugin add github:joe-broadhead/opencode-tavily#v<version>`.
-
 Or add the plugin to `opencode.json` instead, with the same spec:
 
 ```json
 { "plugins": [{ "package": "github:joe-broadhead/opencode-tavily#v0.0.0" }] }
 ```
+
+### Update
+
+Each release has its own tag, and a Git install does not update by itself. To move to a newer release, remove the old entry with `opencode plugin remove github:joe-broadhead/opencode-tavily#v0.0.0`, then add the new tag with `opencode plugin add github:joe-broadhead/opencode-tavily#v<version>`.
 
 ## Sign in
 
