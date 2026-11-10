@@ -4,6 +4,8 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+## [0.0.0] - 2026-11-10
+
 ### Added
 
 - `opencode.icons` and `opencode.vendor`, with `assets/icon.svg`, `icon-128.png` and `icon-256.png` from the family icon kit, the three `exports` and `files` entries, and the `icons` stage of `npm run check`.
@@ -110,7 +112,7 @@ All notable changes to this project are documented here. The format follows [Kee
 - `TAVILY_API_KEY` set only in a shell no longer fails silently. The plugin runs in OpenCode's background service, which never sees a variable exported in a terminal after it started, so it used OAuth. The **Tavily: Status** dialog now names this case, and the docs and next steps explain `/connect` → **Tavily** and `opencode service set env TAVILY_API_KEY` instead of "restart OpenCode".
 - Status no longer mixes two keys when the key changes while status is read.
 
-## [0.0.0] - 2026-11-01
+## [0.0.0-npm] - 2026-11-01
 
 ### Added
 

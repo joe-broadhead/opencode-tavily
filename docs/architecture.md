@@ -119,7 +119,7 @@ The TUI part registers one global command from setup: the palette entry **Tavily
 ## Package
 
 - JavaScript only: `dist`, `skills`, `README.md`, `LICENSE`, `CHANGELOG.md` and `package.json`.
-- `dist/` holds exactly two self-contained files, built by `tools/build.mjs` with esbuild: `index.js` (the server part) and `tui.js` (the TUI part, after Babel compiles its JSX). Each inlines every module it uses, the RPC contract included, so neither has a relative import. OpenCode reloads a plugin in place but keeps the module records of unchanged paths, so a sibling module could otherwise be a stale copy. Only `@opencode/plugin`, OpenTUI, Solid and `node:*` stay imports; the build fails on anything else. `tsc` only typechecks.
+- `dist/` holds exactly two self-contained files, built by `scripts/build.mjs` with esbuild: `index.js` (the server part) and `tui.js` (the TUI part, after Babel compiles its JSX). Each inlines every module it uses, the RPC contract included, so neither has a relative import. OpenCode reloads a plugin in place but keeps the module records of unchanged paths, so a sibling module could otherwise be a stale copy. Only `@opencode/plugin`, OpenTUI, Solid and `node:*` stay imports; the build fails on anything else. `tsc` only typechecks.
 - The server part finds `skills/` at `../skills/` from `dist/index.js`, the package root.
 - No `dependencies` and no peer dependencies. OpenCode supplies `@opencode/plugin`, OpenTUI and Solid to plugins at runtime. They are dev dependencies here, for types, the build and the tests, with `@opencode/plugin` pinned at 2.2.3.
 - `"opencode": { "host": ">=2.2.3 <2.3.0" }` states the tested range. The start-up check uses the same range.

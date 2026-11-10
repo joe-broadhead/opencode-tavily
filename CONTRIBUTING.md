@@ -26,7 +26,7 @@ To try a local build, add the checkout's directory to `plugins` in your OpenCode
 npm run check
 ```
 
-`npm run build` runs `tools/build.mjs`: esbuild bundles `src/index.ts` into `dist/index.js` and `src/tui/index.tsx`, after Babel compiles its JSX, into `dist/tui.js`. Each file is self-contained, with no relative imports, so an in-place plugin reload never mixes it with a stale sibling module. `tsc` only typechecks.
+`npm run build` runs `scripts/build.mjs`: esbuild bundles `src/index.ts` into `dist/index.js` and `src/tui/index.tsx`, after Babel compiles its JSX, into `dist/tui.js`. Each file is self-contained, with no relative imports, so an in-place plugin reload never mixes it with a stale sibling module. `tsc` only typechecks.
 
 `check` runs, in order: `typecheck` (the source and the whole test tree), `build`, the unit tests (`test`), the TUI tests (`test:tui`), the host tests (`test:host`), the package test (`test:pack`) and the forbidden-API scan (`lint`). Nothing calls Tavily.
 
@@ -37,8 +37,17 @@ npm run check
 
 ## Releasing
 
-1. Update `CHANGELOG.md` and the `version` in `package.json` on `master`.
-2. Create a signed, annotated `vX.Y.Z` tag for that commit (`git tag -s -a vX.Y.Z -m "vX.Y.Z"`), and push it.
-3. A reviewer approves the job in the `release` environment.
+Every plugin releases as `v0.0.0`, and it installs from that GitHub tag. The release is one commit on top of a `master`
+head that CI passed, and the tag points at it.
 
-`.github/workflows/release.yml` then refuses a private package or a tag that differs from the version. It runs `npm ci` and `npm run check`, packs the tree once, runs the package test on that exact tarball, and publishes it to npm with trusted publishing and provenance. If the version is already on npm, it publishes nothing and says so, so a re-run is safe.
+1. Set `version` to `0.0.0` in `package.json`, date the `## [0.0.0]` entry in `CHANGELOG.md`, then run `npm run check`.
+2. Push that commit to `master`, and wait for CI to pass on it.
+3. In a clean checkout of `master` at that commit, run `node scripts/release-commit.mjs --ci-sha <its full sha>`. It builds
+   `dist/`, removes the lifecycle scripts, and creates the signed commit and the signed annotated tag `v0.0.0`. It never
+   pushes; `--dry-run` shows the change first.
+4. Push the tag only: `git push origin v0.0.0`.
+5. Approve the run in the `release` environment. The release workflow checks the tag and its commit, installs the tag on
+   each stock OpenCode host (2.2.3 to 2.2.6), packs it, and creates the GitHub Release with the notes, the tarball and
+   `SHA256SUMS`.
+
+A tag that already exists stops step 3. Delete the old tag and its Release first, then start again.

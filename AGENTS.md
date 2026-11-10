@@ -36,9 +36,9 @@ This repository builds `@joe-broadhead/opencode-tavily`, an OpenCode plugin that
   `joe-broadhead <91376460+joe-broadhead@users.noreply.github.com>`. Before committing or tagging, check that
   `git config user.email` is that address: a fresh clone inherits the machine's global identity, which is not that
   address. Never commit, tag or publish with a work or personal address, or with a local hostname.
-- The version appears only in `package.json` and `CHANGELOG.md`. `tools/build.mjs` defines `__PLUGIN_VERSION__` from `package.json` for `src/version.ts`, and `bunfig.toml` preloads `test/version.ts`, which does the same for the tests.
+- The version appears only in `package.json` and `CHANGELOG.md`. `scripts/build.mjs` defines `__PLUGIN_VERSION__` from `package.json` for `src/version.ts`, and `bunfig.toml` preloads `test/version.ts`, which does the same for the tests.
 - No `dependencies`, peer dependencies, lifecycle scripts or declaration files. `exports` lists only `.` → `./dist/index.js` and `./tui` → `./dist/tui.js`.
-- `dist/` holds exactly `index.js` and `tui.js`, each a self-contained esbuild bundle with no relative imports (`tools/build.mjs`). Only `@opencode/plugin*`, `@opentui/*`, `solid-js` and `node:*` stay external. `tsc` only typechecks.
+- `dist/` holds exactly `index.js` and `tui.js`, each a self-contained esbuild bundle with no relative imports (`scripts/build.mjs`). Only `@opencode/plugin*`, `@opentui/*`, `solid-js` and `node:*` stay external. `tsc` only typechecks.
 - `@opencode/plugin`, `@opencode/sdk`, `@opencode/client` and `@opencode/theme` are exact dev dependencies at 2.2.3. Do not add 2.2.4 to `package-lock.json`.
 - npm installs and runs the scripts (`npm ci`, `npm run check`); Bun 1.4.4 runs the tests.
 - The stages are `typecheck`, `build`, `unit`, `tui`, `host`, `pack`, `lint`, `icons` and `actionlint` (a notice when it is not on PATH). CI runs `actionlint` in its own job, and the host and pack stages run every release in `TESTED_HOSTS`.

@@ -1,6 +1,6 @@
 {
   "name": "@joe-broadhead/opencode-tavily",
-  "version": "0.0.7",
+  "version": "0.0.0",
   "description": "Unofficial OpenCode plugin for Tavily web search, extract, map, crawl and research",
   "keywords": [
     "opencode",
@@ -36,7 +36,7 @@
   ],
   "scripts": {
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.tui.json --noEmit",
-    "build": "node tools/build.mjs",
+    "build": "node scripts/build.mjs",
     "test": "bun test test/unit",
     "test:tui": "bun test --preload @opentui/solid/preload test/tui",
     "test:host": "node tools/host-tests.mjs",

@@ -13,19 +13,13 @@ Unofficial; not affiliated with Tavily.
 ## Install
 
 ```sh
-opencode plugin add @joe-broadhead/opencode-tavily
+opencode plugin add github:joe-broadhead/opencode-tavily#v0.0.0
 ```
 
-Run `opencode reload`, or restart OpenCode. Then run `/tavily-status` in a session.
+Run `opencode reload`, or restart OpenCode, then run `/tavily-status`.
 
-### Update
-
-```sh
-opencode plugin update @joe-broadhead/opencode-tavily
-opencode reload
-```
-
-An entry pinned to a version, such as `@joe-broadhead/opencode-tavily@0.0.2`, does not update: remove the `@version` from `plugins` in `opencode.json`.
+The install takes the GitHub release tag. Its commit carries the built `dist/`, so the install runs no build.
+A new release is a new tag: install it with its own `#v<version>` spec.
 
 ## Sign in
 
@@ -106,7 +100,7 @@ See [Scripting](https://github.com/joe-broadhead/opencode-tavily/blob/HEAD/docs/
    | `"read-only"` | the five tools | a tool Tavily adds later: it is **denied** |
 
    ```jsonc
-   { "plugins": [{ "package": "@joe-broadhead/opencode-tavily", "options": { "access": "ask-changes" } }] }
+   { "plugins": [{ "package": "github:joe-broadhead/opencode-tavily#v0.0.0", "options": { "access": "ask-changes" } }] }
    ```
 
    The default block, generated from `defaultRules()` for `access: "all"`:
@@ -150,7 +144,7 @@ An organisation can install the plugin for every user on a machine through OpenC
 
 ```json
 {
-  "plugins": [{ "package": "@joe-broadhead/opencode-tavily", "options": { "websearch": true } }]
+  "plugins": [{ "package": "github:joe-broadhead/opencode-tavily#v0.0.0", "options": { "websearch": true } }]
 }
 ```
 
@@ -201,7 +195,7 @@ Sign out first, while the plugin is installed: once it is removed, `opencode mcp
 3. Remove the plugin, then reload:
 
    ```sh
-   opencode plugin remove @joe-broadhead/opencode-tavily
+   opencode plugin remove github:joe-broadhead/opencode-tavily#v0.0.0
    opencode reload
    ```
 
