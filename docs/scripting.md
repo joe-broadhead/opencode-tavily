@@ -21,10 +21,10 @@ Each call spends the user's Tavily credits, as the tool does for the model. `tav
 
 ## A script runs as a session
 
-Every call names a session, and the session must name an agent. Create it for the script once, with the agent the script runs as, and keep its id (`data.id` in the reply):
+Every call names a session, and the session must name an agent. Create it for the script once, with the agent the script runs as, and keep its id (`data.id` in the reply). Give the project as the session's `location`: a session made without one belongs to the service's default location, where the project's agents may not exist, and each call then fails `Agent not found`. For example:
 
 ```sh
-opencode api post /api/session -d '{"title":"news digest","agent":"build"}'
+opencode api post /api/session -d '{"title":"news digest","agent":"build","location":{"directory":"/path/to/project"}}'
 ```
 
 Never borrow a session found through history or a list: the script would run as that session's agent, under its rules. The script then runs as that agent, with exactly the access its model would have:
@@ -38,7 +38,7 @@ Never borrow a session found through history or a list: the script would run as 
 Session rules come after the agent's, so a session can narrow what its script may do. This one can search and extract, but not crawl, map or research:
 
 ```sh
-opencode api post /api/session -d '{"title":"news digest","agent":"build","permissions":[
+opencode api post /api/session -d '{"title":"news digest","agent":"build","location":{"directory":"/path/to/project"},"permissions":[
   {"action":"tavily_*","resource":"*","effect":"deny"},
   {"action":"tavily_tavily_search","resource":"*","effect":"allow"},
   {"action":"tavily_tavily_extract","resource":"*","effect":"allow"}

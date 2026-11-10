@@ -43,10 +43,10 @@ Report `state`, `auth`, `tools.visible` and any `unguardedAgents`, then quote `n
 
 ## Scripts and cron jobs
 
-A script calls the tools RPC as a session and its agent, with no model and no key (never `TAVILY_API_KEY` or `api.tavily.com`). Create a session for the script, and for any test run of it, once; it answers `{"data":{"id":"ses_…",…}}`, so keep `data.id`. Never borrow a session found in history or a session list: the script would run as that session's agent, under its rules.
+A script calls the tools RPC as a session and its agent, with no model and no key (never `TAVILY_API_KEY` or `api.tavily.com`). Create a session for the script, and for any test run of it, once; it answers `{"data":{"id":"ses_…",…}}`, so keep `data.id`. Give the project as the session's `location`: a session made without one belongs to the service's default location, where the project's agents may not exist, and each call then fails `Agent not found`. Never borrow a session found in history or a session list: the script would run as that session's agent, under its rules.
 
 ```sh
-opencode api post /api/session -d '{"title":"news digest","agent":"build"}'
+opencode api post /api/session -d '{"title":"news digest","agent":"build","location":{"directory":"/path/to/project"}}'
 opencode api post /api/rpc/tavily.web.tools/tavily_search \
   -d '{"input":{"sessionID":"ses_…","input":{"query":"…","search_depth":"basic","max_results":3}}}'
 ```
