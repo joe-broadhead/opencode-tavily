@@ -165,7 +165,7 @@ describe("the release working folder", () => {
     const hits = listed.filter((path) => !skip.has(path)).flatMap((path) => {
       const bytes = readFileSync(join(REPO, path))
       if (bytes.includes(0)) return []
-      return bytes.toString("utf8").split(/\r?\n/).flatMap((line, index) => (/opencode-release\//.test(line) ? [`${path}:${index + 1}`] : []))
+      return bytes.toString("utf8").split(/\r?\n/).flatMap((line, index) => (/opencode-release\/|prosus|toqan/i.test(line) ? [`${path}:${index + 1}`] : []))
     })
     expect(hits).toEqual([])
   })
