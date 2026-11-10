@@ -1,6 +1,6 @@
 // Fails when a shared module's copy in this plugin differs from the one every plugin carries.
-//   node tools/check-copies.mjs          check the copies this plugin has
-//   node tools/check-copies.mjs --print  print each copy's hash, after a change made in every plugin at once
+//   node scripts/check-copies.mjs          check the copies this plugin has
+//   node scripts/check-copies.mjs --print  print each copy's hash, after a change made in every plugin at once
 // Each plugin keeps its own copy, because each bundle and each test suite stands alone. The hashes below name the one
 // version all plugins carry: the tools RPC outside its PLUGIN-SPECIFIC block, and the declaration test kit whole.
 import { createHash } from "node:crypto"
