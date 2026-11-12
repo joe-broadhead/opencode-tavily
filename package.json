@@ -90,7 +90,8 @@
     "vendor": {
       "id": "tavily",
       "name": "Tavily",
-      "domain": "tavily.com"
+      "domain": "tavily.com",
+      "mark": true
     }
   },
   "jelly": {

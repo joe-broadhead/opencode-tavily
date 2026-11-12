@@ -4,6 +4,8 @@ Search, extract, map, crawl and research the web from OpenCode with Tavily's off
 
 Unofficial; not affiliated with Tavily.
 
+Tavily is a trademark of Tavily Inc. The icon is Tavily's Brand Mark, unmodified, used under [Tavily's brand guidelines](https://www.tavily.com/brand) only to identify the service this plugin connects to.
+
 ## Requirements
 
 - OpenCode `>=2.2.3 <2.3.0`, tested on 2.2.3, 2.2.4, 2.2.5 and 2.2.6. A later 2.2 release, such as 2.2.99, works, and `/tavily-status` calls it untested. Outside `>=2.2.3 <2.3.0` the plugin does not start, unless you set [`allowUntestedHost`](https://github.com/joe-broadhead/opencode-tavily/blob/HEAD/docs/configuration.md#options).
@@ -232,4 +234,4 @@ Sign out first, while the plugin is installed: once it is removed, `opencode mcp
 - [Issues](https://github.com/joe-broadhead/opencode-tavily/issues)
 - [Tavily's MCP documentation](https://docs.tavily.com/documentation/mcp)
 
-MIT licence; see [LICENSE](https://github.com/joe-broadhead/opencode-tavily/blob/HEAD/LICENSE). Tavily is a trademark of its owner.
+MIT licence; see [LICENSE](https://github.com/joe-broadhead/opencode-tavily/blob/HEAD/LICENSE). Tavily is a trademark of Tavily Inc.
