@@ -2,6 +2,13 @@
 
 All notable changes to this project are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+- The icon is Tavily's Brand Mark, unmodified, used under Tavily's brand guidelines. `opencode.vendor.mark` is `true`, and the README names Tavily Inc. as the trademark owner.
+- `scripts/check-icons.mjs` is the icon contract's revision 2: with `opencode.vendor.mark: true` it accepts the vendor's own mark in place of the family tile (any square viewBox, path numbers bounded by four times its width) and requires the README to say "not affiliated with" the vendor and to carry a trademark line. The sanitizer block is unchanged.
+
 ## [0.0.0] - 2026-11-10
 <!-- kit-release: the GitHub release v0.0.0 -->
 
