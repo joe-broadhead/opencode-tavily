@@ -46,6 +46,21 @@ A rejected `TAVILY_API_KEY` has no saved connection to mark, so the key row does
 
 Jelly folds the declared sign-ins into this plugin's one card, which shows each as Connected, Not signed in or Sign in again (expired or revoked), and starts, renews and signs out of each. An agent's `jelly_connection_request`, or a tool result that names this plugin's "Run /connect and choose …" next step, opens the same card. The plugin still signs in through OpenCode, as it does without Jelly; the declaration only tells Jelly which of the engine's integrations and servers are this plugin's.
 
+## Settings
+
+Jelly draws a form from `jelly.contributes.settings` and writes each value into the plugin's options:
+
+- `access` declares its three values as `choices`, with Jelly's own labels: **Allowed** (`all`, the default), **Ask
+  before changes** (`ask-changes`) and **Read only** (`read-only`).
+- `websearch` is a switch, on by default.
+- `executionTimeoutMs` (Call time limit) is a whole number from 60000 to 3600000 (1 minute to 1 hour), 15 minutes by
+  default.
+
+These sets and bounds are the options parser's own, so Jelly never saves a value the plugin refuses. Choices and bounds
+need a Jelly that includes app#1301: an older Jelly refuses a setting that declares them. `test/unit/jelly.test.ts`
+checks the settings against Jelly's setting contract, restated in `test/support/jelly-settings.ts`, and checks each
+declared value and bound against the options parser.
+
 ## Versions
 
 Jelly's curated catalogue pins an exact version. Publish each release under a new version, so
