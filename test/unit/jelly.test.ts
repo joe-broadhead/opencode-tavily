@@ -5,6 +5,7 @@ import { SERVER_NAME } from "../../src/mcp.js"
 import { parseOptions } from "../../src/options.js"
 import { defaultRules, KNOWN_ACTIONS } from "../../src/permissions.js"
 import { declarationProblems, docProblems, effectFromRules, readPackage } from "../support/jelly-kit.js"
+import { ACCESS_CHOICES, type PluginSetting, settingChoices, settingsProblems, settingValueIssue } from "../support/jelly-settings.js"
 
 /**
  * The `jelly` section of package.json, which Jelly reads without loading the plugin. Jelly's agents have no base
@@ -25,15 +26,49 @@ describe("the jelly declaration", () => {
     for (const tool of pkg.jelly?.tools ?? []) expect(tool.readOnly, tool.name).toBe(true)
   })
 
-  test("exposes the flat access and websearch options", () => {
-    const settings = (pkg.jelly?.contributes as { settings: { key: string; type: string; default: unknown }[] }).settings
+  const settings = (pkg.jelly?.contributes as { settings: PluginSetting[] }).settings
+  const setting = (key: string) => settings.find((item) => item.key === key)!
+
+  test("exposes the flat access, websearch and executionTimeoutMs options, each default the parser's", () => {
     expect(settings.map(({ key, type }) => ({ key, type }))).toEqual([
       { key: "access", type: "string" },
       { key: "websearch", type: "boolean" },
+      { key: "executionTimeoutMs", type: "number" },
     ])
     expect(parseOptions({ access: "read-only", websearch: false })).toMatchObject({ access: "read-only", websearch: false })
     const defaults = parseOptions({})
-    for (const setting of settings) expect(setting.default).toBe(defaults[setting.key as "access" | "websearch"])
+    for (const item of settings) expect([item.key, item.default]).toEqual([item.key, defaults[item.key as "access" | "websearch" | "executionTimeoutMs"]])
+  })
+
+  test("passes Jelly's setting contract: access offers Jelly's three choices, the timeout is a bounded whole number", () => {
+    expect(settingsProblems(settings)).toEqual([])
+    expect(setting("access").choices).toEqual([...ACCESS_CHOICES])
+    expect(setting("executionTimeoutMs")).toMatchObject({ integer: true, min: 60_000, max: 3_600_000 })
+    expect(setting("executionTimeoutMs").step).toBeUndefined()
+  })
+
+  test("offers only access values the parser takes, and the parser refuses one outside the set", () => {
+    const access = setting("access")
+    for (const value of settingChoices(access)!.map((choice) => choice.value)) {
+      expect(settingValueIssue(access, value)).toBeNull()
+      expect(parseOptions({ access: value }).access as string).toBe(value)
+    }
+    for (const outside of ["write", "read", "none", ""]) {
+      expect(settingValueIssue(access, outside)).not.toBeNull()
+      expect(() => parseOptions({ access: outside })).toThrow("OPTIONS_INVALID")
+    }
+  })
+
+  test("bounds executionTimeoutMs exactly as the parser does: its ends are taken, a step past either end or a fraction refused", () => {
+    const timeout = setting("executionTimeoutMs")
+    for (const value of [timeout.min!, timeout.max!]) {
+      expect(settingValueIssue(timeout, value)).toBeNull()
+      expect(parseOptions({ executionTimeoutMs: value }).executionTimeoutMs).toBe(value)
+    }
+    for (const value of [timeout.min! - 1, timeout.max! + 1, timeout.min! + 0.5]) {
+      expect(settingValueIssue(timeout, value)).not.toBeNull()
+      expect(() => parseOptions({ executionTimeoutMs: value })).toThrow("OPTIONS_INVALID")
+    }
   })
 
   test("declares the two sign-ins: an API key through the built-in Tavily entry, or OAuth with a Tavily account", () => {
