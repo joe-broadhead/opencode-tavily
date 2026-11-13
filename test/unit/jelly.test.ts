@@ -5,7 +5,7 @@ import { SERVER_NAME } from "../../src/mcp.js"
 import { parseOptions } from "../../src/options.js"
 import { defaultRules, KNOWN_ACTIONS } from "../../src/permissions.js"
 import { declarationProblems, docProblems, effectFromRules, readPackage } from "../support/jelly-kit.js"
-import { ACCESS_CHOICES, type DeclaredSetting, settingChoices, settingsProblems, settingValueIssue } from "../support/jelly-settings.js"
+import { ACCESS_CHOICES, type PluginSetting, settingChoices, settingsProblems, settingValueIssue } from "../support/jelly-settings.js"
 
 /**
  * The `jelly` section of package.json, which Jelly reads without loading the plugin. Jelly's agents have no base
@@ -26,7 +26,7 @@ describe("the jelly declaration", () => {
     for (const tool of pkg.jelly?.tools ?? []) expect(tool.readOnly, tool.name).toBe(true)
   })
 
-  const settings = (pkg.jelly?.contributes as { settings: DeclaredSetting[] }).settings
+  const settings = (pkg.jelly?.contributes as { settings: PluginSetting[] }).settings
   const setting = (key: string) => settings.find((item) => item.key === key)!
 
   test("exposes the flat access, websearch and executionTimeoutMs options, each default the parser's", () => {
