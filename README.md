@@ -4,7 +4,7 @@ Search, extract, map, crawl and research the web from OpenCode with Tavily's off
 
 Unofficial; not affiliated with Tavily.
 
-Tavily is a trademark of Tavily Inc. The icon is Tavily's Brand Mark, unmodified, used under [Tavily's brand guidelines](https://www.tavily.com/brand) only to identify the service this plugin connects to.
+Tavily is a trademark of Tavily Inc.; this unofficial plugin is not endorsed by them.
 
 ## Requirements
 

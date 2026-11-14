@@ -7,7 +7,7 @@ All notable changes to this project are documented here. The format follows [Kee
 ### Changed
 
 - The icon is Tavily's Brand Mark, unmodified, used under Tavily's brand guidelines. `opencode.vendor.mark` is `true`, and the README names Tavily Inc. as the trademark owner.
-- `scripts/check-icons.mjs` is the icon contract's revision 2: with `opencode.vendor.mark: true` it accepts the vendor's own mark in place of the family tile (any square viewBox, path numbers bounded by four times its width) and requires the README to say "not affiliated with" the vendor and to carry a trademark line. The sanitizer block is unchanged.
+- `test/unit/check-icons.test.ts` checks `scripts/check-icons.mjs` (contract revision 2) on scratch copies of this package: the family rules without `opencode.vendor.mark`, and the vendor's own mark, its README notice and trademark line with it.
 
 ## [0.0.1] - 2026-11-13
 
