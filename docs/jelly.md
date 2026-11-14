@@ -38,7 +38,7 @@ None yet.
 
 ## Signing in
 
-`jelly.signIns` declares two alternatives in one group, `tavily`: `key`, OpenCode's key integration `tavily` (an API key; the row links to Tavily's key page), or `account`, the `tavily` MCP server's own OAuth ("Tavily account"). Either one connects the card, and once one is connected the card shows only that one. The plugin checks each key once with Tavily's usage endpoint, which costs no credits. A key saved through `/connect` or `opencode auth login tavily` that Tavily turns down shows this plugin's `needs_auth` message on the key row, with Replace the key:
+`jelly.signIns` declares two alternatives in one group, `tavily`: `key`, OpenCode's key integration `tavily` ("Tavily API key"; OpenCode's `/connect` calls the same entry "Tavily", and the row links to Tavily's key page), or `account`, the `tavily` MCP server's own OAuth ("Tavily account"). Either one connects the card and serves the five Tavily tools, and once one is connected the card shows only that one. They differ in one thing: only the key serves OpenCode's built-in `websearch` tool, which the `websearch` setting (on by default) makes Tavily's. With the account alone the card reads Connected, but `websearch` has no key and uses Tavily's keyless access, not the person's account; connect the key for web search on the person's own key, or turn `websearch` off. When both are connected, the key wins. The plugin checks each key once with Tavily's usage endpoint, which costs no credits. A key saved through `/connect` or `opencode auth login tavily` that Tavily turns down shows this plugin's `needs_auth` message on the key row, with Replace the key:
 
 > Tavily did not accept this API key. Replace it, or remove it to sign in with your Tavily account.
 

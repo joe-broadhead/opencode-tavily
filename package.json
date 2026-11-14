@@ -141,7 +141,7 @@
     "signIns": [
       {
         "id": "key",
-        "label": "Tavily",
+        "label": "Tavily API key",
         "integration": "tavily",
         "group": "tavily",
         "help": {

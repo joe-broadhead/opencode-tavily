@@ -75,7 +75,7 @@ describe("the jelly declaration", () => {
     const key = signIns.find((signIn) => signIn.id === "key")
     const account = signIns.find((signIn) => signIn.id === "account")
     expect(signIns).toHaveLength(2)
-    expect(key).toMatchObject({ integration: INTEGRATION_ID, label: "Tavily" })
+    expect(key).toMatchObject({ integration: INTEGRATION_ID, label: "Tavily API key" })
     expect(account).toMatchObject({ server: SERVER_NAME, label: "Tavily account" })
     expect((key as { group?: string }).group).toBe((account as { group?: string }).group)
   })
