@@ -51,7 +51,7 @@ describe("check-icons, contract revision 2", () => {
     const result = check({ mark: undefined })
     expect(result.ok).toBe(false)
     expect(result.out).toContain("the family canvas")
-    expect(result.out).toContain("the first element must be the tile")
+    expect(result.out).toContain("it must cover the 48x48 canvas")
   })
 
   test("without the flag, a family tile still passes and needs no trademark line", () => {
@@ -91,20 +91,20 @@ describe("check-icons, contract revision 2", () => {
   })
 
   test("the root must be a square viewBox starting at 0 0", () => {
-    const wide = MARK.replace('viewBox="0 0 55 55"', 'viewBox="0 0 55 40"')
+    const wide = MARK.replace('viewBox="0 0 165 165"', 'viewBox="0 0 165 120"')
     expect(check({ svg: wide }).out).toContain("is not square")
-    const moved = MARK.replace('viewBox="0 0 55 55"', 'viewBox="5 0 55 55"')
+    const moved = MARK.replace('viewBox="0 0 165 165"', 'viewBox="5 0 165 165"')
     expect(check({ svg: moved }).out).toContain("must start at 0 0")
-    expect(check({ svg: MARK.replace(' viewBox="0 0 55 55"', "") }).out).toContain("has no viewBox")
+    expect(check({ svg: MARK.replace(' viewBox="0 0 165 165"', "") }).out).toContain("has no viewBox")
   })
 
   test("path numbers are bounded by four times the viewBox width", () => {
-    const within = MARK.replace('d="', 'd="M0 0H219 ')
+    const within = MARK.replace('d="', 'd="M0 0H659 ')
     expect(check({ svg: within }).ok).toBe(true)
-    const beyond = MARK.replace('d="', 'd="M0 0H221 ')
+    const beyond = MARK.replace('d="', 'd="M0 0H661 ')
     const result = check({ svg: beyond })
     expect(result.ok).toBe(false)
-    expect(result.out).toContain("far outside the 55x55 canvas")
+    expect(result.out).toContain("far outside the 165x165 canvas")
   })
 
   test("the sanitizer still decides what is a clean icon", () => {
