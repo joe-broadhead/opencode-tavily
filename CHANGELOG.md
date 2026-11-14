@@ -14,8 +14,10 @@ All notable changes to this project are documented here. The format follows [Kee
 
 - Jelly: the key sign-in's label is "Tavily API key" (it was "Tavily"), so the card says it is a key. `docs/jelly.md`
   says that only the key serves OpenCode's `websearch`; with the account alone, web search uses Tavily's keyless
-  access.
+  access. Turning the `websearch` setting off only stops the plugin choosing Tavily as OpenCode's web search provider.
 - The icon is Tavily's Brand Mark, unmodified, on a white rounded holding tile with clear space of its own height, used under Tavily's brand guidelines. `opencode.vendor.mark` is `true`, and the README names Tavily Inc. as the trademark owner.
+- `package.json` is `"private": true`, so nothing can be published to npm by mistake. Installs from the GitHub release
+  tag are unaffected.
 - `test/unit/check-icons.test.ts` checks `scripts/check-icons.mjs` (contract revision 2) on scratch copies of this package: the family rules without `opencode.vendor.mark`, and the vendor's own mark, its README notice and trademark line with it.
 
 ## [0.0.1] - 2026-11-13
