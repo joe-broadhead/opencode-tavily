@@ -20,7 +20,7 @@ This repository builds `@joe-broadhead/opencode-tavily`, an OpenCode plugin that
 
 - Every tool is allowed by default. `src/permissions.ts` generates the block from the tool classes and the `access` option (`all`, the default; `ask-changes`; `read-only`) and inserts it after each agent's first base allow. A user's rules always win.
 - `defaultRules(access)` is printed in full in the README and in `docs/configuration.md` for each value; `test/unit/docs.test.ts` asserts the docs equal it.
-- The package declares `opencode.icons` and `opencode.vendor`, with `assets/icon.svg`, `icon-128.png` and `icon-256.png`; `scripts/check-icons.mjs` is the kit's copy, verbatim.
+- The package declares `opencode.icons` and `opencode.vendor`, with `assets/icon.svg`, `icon-128.png` and `icon-256.png`. The icon is Tavily's Brand Mark (black), from https://www.tavily.com/brand, used under Tavily's brand guidelines: the vendor's own rounded-square mark, unmodified, never wrapped in the family tile, recoloured, outlined or combined with other graphics. `opencode.vendor.mark: true` tells `scripts/check-icons.mjs` (contract revision 2) so; the README keeps its "not affiliated with Tavily" and trademark lines. Revision 2 of that script is ahead of the kit's copy until the release-kit rollout; do not edit it further here.
 
 ## Greenfield
 
