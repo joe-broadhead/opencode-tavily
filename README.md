@@ -15,7 +15,7 @@ Tavily is a trademark of Tavily Inc.; this unofficial plugin is not endorsed by 
 ## Install
 
 ```sh
-opencode plugin add github:joe-broadhead/opencode-tavily#v0.0.3
+opencode plugin add github:joe-broadhead/opencode-tavily#v0.0.4
 ```
 
 Run `opencode reload`, or restart OpenCode. Then run `/tavily-status` in a session.
@@ -25,12 +25,12 @@ The install takes the GitHub release tag. Its commit carries the built `dist/`, 
 Or add the plugin to `opencode.json` instead, with the same spec:
 
 ```json
-{ "plugins": [{ "package": "github:joe-broadhead/opencode-tavily#v0.0.3" }] }
+{ "plugins": [{ "package": "github:joe-broadhead/opencode-tavily#v0.0.4" }] }
 ```
 
 ### Update
 
-Each release has its own tag, and a Git install does not update by itself. To move to a newer release, remove the old entry with `opencode plugin remove github:joe-broadhead/opencode-tavily#v0.0.2`, then add the new tag with `opencode plugin add github:joe-broadhead/opencode-tavily#v<version>`.
+Each release has its own tag, and a Git install does not update by itself. To move to a newer release, remove the old entry with `opencode plugin remove github:joe-broadhead/opencode-tavily#v0.0.3`, then add the new tag with `opencode plugin add github:joe-broadhead/opencode-tavily#v<version>`.
 
 ## Sign in
 
@@ -111,7 +111,7 @@ See [Scripting](https://github.com/joe-broadhead/opencode-tavily/blob/HEAD/docs/
    | `"read-only"` | the five tools | a tool Tavily adds later: it is **denied** |
 
    ```jsonc
-   { "plugins": [{ "package": "github:joe-broadhead/opencode-tavily#v0.0.3", "options": { "access": "ask-changes" } }] }
+   { "plugins": [{ "package": "github:joe-broadhead/opencode-tavily#v0.0.4", "options": { "access": "ask-changes" } }] }
    ```
 
    The default block, generated from `defaultRules()` for `access: "all"`:
@@ -155,7 +155,7 @@ An organisation can install the plugin for every user on a machine through OpenC
 
 ```json
 {
-  "plugins": [{ "package": "github:joe-broadhead/opencode-tavily#v0.0.3", "options": { "websearch": true } }]
+  "plugins": [{ "package": "github:joe-broadhead/opencode-tavily#v0.0.4", "options": { "websearch": true } }]
 }
 ```
 
@@ -206,7 +206,7 @@ Sign out first, while the plugin is installed: once it is removed, `opencode mcp
 3. Remove the plugin, then reload:
 
    ```sh
-   opencode plugin remove github:joe-broadhead/opencode-tavily#v0.0.3
+   opencode plugin remove github:joe-broadhead/opencode-tavily#v0.0.4
    opencode reload
    ```
 
