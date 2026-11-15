@@ -58,7 +58,7 @@ describe("terminalKeyText", () => {
     auth,
     tools: { visible: 5, unknown: 0, unknownNames: [] },
     websearchDefault: true,
-    host: { version: "2.2.3", range: ">=2.2.3 <2.3.0", tested: true },
+    host: { version: "2.2.3", range: ">=2.2.3 <2.4.0", tested: true },
     unguardedAgents: [],
     nextStep: "Nothing to do.",
   })

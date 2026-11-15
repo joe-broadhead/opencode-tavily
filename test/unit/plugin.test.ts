@@ -34,7 +34,7 @@ describe("plugin", () => {
 
   test("an untested host is refused before anything is registered", async () => {
     const { ctx, registered } = context("0.0.0-dev-1", {})
-    await expect(plugin.setup(ctx)).rejects.toThrow("HOST_UNTESTED: This plugin supports OpenCode >=2.2.3 <2.3.0, and this is 0.0.0-dev-1. Next step:")
+    await expect(plugin.setup(ctx)).rejects.toThrow("HOST_UNTESTED: This plugin supports OpenCode >=2.2.3 <2.4.0, and this is 0.0.0-dev-1. Next step:")
     expect(registered).toEqual([])
   })
 

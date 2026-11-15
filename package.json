@@ -1,6 +1,6 @@
 {
   "name": "@joe-broadhead/opencode-tavily",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "private": true,
   "description": "Unofficial OpenCode plugin for Tavily web search, extract, map, crawl and research",
   "keywords": [
@@ -66,7 +66,7 @@
     "typescript": "5.9.3"
   },
   "opencode": {
-    "host": ">=2.2.3 <2.3.0",
+    "host": ">=2.2.3 <2.4.0",
     "icons": [
       {
         "src": "assets/icon.svg",

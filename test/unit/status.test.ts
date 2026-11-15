@@ -28,7 +28,7 @@ const BASE: Rule = { action: "*", resource: "*", effect: "allow" }
 const guarded = { id: "build", permissions: [BASE, ...defaultRules()] }
 /** The host check for a tested release, and the same host as status reports it. */
 const CHECK = { version: "2.2.3", tested: true, inRange: true }
-const HOST = { version: "2.2.3", range: ">=2.2.3 <2.3.0", tested: true }
+const HOST = { version: "2.2.3", range: ">=2.2.3 <2.4.0", tested: true }
 const USER_SERVER_SCRIPTS =
   "Scripts can't use your own tavily server, because its URL is not Tavily's (https://mcp.tavily.com/mcp/); point it at that URL, or remove it from opencode.json, to use the tools RPC."
 const KNOWN = ["search", "extract", "map", "crawl", "research"].map((name) => ({ id: `tavily_tavily_${name}` }))
@@ -200,18 +200,18 @@ describe("buildStatus", () => {
 
   test("an untested release inside the range runs normally: same state and next step, host.tested false", () => {
     const status = buildStatus(facts({ host: { version: "2.2.99", tested: false, inRange: true } }))
-    expect(status).toMatchObject({ state: "connected", host: { version: "2.2.99", range: ">=2.2.3 <2.3.0", tested: false } })
+    expect(status).toMatchObject({ state: "connected", host: { version: "2.2.99", range: ">=2.2.3 <2.4.0", tested: false } })
     expect(status.nextStep).toBe("Nothing to do.")
-    expect(formatStatus(status)).toContain("- OpenCode: 2.2.99 (untested; supported range >=2.2.3 <2.3.0)\n")
+    expect(formatStatus(status)).toContain("- OpenCode: 2.2.99 (untested; supported range >=2.2.3 <2.4.0)\n")
   })
 
   test("a host outside the range, run with allowUntestedHost, is reported once everything else is ready", () => {
     const status = buildStatus(facts({ host: { version: "3.0.0", tested: false, inRange: false } }))
-    expect(status).toMatchObject({ state: "connected", host: { version: "3.0.0", range: ">=2.2.3 <2.3.0", tested: false } })
-    expect(status.nextStep).toBe("If Tavily misbehaves, use OpenCode 2.2.3, 2.2.4, 2.2.5 or 2.2.6.")
+    expect(status).toMatchObject({ state: "connected", host: { version: "3.0.0", range: ">=2.2.3 <2.4.0", tested: false } })
+    expect(status.nextStep).toBe("If Tavily misbehaves, use OpenCode 2.2.3, 2.2.4, 2.2.5, 2.2.6, 2.2.7 or 2.3.0.")
     const unknown = buildStatus(facts({ host: { version: null, tested: false, inRange: false } }))
     expect(unknown.host.version).toBeNull()
-    expect(formatStatus(unknown)).toContain("- OpenCode: unknown version (untested; supported range >=2.2.3 <2.3.0)\n")
+    expect(formatStatus(unknown)).toContain("- OpenCode: unknown version (untested; supported range >=2.2.3 <2.4.0)\n")
   })
 
   test("never carries the key", () => {
@@ -230,6 +230,7 @@ describe("readStatus", () => {
   const OWN = [{ id: "tavily", path: "/pkg/skills/tavily/SKILL.md" }]
   const skillList = (data: { id: string; path: string }[]) => ({ list: async () => ({ location: LOCATION, data }) as never })
   const skill = skillList(OWN)
+  const websearch = { providers: async () => ({ location: LOCATION, data: [] }) as never }
   const checked: string[] = []
   const checkKey = async (key: string) => (checked.push(key), "rejected" as const)
   const state = {
@@ -250,6 +251,7 @@ describe("readStatus", () => {
         agent: agents([agent("reviewer")]),
         tool,
         skill,
+        websearch,
       },
       state,
     )
@@ -272,6 +274,7 @@ describe("readStatus", () => {
         agent: agents([]),
         tool,
         skill,
+        websearch,
       },
       state,
     )
@@ -287,6 +290,7 @@ describe("readStatus", () => {
       agent: agents([]),
       tool,
       skill,
+      websearch,
     }
     const key = { key: "tvly-k", source: "env" } as const
     expect(await readStatus(ctx, { ...state, server: { key, userServer: false, userServerAtTavily: false } })).toMatchObject({ keyCheck: "rejected" })
@@ -307,12 +311,12 @@ describe("readStatus", () => {
       return "rejected" as const
     }
     const mcp = { list: async () => ({ location: LOCATION, data: [{ name: "tavily", status: { status: "connected" } } as McpServer] }) }
-    const status = await readStatus({ mcp, integration: integration({}).domain, agent: agents([]), tool, skill }, { ...state, server, checkKey: switching })
+    const status = await readStatus({ mcp, integration: integration({}).domain, agent: agents([]), tool, skill, websearch }, { ...state, server, checkKey: switching })
     expect(status).toMatchObject({ auth: "key_connected", account: "Old", keyCheck: "rejected" })
   })
 
   test("names a skill with the plugin's id that OpenCode loads from another file, and the next step moves it", async () => {
-    const ctx = { mcp: server({ name: "tavily", status: { status: "connected" } }), integration: integration({}).domain, agent: agents([]), tool }
+    const ctx = { mcp: server({ name: "tavily", status: { status: "connected" } }), integration: integration({}).domain, agent: agents([]), tool, websearch }
     const user = { id: "tavily", path: "/home/jo/.config/opencode/skills/tavily/SKILL.md" }
     expect(await readStatus({ ...ctx, skill: skillList([user]) }, state)).toMatchObject({
       shadowedSkills: [user],
@@ -326,10 +330,21 @@ describe("readStatus", () => {
 
   test("another server name is not Tavily", async () => {
     const status = await readStatus(
-      { mcp: server({ name: "other", status: { status: "connected" } }), integration: integration({}).domain, agent: agents([]), tool, skill },
+      { mcp: server({ name: "other", status: { status: "connected" } }), integration: integration({}).domain, agent: agents([]), tool, skill, websearch },
       state,
     )
     expect(status.state).toBe("not_configured")
+  })
+
+  test("reads OpenCode's web search state before the web search row, which runs the plugin's transform on a lazy host", async () => {
+    // OpenCode applies web search transforms when its web search state is read: until then the plugin's flag is unset.
+    const lazy = { tavilyDefault: false }
+    const providers = async () => ((lazy.tavilyDefault = true), { location: LOCATION, data: [] }) as never
+    const ctx = { mcp: server({ name: "tavily", status: { status: "connected" } }), integration: integration({}).domain, agent: agents([]), tool, skill }
+    expect(await readStatus({ ...ctx, websearch: { providers } }, { ...state, websearch: lazy })).toMatchObject({ websearchDefault: true })
+    // A failed read leaves the rest of the status intact.
+    const failing = { providers: async () => Promise.reject(new Error("no web search")) } as never
+    expect(await readStatus({ ...ctx, websearch: failing }, { ...state, websearch: { tavilyDefault: false } })).toMatchObject({ state: "connected", websearchDefault: false })
   })
 })
 

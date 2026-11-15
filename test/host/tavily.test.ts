@@ -166,7 +166,7 @@ describe(`defaults on ${HOST}`, () => {
       state: "sign_in_required",
       auth: "oauth",
       websearchDefault: true,
-      host: { version: HOST_VERSION, range: ">=2.2.3 <2.3.0", tested: true },
+      host: { version: HOST_VERSION, range: ">=2.2.3 <2.4.0", tested: true },
       unguardedAgents: ["reviewer"],
     })
     expect(current.tools).toEqual({ visible: 0, unknown: 0, unknownNames: [] })
