@@ -11,6 +11,11 @@ plugin, and keeps it only if it is a clean SVG of drawing elements, with no scri
 or outside reference. A Jelly whose declaration schema lacks `summary` or `icon` refuses this
 declaration, because that schema accepts no unknown keys.
 
+`jelly.cost` is the line Jelly shows on the plugin's review before it installs, in the plugin's own words, saying what
+it costs with Tavily: "Every search, extract, map, crawl and research call spends Tavily credits from the signed-in
+account or key. A research task costs 4-110 credits with mini and 15-250 with pro, and a crawl reads up to 50 pages by
+default. The plugin sets no spending limit." It changes nothing Jelly allows.
+
 ## Tools and permissions
 
 5 tools are declared (5 read-only). Jelly's agents have no base "allow everything"
