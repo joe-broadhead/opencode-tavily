@@ -2,6 +2,15 @@
 
 All notable changes to this project are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.4] - 2026-11-15
+
+### Added
+
+- **For jelly:** `jelly.cost`, the line jelly shows on the plugin's review before it installs: "Every search, extract,
+  map, crawl and research call spends Tavily credits from the signed-in account or key. A research task costs 4-110
+  credits with mini and 15-250 with pro, and a crawl reads up to 50 pages by default. The plugin sets no spending
+  limit."
+
 ## [0.0.3] - 2026-11-15
 
 ### Changed

@@ -1,6 +1,6 @@
 {
   "name": "@joe-broadhead/opencode-tavily",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "private": true,
   "description": "Unofficial OpenCode plugin for Tavily web search, extract, map, crawl and research",
   "keywords": [
@@ -101,6 +101,7 @@
     "title": "Tavily",
     "summary": "Web search, extract, crawl and research.",
     "icon": "assets/icon.svg",
+    "cost": "Every search, extract, map, crawl and research call spends Tavily credits from the signed-in account or key. A research task costs 4-110 credits with mini and 15-250 with pro, and a crawl reads up to 50 pages by default. The plugin sets no spending limit.",
     "tools": [
       {
         "name": "tavily.tavily_search",
