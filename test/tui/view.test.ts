@@ -27,7 +27,7 @@ const connected: Status = {
   account: "jo@example.com",
   tools: { visible: 5, unknown: 0, unknownNames: [] },
   websearchDefault: true,
-  host: { version: "2.2.3", range: ">=2.2.3 <2.3.0", tested: true },
+  host: { version: "2.2.3", range: ">=2.2.3 <2.4.0", tested: true },
   unguardedAgents: [],
   nextStep: "Nothing to do.",
 }
@@ -39,7 +39,7 @@ const needsAuth: Status = {
   auth: "oauth",
   tools: { visible: 6, unknown: 1, unknownNames: ["tavily_feedback"] },
   websearchDefault: false,
-  host: { version: "2.2.4", range: ">=2.2.3 <2.3.0", tested: true },
+  host: { version: "2.2.4", range: ">=2.2.3 <2.4.0", tested: true },
   unguardedAgents: ["reviewer"],
   permissionsBlock: [
     { action: "tavily_*", resource: "*", effect: "allow" },

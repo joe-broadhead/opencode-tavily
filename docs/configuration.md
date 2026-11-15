@@ -24,7 +24,7 @@ All options are optional.
 | --- | --- | --- |
 | `websearch` | `true` | Make OpenCode's built-in Tavily provider the default for the `websearch` tool. A `websearch` setting in `opencode.json` still wins. See [Web search](#web-search). |
 | `executionTimeoutMs` | `900000` (15 minutes) | How long one call to a Tavily tool can run, in milliseconds. An integer from `60000` (1 minute) to `3600000` (1 hour). Research needs the most time. |
-| `allowUntestedHost` | `false` | Start on an OpenCode version outside `>=2.2.3 <2.3.0`. The plugin then logs a `HOST_UNTESTED` warning and runs. A later 2.2 release, such as 2.2.99, needs no option: it runs, and status calls it untested. |
+| `allowUntestedHost` | `false` | Start on an OpenCode version outside `>=2.2.3 <2.4.0`. The plugin then logs a `HOST_UNTESTED` warning and runs. A later 2.2 or 2.3 release, such as 2.2.99, needs no option: it runs, and status calls it untested. |
 | `access` | `"all"` | `"all"`, `"ask-changes"` or `"read-only"`. It generates the default rules: everything allowed, or the five reads allowed and a tool Tavily adds later asking or denied. See [The default rules](#the-default-rules). |
 
 An unknown option, or a value of the wrong type, stops the plugin at start-up with a [`OPTIONS_INVALID`](#errors) error.
@@ -219,7 +219,7 @@ The plugin's own errors and warnings have one shape: `CODE: what happened. Next 
 | Code | When | Example |
 | --- | --- | --- |
 | `OPTIONS_INVALID` | Start-up; the plugin does not start | `OPTIONS_INVALID: Unknown option "foo"; the options are websearch, executionTimeoutMs, allowUntestedHost, access. Next step: Fix the plugin's options in opencode.json.` |
-| `HOST_UNTESTED` | Start-up, outside `>=2.2.3 <2.3.0`; a warning with `allowUntestedHost` | `HOST_UNTESTED: This plugin supports OpenCode >=2.2.3 <2.3.0, and this is 2.3.0. Next step: Use OpenCode 2.2.3, 2.2.4, 2.2.5 or 2.2.6, or set "allowUntestedHost": true to run anyway.` |
+| `HOST_UNTESTED` | Start-up, outside `>=2.2.3 <2.4.0`; a warning with `allowUntestedHost` | `HOST_UNTESTED: This plugin supports OpenCode >=2.2.3 <2.4.0, and this is 2.4.0. Next step: Use OpenCode 2.2.3, 2.2.4, 2.2.5, 2.2.6, 2.2.7 or 2.3.0, or set "allowUntestedHost": true to run anyway.` |
 | `SKILLS_INVALID` | Start-up; a packaged skill is missing or damaged | `SKILLS_INVALID: skills/tavily has no SKILL.md. Next step: Reinstall the plugin.` |
 | `KEY_UNAVAILABLE` | Log warning; OpenCode could not read the key | `KEY_UNAVAILABLE: OpenCode could not read the Tavily API key (<reason>). Next step: Run /connect and choose Tavily, then connect the key again.` |
 | `KEY_WATCH_STOPPED` | Log warning; key changes are no longer picked up | `KEY_WATCH_STOPPED: The plugin stopped watching for Tavily key changes (<reason>). Next step: Restart OpenCode after you change the key.` |

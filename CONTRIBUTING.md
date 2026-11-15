@@ -30,9 +30,9 @@ npm run check
 
 `check` runs, in order: `typecheck` (the source and the whole test tree), `build`, the unit tests (`test`), the TUI tests (`test:tui`), the host tests (`test:host`), the package test (`test:pack`) and the forbidden-API scan (`lint`). Nothing calls Tavily.
 
-- The host tests start OpenCode from `@opencode/sdk` inside the test process, in a temporary home with a proxy that refuses every request. A scripted loopback model runs real session turns, so the tests see what a model receives from a Tavily tool. `tools/host-tests.mjs` runs the suite on every tested release: the locked 2.2.3, then 2.2.4, 2.2.5 and 2.2.6 each installed from npm into a temp folder, and the stage fails when a release did not run. `HOST_SDK_DIR=<dir>` runs only the SDK in that folder.
+- The host tests start OpenCode from `@opencode/sdk` inside the test process, in a temporary home with a proxy that refuses every request. A scripted loopback model runs real session turns, so the tests see what a model receives from a Tavily tool. `tools/host-tests.mjs` runs the suite on every tested release: the locked 2.2.3, then 2.2.4, 2.2.5, 2.2.6, 2.2.7 and 2.3.0 each installed from npm into a temp folder, and the stage fails when a release did not run. `HOST_SDK_DIR=<dir>` runs only the SDK in that folder.
 - **Isolation.** Every test host lives in one temp root under `/tmp` (`/private/tmp` on macOS), whatever `TMPDIR` says. OpenCode reads `.opencode/` folders above a project, so a root inside your home would pick up your own agents and skills. Each project is its own git worktree, and the harness fails if a folder above the root holds `.opencode/`. Each stock host serves on its own free port and pins its managed-service port, so no CLI call reaches a running OpenCode.
-- The package test checks that `dist/` holds exactly `index.js` and `tui.js` with no relative `import`, `import()` or `require`. It packs the plugin with `npm`, installs the tarball offline into an empty project, and loads it in each tested stock OpenCode release, 2.2.3, 2.2.4, 2.2.5 and 2.2.6 (`TESTED_HOSTS` in `src/host-version.ts`). Set `OPENCODE_BIN_2_2_3`, `OPENCODE_BIN_2_2_4`, `OPENCODE_BIN_2_2_5` and `OPENCODE_BIN_2_2_6` to those `opencode` binaries; otherwise it downloads each release from npm on every run, as CI does. `PACK_TARBALL` tests an existing tarball instead of packing one.
+- The package test checks that `dist/` holds exactly `index.js` and `tui.js` with no relative `import`, `import()` or `require`. It packs the plugin with `npm`, installs the tarball offline into an empty project, and loads it in each tested stock OpenCode release, 2.2.3, 2.2.4, 2.2.5, 2.2.6, 2.2.7 and 2.3.0 (`TESTED_HOSTS` in `src/host-version.ts`). Set `OPENCODE_BIN_2_2_3`, `OPENCODE_BIN_2_2_4`, `OPENCODE_BIN_2_2_5`, `OPENCODE_BIN_2_2_6`, `OPENCODE_BIN_2_2_7` and `OPENCODE_BIN_2_3_0` to those `opencode` binaries; otherwise it downloads each release from npm on every run, as CI does. `PACK_TARBALL` tests an existing tarball instead of packing one.
 - `npm run check:upstream` is for maintainers. It lists the tools of Tavily's hosted server without a key and prints tools that were added or removed. It needs the network, only warns, and is not part of `check`.
 
 ## Releasing
@@ -95,7 +95,7 @@ Before the approval, the workflow:
 - **verifies** on a fresh runner: the commit's identity, one parent on `master`, `package.json` exactly the parent's
   without the lifecycle scripts, only regular files in the allowed paths, no `package.json` under `dist/`, and a second,
   independent build of the parent (its own job) equal to the committed `dist/` byte for byte;
-- **installs** the release commit with `plugin add` on each stock OpenCode host (2.2.3 to 2.2.6);
+- **installs** the release commit with `plugin add` on each stock OpenCode host (2.2.3 to 2.2.7, and 2.3.0);
 - **packs** the commit before installing anything and keeps that tarball, then runs the pack stage against a copy;
 - **stages** the Release: verifies the attested native files, writes `SHA256SUMS` and the notes (the version's CHANGELOG
   section), and shows them all in the run summary with the sha256 of `SHA256SUMS`.

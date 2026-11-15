@@ -2,7 +2,7 @@
 
 The plugin is a thin layer over OpenCode's public plugin API. Tavily's hosted MCP server provides the tools, and OpenCode runs them: OAuth, the MCP connection, permission prompts and tool results. The plugin chooses the server's settings, adds default permission rules, chooses the web search default and reports status. It adds no tools of its own. It changes one kind of result only: Tavily's error object, which Tavily's server sends as an ordinary result, becomes an error (see [Tavily's error objects](#tavilys-error-objects)).
 
-It uses only APIs that are public in OpenCode 2.2.3. It is tested on stock OpenCode 2.2.3, 2.2.4, 2.2.5 and 2.2.6 (`TESTED_HOSTS` in `src/host-version.ts`). A later 2.2 release runs too, and status calls it untested. Outside `>=2.2.3 <2.3.0` the plugin does not start, unless `allowUntestedHost` is set.
+It uses only APIs that are public in OpenCode 2.2.3. It is tested on stock OpenCode 2.2.3, 2.2.4, 2.2.5, 2.2.6, 2.2.7 and 2.3.0 (`TESTED_HOSTS` in `src/host-version.ts`). A later 2.2 or 2.3 release runs too, and status calls it untested. Outside `>=2.2.3 <2.4.0` the plugin does not start, unless `allowUntestedHost` is set.
 
 `setup` runs in this order: options, host check, skills, key, then the MCP, agent, web search, skill and command transforms, the status RPC, the tool namespace and `execute.after` hook, the tools RPC, and last the key and `/connect` watchers. A failed check stops `setup` before the plugin registers anything.
 
@@ -59,7 +59,7 @@ One status object feeds `/tavily-status`, the RPC and the dialog:
   keyCheck?: "accepted" | "rejected" | "unchecked" // with an API key: Tavily's answer from /usage
   tools: { visible: number; unknown: number; unknownNames: string[] } // the tavily server's tools OpenCode lists
   websearchDefault: boolean   // the plugin chose Tavily; opencode.json can still override it
-  host: { version: string | null; range: string; tested: boolean } // tested: 2.2.3, 2.2.4, 2.2.5 or 2.2.6
+  host: { version: string | null; range: string; tested: boolean } // tested: 2.2.3, 2.2.4, 2.2.5, 2.2.6, 2.2.7 or 2.3.0
   unguardedAgents: string[]   // agents without the default rules; empty when none
   permissionsBlock?: Rule[]   // the block to paste, when unguardedAgents is not empty
   shadowedSkills?: { id: string; path: string }[] // the plugin's skills that a same-id skill replaces, and its file
@@ -122,7 +122,7 @@ The TUI part registers one global command from setup: the palette entry **Tavily
 - `dist/` holds exactly two self-contained files, built by `scripts/build.mjs` with esbuild: `index.js` (the server part) and `tui.js` (the TUI part, after Babel compiles its JSX). Each inlines every module it uses, the RPC contract included, so neither has a relative import. OpenCode reloads a plugin in place but keeps the module records of unchanged paths, so a sibling module could otherwise be a stale copy. Only `@opencode/plugin`, OpenTUI, Solid and `node:*` stay imports; the build fails on anything else. `tsc` only typechecks.
 - The server part finds `skills/` at `../skills/` from `dist/index.js`, the package root.
 - No `dependencies` and no peer dependencies. OpenCode supplies `@opencode/plugin`, OpenTUI and Solid to plugins at runtime. They are dev dependencies here, for types, the build and the tests, with `@opencode/plugin` pinned at 2.2.3.
-- `"opencode": { "host": ">=2.2.3 <2.3.0" }` states the tested range. The start-up check uses the same range.
+- `"opencode": { "host": ">=2.2.3 <2.4.0" }` states the tested range. The start-up check uses the same range.
 - No lifecycle scripts. OpenCode installs plugins with scripts turned off, so `dist/` is built before packing.
 - Exports: `.` → `./dist/index.js` and `./tui` → `./dist/tui.js`. The package ships no declaration files.
 

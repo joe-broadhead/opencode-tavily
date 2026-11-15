@@ -93,7 +93,7 @@ describe("the tarball", () => {
     for (const field of ["dependencies", "optionalDependencies", "peerDependencies", "peerDependenciesMeta", "bundleDependencies", "bundledDependencies", "overrides"])
       expect(manifest[field]).toBeUndefined()
     expect(Object.keys(manifest.scripts ?? {}).filter((script) => LIFECYCLE.includes(script))).toEqual([])
-    expect(manifest.opencode).toMatchObject({ host: ">=2.2.3 <2.3.0", vendor: { id: "tavily", name: "Tavily", domain: "tavily.com" } })
+    expect(manifest.opencode).toMatchObject({ host: ">=2.2.3 <2.4.0", vendor: { id: "tavily", name: "Tavily", domain: "tavily.com" } })
     expect(manifest.opencode.icons.map((icon: { src: string }) => icon.src)).toEqual(["assets/icon.svg", "assets/icon-128.png", "assets/icon-256.png"])
     expect(manifest.exports).toEqual({
       ".": "./dist/index.js",
@@ -185,7 +185,7 @@ for (const version of STOCK_VERSIONS)
       const { output } = await host.client.rpc.call({ rpcID: "tavily.web", method: "status", input: {}, location: host.location })
       expect(schemaErrors(Tavily.methods.status.output, output)).toEqual([])
       // The proxy refuses every request, so the server fails to connect (see startStock).
-      expect(output).toMatchObject({ version: manifest.version, state: "failed", auth: "oauth", host: { version, range: ">=2.2.3 <2.3.0", tested: true }, unguardedAgents: [] })
+      expect(output).toMatchObject({ version: manifest.version, state: "failed", auth: "oauth", host: { version, range: ">=2.2.3 <2.4.0", tested: true }, unguardedAgents: [] })
     })
 
     test("/connect lists the built-in key entry as Tavily and the server's OAuth entry as Tavily account", async () => {

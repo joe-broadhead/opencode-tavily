@@ -28,7 +28,7 @@ const BASE: Rule = { action: "*", resource: "*", effect: "allow" }
 const guarded = { id: "build", permissions: [BASE, ...defaultRules()] }
 /** The host check for a tested release, and the same host as status reports it. */
 const CHECK = { version: "2.2.3", tested: true, inRange: true }
-const HOST = { version: "2.2.3", range: ">=2.2.3 <2.3.0", tested: true }
+const HOST = { version: "2.2.3", range: ">=2.2.3 <2.4.0", tested: true }
 const USER_SERVER_SCRIPTS =
   "Scripts can't use your own tavily server, because its URL is not Tavily's (https://mcp.tavily.com/mcp/); point it at that URL, or remove it from opencode.json, to use the tools RPC."
 const KNOWN = ["search", "extract", "map", "crawl", "research"].map((name) => ({ id: `tavily_tavily_${name}` }))
@@ -200,18 +200,18 @@ describe("buildStatus", () => {
 
   test("an untested release inside the range runs normally: same state and next step, host.tested false", () => {
     const status = buildStatus(facts({ host: { version: "2.2.99", tested: false, inRange: true } }))
-    expect(status).toMatchObject({ state: "connected", host: { version: "2.2.99", range: ">=2.2.3 <2.3.0", tested: false } })
+    expect(status).toMatchObject({ state: "connected", host: { version: "2.2.99", range: ">=2.2.3 <2.4.0", tested: false } })
     expect(status.nextStep).toBe("Nothing to do.")
-    expect(formatStatus(status)).toContain("- OpenCode: 2.2.99 (untested; supported range >=2.2.3 <2.3.0)\n")
+    expect(formatStatus(status)).toContain("- OpenCode: 2.2.99 (untested; supported range >=2.2.3 <2.4.0)\n")
   })
 
   test("a host outside the range, run with allowUntestedHost, is reported once everything else is ready", () => {
     const status = buildStatus(facts({ host: { version: "3.0.0", tested: false, inRange: false } }))
-    expect(status).toMatchObject({ state: "connected", host: { version: "3.0.0", range: ">=2.2.3 <2.3.0", tested: false } })
-    expect(status.nextStep).toBe("If Tavily misbehaves, use OpenCode 2.2.3, 2.2.4, 2.2.5 or 2.2.6.")
+    expect(status).toMatchObject({ state: "connected", host: { version: "3.0.0", range: ">=2.2.3 <2.4.0", tested: false } })
+    expect(status.nextStep).toBe("If Tavily misbehaves, use OpenCode 2.2.3, 2.2.4, 2.2.5, 2.2.6, 2.2.7 or 2.3.0.")
     const unknown = buildStatus(facts({ host: { version: null, tested: false, inRange: false } }))
     expect(unknown.host.version).toBeNull()
-    expect(formatStatus(unknown)).toContain("- OpenCode: unknown version (untested; supported range >=2.2.3 <2.3.0)\n")
+    expect(formatStatus(unknown)).toContain("- OpenCode: unknown version (untested; supported range >=2.2.3 <2.4.0)\n")
   })
 
   test("never carries the key", () => {
