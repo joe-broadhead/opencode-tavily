@@ -230,6 +230,7 @@ describe("readStatus", () => {
   const OWN = [{ id: "tavily", path: "/pkg/skills/tavily/SKILL.md" }]
   const skillList = (data: { id: string; path: string }[]) => ({ list: async () => ({ location: LOCATION, data }) as never })
   const skill = skillList(OWN)
+  const websearch = { providers: async () => ({ location: LOCATION, data: [] }) as never }
   const checked: string[] = []
   const checkKey = async (key: string) => (checked.push(key), "rejected" as const)
   const state = {
@@ -250,6 +251,7 @@ describe("readStatus", () => {
         agent: agents([agent("reviewer")]),
         tool,
         skill,
+        websearch,
       },
       state,
     )
@@ -272,6 +274,7 @@ describe("readStatus", () => {
         agent: agents([]),
         tool,
         skill,
+        websearch,
       },
       state,
     )
@@ -287,6 +290,7 @@ describe("readStatus", () => {
       agent: agents([]),
       tool,
       skill,
+      websearch,
     }
     const key = { key: "tvly-k", source: "env" } as const
     expect(await readStatus(ctx, { ...state, server: { key, userServer: false, userServerAtTavily: false } })).toMatchObject({ keyCheck: "rejected" })
@@ -307,12 +311,12 @@ describe("readStatus", () => {
       return "rejected" as const
     }
     const mcp = { list: async () => ({ location: LOCATION, data: [{ name: "tavily", status: { status: "connected" } } as McpServer] }) }
-    const status = await readStatus({ mcp, integration: integration({}).domain, agent: agents([]), tool, skill }, { ...state, server, checkKey: switching })
+    const status = await readStatus({ mcp, integration: integration({}).domain, agent: agents([]), tool, skill, websearch }, { ...state, server, checkKey: switching })
     expect(status).toMatchObject({ auth: "key_connected", account: "Old", keyCheck: "rejected" })
   })
 
   test("names a skill with the plugin's id that OpenCode loads from another file, and the next step moves it", async () => {
-    const ctx = { mcp: server({ name: "tavily", status: { status: "connected" } }), integration: integration({}).domain, agent: agents([]), tool }
+    const ctx = { mcp: server({ name: "tavily", status: { status: "connected" } }), integration: integration({}).domain, agent: agents([]), tool, websearch }
     const user = { id: "tavily", path: "/home/jo/.config/opencode/skills/tavily/SKILL.md" }
     expect(await readStatus({ ...ctx, skill: skillList([user]) }, state)).toMatchObject({
       shadowedSkills: [user],
@@ -326,10 +330,21 @@ describe("readStatus", () => {
 
   test("another server name is not Tavily", async () => {
     const status = await readStatus(
-      { mcp: server({ name: "other", status: { status: "connected" } }), integration: integration({}).domain, agent: agents([]), tool, skill },
+      { mcp: server({ name: "other", status: { status: "connected" } }), integration: integration({}).domain, agent: agents([]), tool, skill, websearch },
       state,
     )
     expect(status.state).toBe("not_configured")
+  })
+
+  test("reads OpenCode's web search state before the web search row, which runs the plugin's transform on a lazy host", async () => {
+    // OpenCode applies web search transforms when its web search state is read: until then the plugin's flag is unset.
+    const lazy = { tavilyDefault: false }
+    const providers = async () => ((lazy.tavilyDefault = true), { location: LOCATION, data: [] }) as never
+    const ctx = { mcp: server({ name: "tavily", status: { status: "connected" } }), integration: integration({}).domain, agent: agents([]), tool, skill }
+    expect(await readStatus({ ...ctx, websearch: { providers } }, { ...state, websearch: lazy })).toMatchObject({ websearchDefault: true })
+    // A failed read leaves the rest of the status intact.
+    const failing = { providers: async () => Promise.reject(new Error("no web search")) } as never
+    expect(await readStatus({ ...ctx, websearch: failing }, { ...state, websearch: { tavilyDefault: false } })).toMatchObject({ state: "connected", websearchDefault: false })
   })
 })
 

@@ -9,9 +9,15 @@ All notable changes to this project are documented here. The format follows [Kee
 - OpenCode 2.3 is admitted: the host range is `>=2.2.3 <2.4.0` (it was `>=2.2.3 <2.3.0`), tested on 2.2.3, 2.2.4, 2.2.5, 2.2.6, 2.2.7 and 2.3.0.
   The host and pack stages, CI and the release's install check run every one of them. A later 2.2 or 2.3 release
   starts and status calls it untested; the `HOST_UNTESTED` example host is now 2.4.0.
-- OpenCode 2.3 needs nothing else from this plugin. It does not call the `subagent` tool or read `session.tool.failed`;
+- Apart from the status fix below, OpenCode 2.3 needs nothing else from this plugin. It does not call the `subagent` tool or read `session.tool.failed`;
   the five tools are Tavily's MCP tools, which OpenCode runs and stops itself when the person presses Stop; and it has
   no use for the new `session.fork` hook.
+
+### Fixed
+
+- Status, `/tavily-status` and the `/tavily` dialog could report that Tavily is not the web search default right after
+  OpenCode started, when it is. OpenCode applies the plugin's web search choice only when something reads its web search
+  state, and on 2.3.0 nothing may have yet; status now reads that state first.
 
 ## [0.0.2] - 2026-11-14
 

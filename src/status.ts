@@ -175,6 +175,7 @@ export async function readStatus(
     readonly agent: Pick<Plugin.Context["agent"], "list">
     readonly tool: Pick<Plugin.Context["tool"], "list">
     readonly skill: Pick<Plugin.Context["skill"], "list">
+    readonly websearch: Pick<Plugin.Context["websearch"], "providers">
   },
   state: StatusState,
 ) {
@@ -190,6 +191,10 @@ export async function readStatus(
       (result) => result.data,
       () => undefined,
     ),
+    // OpenCode runs web search transforms only when something reads its web search state, so the plugin's own
+    // `tavilyDefault` is unset until then: right after start-up, a status read could report it false. Reading the
+    // providers runs the transform first. It is advice for one row; a failed read must not hide the rest.
+    ctx.websearch.providers().catch(() => undefined),
   ])
   const server = servers.data.find((entry) => entry.name === SERVER_NAME)
   // The account label is optional; a failed lookup must not hide the rest of the status.
