@@ -10,17 +10,17 @@ describe("host check", () => {
     expect(pkg).not.toHaveProperty("peerDependenciesMeta")
   })
 
-  test("the tested releases are 2.2.3 to 2.2.7 and 2.3.0, all inside the range", () => {
-    expect([...TESTED_HOSTS]).toEqual(["2.2.3", "2.2.4", "2.2.5", "2.2.6", "2.2.7", "2.3.0"])
+  test("the tested releases are 2.2.3 to 2.3.2, all inside the range", () => {
+    expect([...TESTED_HOSTS]).toEqual(["2.2.3", "2.2.4", "2.2.5", "2.2.6", "2.2.7", "2.3.0", "2.3.1", "2.3.2"])
     expect(TESTED_HOSTS.every(inHostRange)).toBe(true)
-    expect(TESTED_TEXT).toBe("2.2.3, 2.2.4, 2.2.5, 2.2.6, 2.2.7 or 2.3.0")
+    expect(TESTED_TEXT).toBe("2.2.3, 2.2.4, 2.2.5, 2.2.6, 2.2.7, 2.3.0, 2.3.1 or 2.3.2")
   })
 
-  test.each(["2.2.3", "2.2.4", "2.2.5", "2.2.6", "2.2.7", "2.3.0"])("%s is tested", (version) => {
+  test.each(["2.2.3", "2.2.4", "2.2.5", "2.2.6", "2.2.7", "2.3.0", "2.3.1", "2.3.2"])("%s is tested", (version) => {
     expect(checkHost(version, false, () => {})).toEqual({ version, tested: true, inRange: true })
   })
 
-  test.each(["2.2.99", "2.2.10", "2.3.1", "2.3.99"])("%s is inside the range but untested: it runs, without a warning", (version) => {
+  test.each(["2.2.99", "2.2.10", "2.3.3", "2.3.99"])("%s is inside the range but untested: it runs, without a warning", (version) => {
     const warnings: string[] = []
     expect(checkHost(version, false, (message) => warnings.push(message))).toEqual({ version, tested: false, inRange: true })
     expect(warnings).toEqual([])
@@ -42,7 +42,7 @@ describe("host check", () => {
   ])("%p is refused", (version) => {
     expect(inHostRange(version)).toBe(false)
     expect(() => checkHost(version, false, () => {})).toThrow(
-      `HOST_UNTESTED: This plugin supports OpenCode >=2.2.3 <2.4.0, and this is ${version}. Next step: Use OpenCode 2.2.3, 2.2.4, 2.2.5, 2.2.6, 2.2.7 or 2.3.0, or set "allowUntestedHost": true to run anyway.`,
+      `HOST_UNTESTED: This plugin supports OpenCode >=2.2.3 <2.4.0, and this is ${version}. Next step: Use OpenCode 2.2.3, 2.2.4, 2.2.5, 2.2.6, 2.2.7, 2.3.0, 2.3.1 or 2.3.2, or set "allowUntestedHost": true to run anyway.`,
     )
   })
 
@@ -57,7 +57,7 @@ describe("host check", () => {
     const warnings: string[] = []
     expect(checkHost(version, true, (message) => warnings.push(message))).toEqual({ version, tested: false, inRange: false })
     expect(warnings).toEqual([
-      `HOST_UNTESTED: This plugin supports OpenCode >=2.2.3 <2.4.0, and this is ${version}; it runs because "allowUntestedHost" is true. Next step: If Tavily misbehaves, use OpenCode 2.2.3, 2.2.4, 2.2.5, 2.2.6, 2.2.7 or 2.3.0.`,
+      `HOST_UNTESTED: This plugin supports OpenCode >=2.2.3 <2.4.0, and this is ${version}; it runs because "allowUntestedHost" is true. Next step: If Tavily misbehaves, use OpenCode 2.2.3, 2.2.4, 2.2.5, 2.2.6, 2.2.7, 2.3.0, 2.3.1 or 2.3.2.`,
     ])
   })
 

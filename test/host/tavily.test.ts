@@ -13,7 +13,7 @@ import { SERVER_URL } from "../../src/mcp.js"
 import { MODEL_ID, startFakeModel, type ChatRequest, type FakeModel } from "./fake-model.js"
 import { NEW_TOOL as FAKE_NEW_TOOL, RECORDED_TOOLS } from "./catalog.js"
 import { startFakeTavily, type FakeTavily } from "./fake-tavily.js"
-import { cleanup, HOST_VERSION, hostedTavily, REJECTED, root, startHost, until, type Host } from "./harness.js"
+import { cleanup, HOST_VERSION, hostedTavily, REJECTED, root, startHost, unattended, until, type Host } from "./harness.js"
 import { schemaErrors } from "../schema.js"
 
 // Starting a host takes seconds on a laptop and minutes in a slow container (see READY_MS in harness.ts).
@@ -265,21 +265,13 @@ describe(`defaults on ${HOST}`, () => {
 })
 
 /**
- * Runs `code` as Code Mode does, through a schedule's check program: OpenCode checks each tool's input and output and
- * evaluates permissions with nobody present to answer a prompt. The program reports by throwing "SEEN <json>", so no
- * schedule is ever created and no model is involved.
+ * Runs `code` as Code Mode does, through a schedule's check program up to 2.3.0 and an automation's code action from
+ * 2.3.1: OpenCode checks each tool's input and output and evaluates permissions with nobody present to answer a prompt.
+ * The program reports by throwing "SEEN <json>", so nothing is left behind and no model is involved.
  */
 async function codeMode(host: Host, sessionID: string, code: string): Promise<{ seen: unknown } | { refused: string }> {
-  let message: string
-  try {
-    const schedule = await host.client.experimental.schedule.create({
-      sessionID, name: "tavily-host-test", when: { in: "6 hours" }, prompt: "noop", if: { code }, location: host.location,
-    } as never)
-    await host.client.experimental.schedule.delete({ scheduleID: schedule.id, location: host.location } as never)
-    throw new Error("the check program finished without reporting")
-  } catch (error) {
-    message = error instanceof Error ? error.message : String(error)
-  }
+  const outcome = await unattended(host, sessionID, code)
+  const message = outcome.ok ? "the check program finished without reporting" : outcome.error
   const seen = /SEEN (.*)$/s.exec(message)
   if (!seen) return { refused: message }
   try {

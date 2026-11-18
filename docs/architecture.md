@@ -2,7 +2,7 @@
 
 The plugin is a thin layer over OpenCode's public plugin API. Tavily's hosted MCP server provides the tools, and OpenCode runs them: OAuth, the MCP connection, permission prompts and tool results. The plugin chooses the server's settings, adds default permission rules, chooses the web search default and reports status. It adds no tools of its own. It changes one kind of result only: Tavily's error object, which Tavily's server sends as an ordinary result, becomes an error (see [Tavily's error objects](#tavilys-error-objects)).
 
-It uses only APIs that are public in OpenCode 2.2.3. It is tested on stock OpenCode 2.2.3, 2.2.4, 2.2.5, 2.2.6, 2.2.7 and 2.3.0 (`TESTED_HOSTS` in `src/host-version.ts`). A later 2.2 or 2.3 release runs too, and status calls it untested. Outside `>=2.2.3 <2.4.0` the plugin does not start, unless `allowUntestedHost` is set.
+It uses only APIs that are public in OpenCode 2.2.3. It is tested on stock OpenCode 2.2.3, 2.2.4, 2.2.5, 2.2.6, 2.2.7, 2.3.0, 2.3.1 and 2.3.2 (`TESTED_HOSTS` in `src/host-version.ts`). A later 2.2 or 2.3 release runs too, and status calls it untested. Outside `>=2.2.3 <2.4.0` the plugin does not start, unless `allowUntestedHost` is set.
 
 `setup` runs in this order: options, host check, skills, key, then the MCP, agent, web search, skill and command transforms, the status RPC, the tool namespace and `execute.after` hook, the tools RPC, and last the key and `/connect` watchers. A failed check stops `setup` before the plugin registers anything.
 
@@ -59,7 +59,7 @@ One status object feeds `/tavily-status`, the RPC and the dialog:
   keyCheck?: "accepted" | "rejected" | "unchecked" // with an API key: Tavily's answer from /usage
   tools: { visible: number; unknown: number; unknownNames: string[] } // the tavily server's tools OpenCode lists
   websearchDefault: boolean   // the plugin chose Tavily; opencode.json can still override it
-  host: { version: string | null; range: string; tested: boolean } // tested: 2.2.3, 2.2.4, 2.2.5, 2.2.6, 2.2.7 or 2.3.0
+  host: { version: string | null; range: string; tested: boolean } // tested: 2.2.3, 2.2.4, 2.2.5, 2.2.6, 2.2.7, 2.3.0, 2.3.1 or 2.3.2
   unguardedAgents: string[]   // agents without the default rules; empty when none
   permissionsBlock?: Rule[]   // the block to paste, when unguardedAgents is not empty
   shadowedSkills?: { id: string; path: string }[] // the plugin's skills that a same-id skill replaces, and its file
@@ -168,3 +168,4 @@ The links point to the OpenCode source at tag `v2.2.3`.
 | `ctx.tool.list()` returns each MCP tool with a callable `execute`, which checks `<server>_<tool>` with the agent's and the session's rules and saved approvals, and gives the `evaluate` hook the call's `source`. A deny is a `Tool.Error` with a cause; the server's `isError` is one without. `execute.before` and `execute.after` hooks do not run for it. Not documented as an entry point. | [`packages/core/src/tool/mcp.ts`](https://github.com/anomalyco/opencode/blob/v2.2.3/packages/core/src/tool/mcp.ts) |
 | An RPC input given as a Standard Schema is validated with it; a plain JSON Schema is decoded with Effect, which drops unknown keys of an object that has properties. | `@opencode/core` 2.2.3, the RPC service's `parse` |
 | A permission decline inside a Code Mode program becomes an error that the program can catch. | [`packages/core/src/codemode/tool.ts`](https://github.com/anomalyco/opencode/blob/v2.2.3/packages/core/src/codemode/tool.ts) |
+| Unattended Code Mode: up to 2.3.0 a schedule's `if: { code }` check runs once at creation, with asks settled unattended. From 2.3.1 `experimental.automation` replaces `experimental.schedule`: a code action's tools are authorized at creation the same way (an ask or a deny is refused), and the program runs, under an unattended grant for those tools, when the scheduler finds it due. Only a server process starts the scheduler; the host test starts it in its embedded host. The flag is `experimental.automations`, also read as `experimental.schedules`. | [`automation/code.ts`](https://github.com/anomalyco/opencode/blob/v2.3.2/packages/core/src/automation/code.ts), [`server/process.ts`](https://github.com/anomalyco/opencode/blob/v2.3.2/packages/server/src/process.ts) |

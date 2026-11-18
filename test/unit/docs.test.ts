@@ -35,13 +35,19 @@ describe("the default rules block", () => {
 })
 
 describe("tested hosts", () => {
-  const UNRELEASED = /## \[Unreleased\]([\s\S]*?)(?=\n## |$)/.exec(read("CHANGELOG.md"))?.[1] ?? ""
+  // The newest CHANGELOG section: [Unreleased] while a release is being prepared, otherwise the newest release's notes.
+  const CHANGELOG = (() => {
+    const text = read("CHANGELOG.md")
+    const unreleased = /## \[Unreleased\]([\s\S]*?)(?=\n## |$)/.exec(text)?.[1]
+    if (unreleased !== undefined) return { name: "CHANGELOG.md (Unreleased)", text: unreleased }
+    return { name: "CHANGELOG.md (newest release)", text: /## \[[^\]]+\][^\n]*\n([\s\S]*?)(?=\n## |$)/.exec(text)?.[1] ?? "" }
+  })()
   const SOURCES: [string, string][] = [
     ["README.md", read("README.md")],
     ["AGENTS.md", read("AGENTS.md")],
     ["SECURITY.md", read("SECURITY.md")],
     ["docs/configuration.md", read("docs/configuration.md")],
-    ["CHANGELOG.md (Unreleased)", UNRELEASED],
+    [CHANGELOG.name, CHANGELOG.text],
   ]
 
   test.each(SOURCES)("%s names exactly TESTED_HOSTS wherever it says what is tested", (file, text) => {
@@ -60,6 +66,6 @@ describe("tested hosts", () => {
   test("the untested example is 2.2.99, and no doc names a future release as tested", () => {
     const all = SOURCES.map(([, text]) => text).join("\n")
     expect(all).toContain("2.2.99")
-    expect(all).not.toMatch(/\b2\.(?:2\.(?:8|9[0-8])|3\.(?:[1-8]\d?|9[0-8]?))\b(?!\d)/)
+    expect(all).not.toMatch(/\b2\.(?:2\.(?:8|9[0-8]|[1-9]\d{2,})|3\.(?:[3-9]|[1-9]\d+))\b(?!\d)/)
   })
 })

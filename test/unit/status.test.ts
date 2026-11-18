@@ -208,7 +208,7 @@ describe("buildStatus", () => {
   test("a host outside the range, run with allowUntestedHost, is reported once everything else is ready", () => {
     const status = buildStatus(facts({ host: { version: "3.0.0", tested: false, inRange: false } }))
     expect(status).toMatchObject({ state: "connected", host: { version: "3.0.0", range: ">=2.2.3 <2.4.0", tested: false } })
-    expect(status.nextStep).toBe("If Tavily misbehaves, use OpenCode 2.2.3, 2.2.4, 2.2.5, 2.2.6, 2.2.7 or 2.3.0.")
+    expect(status.nextStep).toBe("If Tavily misbehaves, use OpenCode 2.2.3, 2.2.4, 2.2.5, 2.2.6, 2.2.7, 2.3.0, 2.3.1 or 2.3.2.")
     const unknown = buildStatus(facts({ host: { version: null, tested: false, inRange: false } }))
     expect(unknown.host.version).toBeNull()
     expect(formatStatus(unknown)).toContain("- OpenCode: unknown version (untested; supported range >=2.2.3 <2.4.0)\n")
