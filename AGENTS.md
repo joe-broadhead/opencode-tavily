@@ -14,7 +14,7 @@ This repository builds `@joe-broadhead/opencode-tavily`, an OpenCode plugin that
   - an import of `@opentui/*` or `solid-js` outside `src/tui`.
 - Code outside `src/tui` imports only `@opencode/plugin`, `@opencode/plugin/*`, `node:*` and other files in `src/`. `src/tui` may also import `../rpc/index.js`, which the build inlines.
 - `src/host/tools-rpc.ts` is a copy of a module shared by several plugins. Change only its block between the `PLUGIN-SPECIFIC` markers here; change the rest in the shared copy first.
-- Tests import no host source: only `@opencode/plugin`, `@opencode/sdk` and `@opencode/client` at 2.2.3. The host stage runs the same suite against each other tested SDK, installed into a temp folder outside the lockfile (`tools/host-tests.mjs`), and fails when a release did not run. Write test doubles as narrow `Pick<Plugin.Context, ...>` fakes.
+- Tests import no host source: only `@opencode/plugin`, `@opencode/sdk` and `@opencode/client` at 2.2.3. The host stage runs the same suite against each other tested SDK, installed into a temp folder outside the lockfile (`tools/host-tests.mjs`), and fails when a release did not run. On 2.3.1 and later the harness builds that host through `PromiseSdk.create`, which `OpenCode.create` calls, with the SDK's `overrides` so that its Automation service also runs the scheduler, as `opencode serve` does: Code Mode with nobody present runs there as an automation's code action (`unattended` in `test/host/harness.ts`). Write test doubles as narrow `Pick<Plugin.Context, ...>` fakes.
 
 ## Permissions
 
