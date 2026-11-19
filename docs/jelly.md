@@ -18,7 +18,7 @@ default. The plugin sets no spending limit." It changes nothing Jelly allows.
 
 ## Tools and permissions
 
-5 tools are declared (5 read-only). Jelly's agents have no base "allow everything"
+5 tools are declared (0 read-only). Jelly's agents have no base "allow everything"
 rule, so this plugin's own default rules, which it puts after that rule, never reach them. Jelly
 writes each declared `ask` or `deny` as that tool's default instead (the person's own choice
 replaces it), and denies a read-only helper every tool not marked `readOnly`. A declared `allow`
@@ -88,4 +88,4 @@ declared value and bound against the options parser.
 Jelly's curated catalogue pins an exact version. Publish each release under a new version, so
 that a review in Jelly can tell two releases apart.
 
-The declaration test runs the shared kit, `test/support/jelly-kit.ts`, which checks the declaration and this page against Jelly's plugin authors' standard. `scripts/check-copies.mjs` holds the kit, and the shared part of the tools RPC (`src/host/tools-rpc.ts`), equal to the copy every plugin carries.
+The declaration test runs the shared kit, `test/support/jelly-kit.ts`, which checks the declaration and this page against Jelly's plugin authors' standard. `scripts/check-copies.mjs` holds the kit. The tools RPC's transport is source-contract's `tools-rpc` module, pinned in `package.json` and bundled into `dist/index.js`.

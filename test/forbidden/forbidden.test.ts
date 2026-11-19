@@ -74,7 +74,7 @@ const inTui = (file: string) => file.startsWith(join("src", "tui")) || file === 
  * The one allowed `evaluate` hook: the tools RPC's, which turns an ask on one of its own script calls in flight into a
  * deny, because no one is there to answer it. It only tightens, and leaves every other call alone.
  */
-const EVALUATE_ALLOWED = [join("src", "host", "tools-rpc.ts"), join("dist", "index.js")]
+const EVALUATE_ALLOWED = [join("dist", "index.js")]
 const evaluateHooks = (file: string) => matches(file, /permission\s*\.\s*hook\s*\(\s*["'`]evaluate/)
 
 if (!existsSync(join(REPO, "dist", "index.js"))) throw new Error("dist/ is missing. Run npm run build first.")
@@ -112,14 +112,14 @@ describe("src/ and dist/ use no forbidden API", () => {
 
   for (const rule of RULES) test(rule.name, () => expect(show(shipped.flatMap(rule.find))).toEqual([]))
 
-  test('permission.hook("evaluate") appears exactly once in the tools RPC and once in its bundle', () => {
+  test('permission.hook("evaluate") appears exactly once in the bundle that inlines the tools RPC', () => {
     for (const file of EVALUATE_ALLOWED) expect({ file, hooks: evaluateHooks(file).length }).toEqual({ file, hooks: 1 })
   })
 })
 
 describe("tests import no host source", () => {
   // Public packages only: the plugin SDK, the embedded host SDK and its client, and the TUI stack for the TUI tests.
-  const PUBLIC = /^(\.{1,2}\/|node:|bun:test$|@opencode\/(plugin|sdk|client)(\/|$)|@opentui\/|solid-js(\/|$))/
+  const PUBLIC = /^(\.{1,2}\/|node:|bun:test$|@opencode\/(plugin|sdk|client)(\/|$)|@opentui\/|solid-js(\/|$)|@we-the-rebel-alliance\/source-contract(\/|$))/
   test("every test import is relative, a Node or Bun built-in, or a public package", () => {
     const imports = files("test").flatMap(specifiers)
     expect(imports.length).toBeGreaterThan(0)

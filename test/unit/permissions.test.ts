@@ -81,16 +81,18 @@ describe("insertDefaultRules", () => {
 })
 
 describe("the access values", () => {
-  test("ask-changes keeps the five reads and asks for a tool Tavily adds later", () => {
+  test("ask-changes asks for the five tools, because each spends credits, and for a tool Tavily adds later", () => {
     const rules = defaultRules("ask-changes")
     expect(rules[0]).toEqual(ask("tavily_*"))
-    expect(rules.slice(1)).toEqual(KNOWN_ACTIONS.map(allow))
+    expect(rules.slice(1)).toEqual(KNOWN_ACTIONS.map(ask))
+    for (const action of KNOWN_ACTIONS) expect(evaluate(rules, action)).toBe("ask")
   })
 
-  test("read-only keeps the five reads and denies a tool Tavily adds later", () => {
+  test("read-only denies the five tools, because each spends credits, and a tool Tavily adds later", () => {
     const rules = defaultRules("read-only")
     expect(rules[0]).toEqual(deny("tavily_*"))
-    expect(rules.slice(1)).toEqual(KNOWN_ACTIONS.map(allow))
+    expect(rules.slice(1)).toEqual(KNOWN_ACTIONS.map(deny))
+    for (const action of KNOWN_ACTIONS) expect(evaluate(rules, action)).toBe("deny")
   })
 
   test("the block for each value is inserted, and a later rule still wins", () => {

@@ -1,8 +1,9 @@
 import { Plugin } from "@opencode/plugin"
+import { registerToolsRpc } from "@we-the-rebel-alliance/source-contract/tools-rpc"
 import { watchConnect } from "./connect.js"
 import { checkHost } from "./host-version.js"
 import { keyChecker } from "./key-check.js"
-import { METHODS, registerToolsRpc } from "./host/tools-rpc.js"
+import { METHODS, PLUGIN } from "./host/tools-rpc.js"
 import { readKey, registerServer, SERVER_NAME, watchKey, type ServerState } from "./mcp.js"
 import { parseOptions } from "./options.js"
 import { registerDefaultRules } from "./permissions.js"
@@ -45,7 +46,8 @@ export default Plugin.define({
     await registerTools(ctx.tool)
     // Scripts call the five tools with no model, as a session and its agent. A user's own server is used only when it
     // is at Tavily's URL; any other is not the plugin's to vouch for.
-    const stopTools = await registerToolsRpc(ctx, {
+    const stopTools = await registerToolsRpc(ctx as never, {
+      plugin: PLUGIN,
       methods: METHODS,
       mcp: { server: SERVER_NAME, managed: () => !server.userServer || server.userServerAtTavily },
     })
