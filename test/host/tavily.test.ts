@@ -313,7 +313,7 @@ describe(`access on ${HOST}`, () => {
 
   // R18: one host test per value, on the tools RPC path, where a refusal must reach nothing.
   for (const [access, effect] of [["ask-changes", "ask"], ["read-only", "deny"]] as const) {
-    test(`${access}: the block is the ${access} one, a read runs, and a ${effect} on the tools RPC path sends nothing`, async () => {
+    test(`${access}: the block is the ${access} one, and a spending tool is ${effect} so the tools RPC sends nothing`, async () => {
       const restricted = await startHost({ options: { access }, config: { agents: { reviewer: { description: "Reviews changes", mode: "subagent" } } } })
       try {
         const current = await until(`${access} status is ready`, async () => {
@@ -325,18 +325,10 @@ describe(`access on ${HOST}`, () => {
         await connectedWithKey(restricted)
         const { id } = await restricted.client.session.create({ agent: "build", location: restricted.location })
         const before = (await hostedTavily()).requests.length
-        const read = await restricted.client.rpc.call({ rpcID: TOOLS_RPC_ID, method: "tavily_search", input: { sessionID: id, input: { query: "host test" } } as never, location: restricted.location })
-        expect(read.output).toMatchObject({ text: expect.any(String) })
-
-        const refused = await restricted.client.session.create({
-          agent: "build", location: restricted.location, permissions: [rule("tavily_tavily_search", effect)],
-        })
-        const after = (await hostedTavily()).requests.length
         await expect(
-          restricted.client.rpc.call({ rpcID: TOOLS_RPC_ID, method: "tavily_search", input: { sessionID: refused.id, input: { query: "host test" } } as never, location: restricted.location }),
+          restricted.client.rpc.call({ rpcID: TOOLS_RPC_ID, method: "tavily_search", input: { sessionID: id, input: { query: "host test" } } as never, location: restricted.location }),
         ).rejects.toMatchObject({ data: { code: "PERMISSION_DENIED" } })
-        expect((await hostedTavily()).requests.length).toBe(after)
-        expect(after).toBeGreaterThan(before)
+        expect((await hostedTavily()).requests.length).toBe(before)
       } finally {
         await restricted.close()
       }

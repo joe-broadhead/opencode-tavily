@@ -2,6 +2,13 @@
 
 All notable changes to this project are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+- The tools RPC transport is source-contract's `tools-rpc` module, pinned to `v0.2.0` and bundled into `dist/index.js`. `src/host/tools-rpc.ts` is Tavily's part of it. The vendored copy and its `check-copies` pin are gone.
+- The five tools spend credits, so they are not free reads. At `access: "all"` they run. At `"ask-changes"` each asks. At `"read-only"` each is denied, and a tool Tavily adds later follows the same rule. The plugin sets no spending limit.
+
 ## [0.0.5] - 2026-11-18
 
 ### Changed

@@ -1,3 +1,35 @@
 {
-  "own": []
+  "own": [],
+  "tools": {
+    "tavily_search": {
+      "readOnlyOverride": {
+        "value": false,
+        "reason": "Tavily marks it read-only, but every call spends Tavily credits, so it is not a free read: ask-changes asks, read-only denies it, and a read-only helper is never given it."
+      }
+    },
+    "tavily_extract": {
+      "readOnlyOverride": {
+        "value": false,
+        "reason": "Tavily marks it read-only, but every call spends Tavily credits, so it is not a free read: ask-changes asks, read-only denies it, and a read-only helper is never given it."
+      }
+    },
+    "tavily_map": {
+      "readOnlyOverride": {
+        "value": false,
+        "reason": "Tavily marks it read-only, but every call spends Tavily credits, so it is not a free read: ask-changes asks, read-only denies it, and a read-only helper is never given it."
+      }
+    },
+    "tavily_crawl": {
+      "readOnlyOverride": {
+        "value": false,
+        "reason": "Tavily marks it read-only, but every call spends Tavily credits, so it is not a free read: ask-changes asks, read-only denies it, and a read-only helper is never given it."
+      }
+    },
+    "tavily_research": {
+      "readOnlyOverride": {
+        "value": false,
+        "reason": "Tavily marks it read-only, but every call spends Tavily credits, so it is not a free read: ask-changes asks, read-only denies it, and a read-only helper is never given it."
+      }
+    }
+  }
 }

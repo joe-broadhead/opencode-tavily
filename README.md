@@ -75,7 +75,7 @@ Ask for what you need. The model uses the skills to choose a tool, or you can na
 Tavily status
 - Connection: sign-in required
 - Account: none
-- Access: every tool runs without asking: the five reads and any tool Tavily adds later. Set the access option to "ask-changes" or "read-only" to restrict a tool Tavily adds later.
+- Access: every tool runs without asking: the five tools, which spend credits, and any tool Tavily adds later. Set the access option to "ask-changes" or "read-only" to ask or deny them.
 - Sign-in: OAuth (/connect → Tavily account)
 - Web search: Tavily, unless opencode.json sets "websearch"
 - Tools: none listed yet
@@ -107,8 +107,8 @@ See [Scripting](https://github.com/joe-broadhead/opencode-tavily/blob/HEAD/docs/
    | Value | What runs | What asks or is denied |
    | --- | --- | --- |
    | `"all"` (the default) | the five tools, and any tool Tavily adds later | nothing |
-   | `"ask-changes"` | the five tools | a tool Tavily adds later: it asks |
-   | `"read-only"` | the five tools | a tool Tavily adds later: it is **denied** |
+   | `"ask-changes"` | nothing: each of the five spends credits | the five tools, and a tool Tavily adds later: each asks |
+   | `"read-only"` | nothing | the five tools, and a tool Tavily adds later: they are **denied** |
 
    ```jsonc
    { "plugins": [{ "package": "github:joe-broadhead/opencode-tavily#v0.0.5", "options": { "access": "ask-changes" } }] }
