@@ -22,8 +22,8 @@ describe("the jelly declaration", () => {
     expect(declarationProblems(ROOT, { effectOf: effectFromRules(defaultRules()), registered: KNOWN_ACTIONS })).toEqual([])
   })
 
-  test("declares each tool read-only", () => {
-    for (const tool of pkg.jelly?.tools ?? []) expect(tool.readOnly, tool.name).toBe(true)
+  test("does not declare a spending tool read-only: a read-only helper is never given one", () => {
+    for (const tool of pkg.jelly?.tools ?? []) expect(tool.readOnly, tool.name).toBe(false)
   })
 
   const settings = (pkg.jelly?.contributes as { settings: PluginSetting[] }).settings

@@ -11,7 +11,7 @@ Write the plugin as its package name, or as an object with `package` and `option
   "$schema": "https://opencode.ai/config.json",
   "plugins": [
     {
-      "package": "github:joe-broadhead/opencode-tavily#v0.0.5",
+      "package": "github:joe-broadhead/opencode-tavily#v0.0.6",
       "options": { "websearch": true, "executionTimeoutMs": 900000 }
     }
   ]
@@ -25,7 +25,7 @@ All options are optional.
 | `websearch` | `true` | Make OpenCode's built-in Tavily provider the default for the `websearch` tool. A `websearch` setting in `opencode.json` still wins. See [Web search](#web-search). |
 | `executionTimeoutMs` | `900000` (15 minutes) | How long one call to a Tavily tool can run, in milliseconds. An integer from `60000` (1 minute) to `3600000` (1 hour). Research needs the most time. |
 | `allowUntestedHost` | `false` | Start on an OpenCode version outside `>=2.2.3 <2.4.0`. The plugin then logs a `HOST_UNTESTED` warning and runs. A later 2.2 or 2.3 release, such as 2.2.99, needs no option: it runs, and status calls it untested. |
-| `access` | `"all"` | `"all"`, `"ask-changes"` or `"read-only"`. It generates the default rules: everything allowed, or the five reads allowed and a tool Tavily adds later asking or denied. See [The default rules](#the-default-rules). |
+| `access` | `"all"` | `"all"`, `"ask-changes"` or `"read-only"`. It generates the default rules: everything allowed, or the five tools (each spends credits) and a tool Tavily adds later asking or denied. See [The default rules](#the-default-rules). |
 
 An unknown option, or a value of the wrong type, stops the plugin at start-up with a [`OPTIONS_INVALID`](#errors) error.
 
@@ -40,8 +40,10 @@ The `access` option generates one block, which the plugin adds to each agent rig
 | Value | What runs | What asks or is denied |
 | --- | --- | --- |
 | `"all"` (the default) | the five tools, and any tool Tavily adds later | nothing |
-| `"ask-changes"` | the five tools | a tool Tavily adds later: it asks |
-| `"read-only"` | the five tools | a tool Tavily adds later: it is **denied** |
+| `"ask-changes"` | nothing: each of the five spends credits | the five tools, and a tool Tavily adds later: each asks |
+| `"read-only"` | nothing | the five tools, and a tool Tavily adds later: they are **denied** |
+
+OpenCode's own `websearch` tool is outside this: while the `websearch` option is on it searches through Tavily and spends the same credits, under OpenCode's `websearch` permission, at every value. Set `"websearch": false` or deny `websearch` to stop it.
 
 <!-- The three blocks below are generated from defaultRules(access); a test asserts each one equals it. -->
 
@@ -63,11 +65,11 @@ The `access` option generates one block, which the plugin adds to each agent rig
 ```json
 [
   { "action": "tavily_*", "resource": "*", "effect": "ask" },
-  { "action": "tavily_tavily_search", "resource": "*", "effect": "allow" },
-  { "action": "tavily_tavily_extract", "resource": "*", "effect": "allow" },
-  { "action": "tavily_tavily_map", "resource": "*", "effect": "allow" },
-  { "action": "tavily_tavily_crawl", "resource": "*", "effect": "allow" },
-  { "action": "tavily_tavily_research", "resource": "*", "effect": "allow" }
+  { "action": "tavily_tavily_search", "resource": "*", "effect": "ask" },
+  { "action": "tavily_tavily_extract", "resource": "*", "effect": "ask" },
+  { "action": "tavily_tavily_map", "resource": "*", "effect": "ask" },
+  { "action": "tavily_tavily_crawl", "resource": "*", "effect": "ask" },
+  { "action": "tavily_tavily_research", "resource": "*", "effect": "ask" }
 ]
 ```
 
@@ -76,15 +78,15 @@ The `access` option generates one block, which the plugin adds to each agent rig
 ```json
 [
   { "action": "tavily_*", "resource": "*", "effect": "deny" },
-  { "action": "tavily_tavily_search", "resource": "*", "effect": "allow" },
-  { "action": "tavily_tavily_extract", "resource": "*", "effect": "allow" },
-  { "action": "tavily_tavily_map", "resource": "*", "effect": "allow" },
-  { "action": "tavily_tavily_crawl", "resource": "*", "effect": "allow" },
-  { "action": "tavily_tavily_research", "resource": "*", "effect": "allow" }
+  { "action": "tavily_tavily_search", "resource": "*", "effect": "deny" },
+  { "action": "tavily_tavily_extract", "resource": "*", "effect": "deny" },
+  { "action": "tavily_tavily_map", "resource": "*", "effect": "deny" },
+  { "action": "tavily_tavily_crawl", "resource": "*", "effect": "deny" },
+  { "action": "tavily_tavily_research", "resource": "*", "effect": "deny" }
 ]
 ```
 
-Tavily's five tools only read from the web, so no value changes what they do; the option decides what a tool Tavily adds later does. The plugin adds each rule only once, however often OpenCode rebuilds its agents.
+Tavily's five tools spend credits, so they are not free reads: `"ask-changes"` asks for each of them and `"read-only"` denies them, and a tool Tavily adds later follows the same rule. The plugin adds each rule only once, however often OpenCode rebuilds its agents.
 
 OpenCode checks a Tavily call against the agent's rules, and **the last matching rule wins**. Rules are checked in this order:
 
@@ -169,7 +171,7 @@ OpenCode's `websearch` tool uses one provider. OpenCode chooses it in this order
 While the plugin's `websearch` option is `true`, OpenCode does not use your stored choice. To use it again, set the option to `false`:
 
 ```jsonc
-{ "plugins": [{ "package": "github:joe-broadhead/opencode-tavily#v0.0.5", "options": { "websearch": false } }] }
+{ "plugins": [{ "package": "github:joe-broadhead/opencode-tavily#v0.0.6", "options": { "websearch": false } }] }
 ```
 
 OpenCode applies the `opencode.json` setting after plugins run, so the plugin cannot see it. When you set it, `/tavily-status` still shows "Web search: Tavily, unless opencode.json sets "websearch"", but your setting is used.

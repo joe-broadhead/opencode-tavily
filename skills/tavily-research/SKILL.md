@@ -11,7 +11,7 @@ If Tavily's tools are absent, run `/connect` and choose Tavily account for OAuth
 
 ## Propose it first
 
-The tool runs without a permission prompt, so you propose it. Before a Research task, end your turn with a proposal and a question, so the user agrees to the scope and the cost:
+By default the tool runs without a permission prompt, so you propose it. Before a Research task, end your turn with a proposal and a question, so the user agrees to the scope and the cost:
 
 - **the draft `input`** you would send: the question, the items to cover, the time period, the criteria, sources to prefer or avoid, and the shape of the report;
 - **the scope to confirm**: which items, which period, which criteria;

@@ -1,6 +1,6 @@
 {
   "name": "@joe-broadhead/opencode-tavily",
-  "version": "0.0.5",
+  "version": "0.0.6",
   "private": true,
   "description": "Unofficial OpenCode plugin for Tavily web search, extract, map, crawl and research",
   "keywords": [
@@ -59,6 +59,7 @@
     "@opencode/theme": "2.2.3",
     "@opentui/core": "0.8.0",
     "@opentui/solid": "0.8.0",
+    "@we-the-rebel-alliance/source-contract": "github:we-the-rebel-alliance/source-contract#v0.2.0",
     "@types/bun": "1.4.4",
     "babel-preset-solid": "1.9.16",
     "esbuild": "0.28.2",
@@ -107,31 +108,31 @@
         "name": "tavily.tavily_search",
         "permission": "tavily_tavily_search",
         "effect": "allow",
-        "readOnly": true
+        "readOnly": false
       },
       {
         "name": "tavily.tavily_extract",
         "permission": "tavily_tavily_extract",
         "effect": "allow",
-        "readOnly": true
+        "readOnly": false
       },
       {
         "name": "tavily.tavily_map",
         "permission": "tavily_tavily_map",
         "effect": "allow",
-        "readOnly": true
+        "readOnly": false
       },
       {
         "name": "tavily.tavily_crawl",
         "permission": "tavily_tavily_crawl",
         "effect": "allow",
-        "readOnly": true
+        "readOnly": false
       },
       {
         "name": "tavily.tavily_research",
         "permission": "tavily_tavily_research",
         "effect": "allow",
-        "readOnly": true
+        "readOnly": false
       }
     ],
     "skills": [
