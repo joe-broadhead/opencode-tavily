@@ -31,8 +31,7 @@ The permission mechanism that shipped is **default `ask` rules added through `ct
 
 In every agent, right after the first `{ action: "*", resource: "*", effect: "allow" }`, the plugin adds the block below. An agent without that rule gets nothing, because the block's `ask` would loosen its default deny.
 
-- `{ action: "tavily_*", resource: "*", effect: "ask" }`, so unknown and new tools ask;
-- one `allow` for each of Tavily's five read-only tools: `tavily_tavily_search`, `_extract`, `_map`, `_crawl` and `_research`.
+- the block from `defaultRules(access)` in `src/permissions.ts`: at `"all"` every tool is allowed; at `"ask-changes"` each of the five asks; at `"read-only"` each is denied. Each spends credits, so none is a free read. A tool Tavily adds later follows the `tavily_*` rule.
 
 The plugin adds the block only when the agent does not already have it, so rebuilds add nothing. OpenCode asserts `<server>_<tool>` on resource `*` for each MCP call, and the last matching rule wins. So every later rule wins over the block: the agent's own denies (Explore's `* * deny`, Plan's limits), your `permissions` and your saved "Always allow" answers.
 

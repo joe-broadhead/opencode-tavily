@@ -18,7 +18,7 @@ default. The plugin sets no spending limit." It changes nothing Jelly allows.
 
 ## Tools and permissions
 
-5 tools are declared (5 read-only). Jelly's agents have no base "allow everything"
+5 tools are declared (0 read-only). Jelly's agents have no base "allow everything"
 rule, so this plugin's own default rules, which it puts after that rule, never reach them. Jelly
 writes each declared `ask` or `deny` as that tool's default instead (the person's own choice
 replaces it), and denies a read-only helper every tool not marked `readOnly`. A declared `allow`

@@ -6,9 +6,11 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ### Changed
 
-- The tools RPC transport is source-contract's `tools-rpc` module, pinned to `v0.2.0` and bundled into
-  `dist/index.js`. `src/host/tools-rpc.ts` is Tavily's part of it. The vendored copy and its `check-copies` pin are
-  gone.
+- The tools RPC transport is source-contract's `tools-rpc` module, pinned to `v0.2.0` and bundled into `dist/index.js`. `src/host/tools-rpc.ts` is Tavily's part of it. The vendored copy and its `check-copies` pin are gone.
+- The five tools spend credits, so they are not free reads. At `access: "all"` they run. At `"ask-changes"` each asks.
+  At `"read-only"` each is denied, and a tool Tavily adds later follows the same rule. This changes what a user at
+  `"ask-changes"` or `"read-only"` sees: before, all five ran without asking at either value. The plugin sets no
+  spending limit.
 
 ## [0.0.5] - 2026-11-18
 

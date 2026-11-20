@@ -56,18 +56,16 @@ export const STATE_LABELS: Record<Status["state"], string> = {
   not_configured: "not configured",
 }
 
-/** What the access value does here, one sentence each: every known tool only reads from the web. */
+/** What the access value does here, one sentence each: every known tool spends credits, so none is a free read. */
 export function accessText(status: Status) {
   switch (status.access) {
     case "all":
-      return "every tool runs without asking: the five reads and any tool Tavily adds later. "
-        + 'Set the access option to "ask-changes" or "read-only" to restrict a tool Tavily adds later.'
+      return "every tool runs without asking: the five tools, which spend credits, and any tool Tavily adds later. "
+        + 'Set the access option to "ask-changes" or "read-only" to ask or deny them.'
     case "read-only":
-      return "the five reads run without asking, and any tool Tavily adds later is denied. "
-        + "All five only read from the web, so no value changes what they do."
+      return "the five tools are denied, because each one spends credits, and any tool Tavily adds later is denied."
     case "ask-changes":
-      return "the five reads run without asking; any tool Tavily adds later asks first. "
-        + "All five only read from the web, so no value changes what they do."
+      return "the five tools ask first, because each one spends credits, and any tool Tavily adds later asks too."
   }
 }
 

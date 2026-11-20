@@ -367,7 +367,7 @@ describe("formatStatus", () => {
         "Tavily status",
         "- Connection: sign-in required",
         "- Account: none",
-        '- Access: every tool runs without asking: the five reads and any tool Tavily adds later. Set the access option to "ask-changes" or "read-only" to restrict a tool Tavily adds later.',
+        '- Access: every tool runs without asking: the five tools, which spend credits, and any tool Tavily adds later. Set the access option to "ask-changes" or "read-only" to ask or deny them.',
         "- Sign-in: OAuth (/connect → Tavily account)",
         `- Web search: Tavily, unless opencode.json sets "websearch"`,
         "- Skills: the plugin's own",

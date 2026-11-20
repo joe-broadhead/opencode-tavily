@@ -4,7 +4,10 @@ import type { PermissionRule as Rule } from "./rpc/index.js"
 
 export type { Rule }
 
-/** The permission actions of Tavily's documented tools. Hosted discovery marks all five read-only. */
+/**
+ * The permission actions of Tavily's documented tools. Hosted discovery marks all five read-only, but each one spends
+ * credits, so this plugin does not treat them as free reads.
+ */
 export const KNOWN_ACTIONS = ["search", "extract", "map", "crawl", "research"].map((tool) => `tavily_tavily_${tool}`)
 
 const rule = (action: string, effect: Rule["effect"]): Rule => ({ action, resource: "*", effect })
@@ -13,12 +16,12 @@ const rule = (action: string, effect: Rule["effect"]): Rule => ({ action, resour
  * The block the plugin inserts. Broad first, narrow last, because the last matching rule wins.
  *
  * At the default `access: "all"` every Tavily tool is allowed, and so is one Tavily adds later, through the `tavily_*`
- * namespace. All five known tools only read, so `"ask-changes"` and `"read-only"` change only what a tool Tavily adds
- * later does: it asks, or it is denied. The known reads are allowed at every value.
+ * namespace. All five known tools spend credits, so they are not free reads: `"ask-changes"` asks for each of them and
+ * `"read-only"` denies them. A tool Tavily adds later follows the same namespace rule.
  */
 export function defaultRules(access: Access = "all"): Rule[] {
-  const other: Rule["effect"] = access === "all" ? "allow" : access === "ask-changes" ? "ask" : "deny"
-  return [rule("tavily_*", other), ...KNOWN_ACTIONS.map((action) => rule(action, "allow"))]
+  const spend: Rule["effect"] = access === "all" ? "allow" : access === "ask-changes" ? "ask" : "deny"
+  return [rule("tavily_*", spend), ...KNOWN_ACTIONS.map((action) => rule(action, spend))]
 }
 
 const BASE_ALLOW: Rule = { action: "*", resource: "*", effect: "allow" }
