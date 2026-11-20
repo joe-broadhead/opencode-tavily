@@ -110,6 +110,10 @@ See [Scripting](https://github.com/joe-broadhead/opencode-tavily/blob/HEAD/docs/
    | `"ask-changes"` | nothing: each of the five spends credits | the five tools, and a tool Tavily adds later: each asks |
    | `"read-only"` | nothing | the five tools, and a tool Tavily adds later: they are **denied** |
 
+   OpenCode's own `websearch` tool is outside this: while the `websearch` option is on it searches through Tavily and
+   spends the same credits, under OpenCode's `websearch` permission, at every value. Set `"websearch": false` or deny
+   `websearch` to stop it.
+
    ```jsonc
    { "plugins": [{ "package": "github:joe-broadhead/opencode-tavily#v0.0.6", "options": { "access": "ask-changes" } }] }
    ```
@@ -139,7 +143,7 @@ See [Scripting](https://github.com/joe-broadhead/opencode-tavily/blob/HEAD/docs/
    ] } } }
    ```
 
-3. **Per-tool rules**, in `permissions` or in an agent's own: `{ "action": "tavily_tavily_research", "resource": "*", "effect": "ask" }` makes research ask, and `deny` refuses it. `{ "action": "tavily_*", "resource": "*", "effect": "deny" }` denies every Tavily tool. A later rule wins, and a saved "Always allow" still applies after your rules.
+3. **Per-tool rules**, in `permissions` or in an agent's own: `{ "action": "tavily_tavily_research", "resource": "*", "effect": "ask" }` makes research ask, and `deny` refuses it. `{ "action": "tavily_*", "resource": "*", "effect": "deny" }` denies every Tavily tool. A later rule wins, and a saved "Always allow" still applies after your rules. To keep one tool running without asking at `"ask-changes"`, add `{ "action": "tavily_tavily_search", "resource": "*", "effect": "allow" }` after the block: it lets search run without asking at `"ask-changes"`; repeat for `tavily_tavily_extract` and `tavily_tavily_map`.
 
 **Why the names read `tavily_tavily_search`.** Tavily's own server names its tools `tavily_<tool>`, and OpenCode prefixes an MCP tool with its server's name, which is `tavily`. The permission action is that full name, so a rule is `tavily_tavily_search`. It is the exact name to use in a rule; renaming it would break saved rules, so it stays.
 

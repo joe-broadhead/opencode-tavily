@@ -9,8 +9,10 @@ All notable changes to this project are documented here. The format follows [Kee
 - The tools RPC transport is source-contract's `tools-rpc` module, pinned to `v0.2.0` and bundled into `dist/index.js`. `src/host/tools-rpc.ts` is Tavily's part of it. The vendored copy and its `check-copies` pin are gone.
 - The five tools spend credits, so they are not free reads. At `access: "all"` they run. At `"ask-changes"` each asks.
   At `"read-only"` each is denied, and a tool Tavily adds later follows the same rule. This changes what a user at
-  `"ask-changes"` or `"read-only"` sees: before, all five ran without asking at either value. The plugin sets no
-  spending limit.
+  `"ask-changes"` or `"read-only"` sees: before, all five ran without asking at either value. In Jelly the five are no
+  longer read-only: a read-only helper can't use them, and at Ask before changes each asks. OpenCode's own `websearch`
+  tool, which uses Tavily while the `websearch` option is on, is not affected: set `"websearch": false` or deny
+  `websearch` to stop it. The plugin sets no spending limit.
 
 ## [0.0.5] - 2026-11-18
 

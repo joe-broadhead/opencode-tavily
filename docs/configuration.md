@@ -43,6 +43,8 @@ The `access` option generates one block, which the plugin adds to each agent rig
 | `"ask-changes"` | nothing: each of the five spends credits | the five tools, and a tool Tavily adds later: each asks |
 | `"read-only"` | nothing | the five tools, and a tool Tavily adds later: they are **denied** |
 
+OpenCode's own `websearch` tool is outside this: while the `websearch` option is on it searches through Tavily and spends the same credits, under OpenCode's `websearch` permission, at every value. Set `"websearch": false` or deny `websearch` to stop it.
+
 <!-- The three blocks below are generated from defaultRules(access); a test asserts each one equals it. -->
 
 `access: "all"`:
