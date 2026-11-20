@@ -1,5 +1,5 @@
-// Tavily's part of the tools RPC: the plugin-specific block of src/host/tools-rpc.ts. The shared part is tested in
-// tools-rpc.test.ts.
+// Tavily's part of the tools RPC: the plugin value in src/host/tools-rpc.ts. The shared transport, the source
+// contract's, is tested in tools-rpc.test.ts.
 import { describe, expect, test } from "bun:test"
 import { METHODS, NEXT_STEPS, pluginError, shapeInput, shapeResult, TOOLS_RPC_ID } from "../../src/host/tools-rpc.js"
 import { SERVER_NAME } from "../../src/mcp.js"
