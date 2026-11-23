@@ -6,7 +6,7 @@ import { readFileSync } from "node:fs"
 import { join } from "node:path"
 import { fileURLToPath } from "node:url"
 import { TESTED_HOSTS } from "../../src/host-version.js"
-import { defaultRules } from "../../src/permissions.js"
+import { defaultRules, evaluate, KNOWN_ACTIONS, type Rule } from "../../src/permissions.js"
 
 const ROOT = fileURLToPath(new URL("../..", import.meta.url))
 const read = (file: string) => readFileSync(join(ROOT, file), "utf8")
@@ -26,11 +26,24 @@ describe("the default rules block", () => {
     }
   })
 
-  test("the agent fix example starts with the block's rules", () => {
+  test("the agent fix example is the ask-changes block plus a Research-only exception", () => {
     const raw = read("docs/configuration.md")
     const example = /for an agent named `reviewer`[\s\S]*?```jsonc\n([\s\S]*?)\n```/.exec(raw)?.[1] ?? "{}"
-    const permissions = (JSON.parse(example.replace(/\/\/.*$/gm, "")) as { agents: { reviewer: { permissions: unknown[] } } }).agents.reviewer.permissions
-    expect(permissions.slice(0, defaultRules().length)).toEqual(defaultRules())
+    const permissions = (JSON.parse(example.replace(/\/\/.*$/gm, "")) as { agents: { reviewer: { permissions: Rule[] } } }).agents.reviewer.permissions
+    expect(permissions.slice(0, defaultRules("ask-changes").length)).toEqual(defaultRules("ask-changes"))
+    expect(permissions.slice(0, defaultRules("all").length)).not.toEqual(defaultRules("all"))
+    expect(permissions).toHaveLength(defaultRules("ask-changes").length + 1)
+    for (const action of ["tavily_tavily_search", "tavily_tavily_extract", "tavily_tavily_map", "tavily_tavily_crawl", "tavily_tavily_unknown"])
+      expect({ action, effect: evaluate(permissions, action) }).toEqual({ action, effect: "ask" })
+    expect(evaluate(permissions, "tavily_tavily_research")).toBe("allow")
+  })
+
+  test("every concrete Tavily action the docs name is one the plugin knows", () => {
+    const known = new Set(KNOWN_ACTIONS)
+    for (const file of ["README.md", "SECURITY.md", "docs/configuration.md", "docs/scripting.md", "docs/jelly.md", "docs/architecture.md"]) {
+      const named = [...read(file).matchAll(/\btavily_tavily_[a-z_]+\b/g)].map((match) => match[0])
+      expect({ file, unknown: [...new Set(named)].filter((action) => !known.has(action)) }).toEqual({ file, unknown: [] })
+    }
   })
 })
 
