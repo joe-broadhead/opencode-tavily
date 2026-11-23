@@ -28,8 +28,9 @@ changes nothing in Jelly.
 - Off: none.
 - Everything else runs, as the plugin's own rules let it.
 
-A tool the upstream server adds later is not declared, so in Jelly it is not asked about by
-default. Keep `jelly.tools` in step with the known-tool list; `test/**/jelly.test.ts` checks
+A tool the upstream server adds later is not declared, so it follows the access choice: it runs
+at Allowed, asks first at Ask before changes, and is off at Read only, like the five declared
+spending tools. Keep `jelly.tools` in step with the known-tool list; `test/**/jelly.test.ts` checks
 each declared effect against the plugin's own default rules.
 
 Jelly's shared rules for every plugin of the family, word for word:

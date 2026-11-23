@@ -106,7 +106,7 @@ So your own rules always win over the plugin's, and a stricter agent stays stric
 
 Add rules to `permissions` in `opencode.json`. They apply to every agent.
 
-Research and Crawl use the most credits. To make them ask first:
+At Allowed or Ask before changes, Research and Crawl use the most credits. To make them ask first:
 
 ```jsonc
 {
@@ -117,10 +117,12 @@ Research and Crawl use the most credits. To make them ask first:
 }
 ```
 
-To allow a tool that asks, or a tool a restricted `access` denies, add a later `allow` rule for its name. Or answer **Always allow** when OpenCode asks. That saves an approval for the whole project; see [SECURITY.md](../SECURITY.md#permissions).
+At Read only both are already denied; this rule would replace the deny with an ask, so leave the read-only block alone.
+
+To allow a tool that asks, add a later `allow` rule for its name. A later `allow` also overrides a `deny`, including the one `read-only` inserts; use it only when you mean to change that setting. For an agent with its own `permissions`, put any Tavily rule after that agent's block, or the agent's later rules win (see [Agents defined only in your config](#agents-defined-only-in-your-config)). Or answer **Always allow** when OpenCode asks. That saves an approval for the whole project; see [SECURITY.md](../SECURITY.md#permissions).
 
 ```jsonc
-{ "permissions": [{ "action": "tavily_tavily_feedback", "resource": "*", "effect": "allow" }] }
+{ "permissions": [{ "action": "tavily_tavily_research", "resource": "*", "effect": "allow" }] }
 ```
 
 To turn off every Tavily tool:
@@ -135,30 +137,32 @@ To turn off every Tavily tool:
 
 OpenCode creates the agents that you define only in your config after plugins run, so these agents do not get the plugin's rules. Without the rules, a new Tavily tool runs there without a prompt. `/tavily-status` and the **Tavily: Status** dialog name these agents and show the block to paste. An agent counts as covered when the block appears anywhere after its first `* * allow` rule.
 
-Put the default rules shown by `/tavily-status` first in each listed agent's own permissions, in `opencode.json` or the agent's Markdown file, followed by your top-level rules for Tavily tools: the agent's own rules come after the top-level ones and would otherwise win. For example, for an agent named `reviewer`, when your top-level `permissions` allow `tavily_tavily_feedback`:
+Put the default rules shown by `/tavily-status` first in each listed agent's own permissions, in `opencode.json` or the agent's Markdown file, then add only the exception you mean after it. The agent's own rules come last, so an exception there wins over the block and over your top-level rules. The block depends on the setting: all `allow` at Allowed, all `ask` at Ask before changes, all `deny` at Read only. For example, for an agent named `reviewer` at `access: "ask-changes"`, this keeps every Tavily tool asking except Research:
 
 ```jsonc
 {
-  "permissions": [{ "action": "tavily_tavily_feedback", "resource": "*", "effect": "allow" }],
   "agents": {
     "reviewer": {
       "description": "Reviews changes",
       "mode": "subagent",
       "permissions": [
-        { "action": "tavily_*", "resource": "*", "effect": "allow" },
-        { "action": "tavily_tavily_search", "resource": "*", "effect": "allow" },
-        { "action": "tavily_tavily_extract", "resource": "*", "effect": "allow" },
-        { "action": "tavily_tavily_map", "resource": "*", "effect": "allow" },
-        { "action": "tavily_tavily_crawl", "resource": "*", "effect": "allow" },
-        { "action": "tavily_tavily_research", "resource": "*", "effect": "allow" },
-        { "action": "tavily_tavily_feedback", "resource": "*", "effect": "allow" }
+        { "action": "tavily_*", "resource": "*", "effect": "ask" },
+        { "action": "tavily_tavily_search", "resource": "*", "effect": "ask" },
+        { "action": "tavily_tavily_extract", "resource": "*", "effect": "ask" },
+        { "action": "tavily_tavily_map", "resource": "*", "effect": "ask" },
+        { "action": "tavily_tavily_crawl", "resource": "*", "effect": "ask" },
+        { "action": "tavily_tavily_research", "resource": "*", "effect": "ask" },
+        // After the block: only Research runs without asking. Search, Crawl and any tool Tavily adds later still ask.
+        { "action": "tavily_tavily_research", "resource": "*", "effect": "allow" }
       ]
     }
   }
 }
 ```
 
-For an agent in a Markdown file, put the same rules under `permissions` in the file. Do not put the plugin's rules in the top-level `permissions`: they would come after Explore's own rules and let Explore use Tavily tools.
+At Allowed, use the all-`allow` block; no exception is needed. At Read only, use the all-`deny` block and add no exception there, because that would override Read only. A later `allow` can override it, but that is a deliberate policy change.
+
+For an agent in a Markdown file, put the same rules under `permissions` in the file. Do not put the plugin's rules only in the top-level `permissions`: top-level rules come after built-in rules such as Explore's `* * deny`, so they can loosen it; explicit per-agent configuration comes later. Put the block in each agent that needs it.
 
 ## Web search
 
