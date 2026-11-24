@@ -2,7 +2,7 @@
 
 Unofficial plugin. Not affiliated with Tavily.
 
-A script can call Tavily's tools with no model: a cron job, a shell script, or any program that can reach the OpenCode server. It uses the tools RPC, `tavily.web.tools`, through `opencode api` or an OpenCode client.
+A script can call Tavily's tools with no model: an OpenCode automation, a shell script, or any program that can reach the OpenCode server. It uses the tools RPC, `tavily.web.tools`, through `opencode api` or an OpenCode client.
 
 | Method | The tool | Class |
 | --- | --- | --- |
@@ -13,7 +13,7 @@ A script can call Tavily's tools with no model: a cron job, a shell script, or a
 | `tavily_research` | `tavily_tavily_research` | read |
 | `describe` | none: lists the methods, their classes, permission actions, whether OpenCode lists each tool now, each tool's input as JSON Schema, and — with a session — that session's permission for each | |
 
-The class is the worst thing a tool can do. It never decides whether a call runs: the rules do. It is what `describe` reports and what a job's approval shows.
+The class is the worst thing a tool can do. It never decides whether a call runs: the rules do. It is what `describe` reports; every tool is a read, and each call spends credits (the plugin's `spend` classification).
 
 Each method's permission name is the tool name with the server's prefix, `tavily_`, for example `tavily_tavily_search`: Tavily's own server already names its tools `tavily_*`, so the doubled prefix is how the host scopes a rule to this server. Each method runs the tool with the same input: Tavily's own tool, through OpenCode's own connection and sign-in. The plugin never sees the API key or the OAuth token. A tool that Tavily adds later is never a method, even with an allow rule.
 
@@ -33,7 +33,7 @@ Never borrow a session found through history or a list: the script would run as 
 - **A script gets the same default as the model.** At the default `access: "all"`, the plugin's block allows every known tool and the `tavily_*` namespace, and each call spends credits. The five tools are not free reads: under `"ask-changes"` each asks, and under `"read-only"` each is denied, and a tool Tavily adds later follows the same rule. An ask is refused, because no one can answer a prompt for a script. Only an `allow` runs; an `ask` and a `deny` are refused, with no tool call and no prompt left waiting. An agent defined only in your config gets no default rules; `/tavily-status` names it.
 - OpenCode then checks the call itself, as it does for the model: the agent's rules, the session's rules, then saved approvals.
 
-**A saved "Always allow" approval does not authorize an ad-hoc script.** It lives outside the agent's and the session's rules, so the resolve refuses an `ask` even after a past approval. That is deliberate: a script's permission must be reviewable in config. A script's grant is a rule in the agent's or the session's config, or a Jobs run session. For a one-off that needs an approval-bound grant, use Jobs's `jobs_run_script`.
+**A saved "Always allow" approval does not authorize an ad-hoc script.** It lives outside the agent's and the session's rules, so the resolve refuses an `ask` even after a past approval. That is deliberate: a script's permission must be reviewable in config. A script's grant is a rule in the agent's or the session's config.
 
 Session rules come after the agent's, so a session can narrow what its script may do. This one can search and extract, but not crawl, map or research:
 
@@ -63,7 +63,7 @@ opencode api post /api/rpc/<id>/<method> -H "x-opencode-directory:$PWD" -d '{…
 
 Without it the call goes to the service's default location and fails `rpc.unavailable` if the plugin is not loaded there. The HTTP equivalents are the `location[directory]` query parameter and the same header. `describe` reports the `location` that answered and a `locationHint`.
 
-A location unloads after OpenCode's idle timeout. If a scheduled script gets `rpc.unavailable` from a location that was loaded before, send the call again once: the request loads the location. Jobs keeps its own location loaded.
+A location unloads after OpenCode's idle timeout. If an OpenCode automation's script gets `rpc.unavailable` from a location that was loaded before, send the call again once: the request loads the location.
 
 The tool's input is Tavily's: `describe` shows each tool's schema as OpenCode lists it now.
 

@@ -2,11 +2,11 @@
 
 ## Supported versions
 
-Only the latest version gets security fixes. It is tested on OpenCode `>=2.2.3 <2.4.0`.
+Only the latest version gets security fixes. It is tested on OpenCode `>=2.4.1 <2.5.0`.
 
 ## Reporting a vulnerability
 
-Report a vulnerability privately, through [GitHub private vulnerability reporting](https://github.com/joe-broadhead/opencode-tavily/security/advisories/new): open the **Security** tab and choose **Report a vulnerability**. Do not open a public issue for a security problem.
+Report a vulnerability privately, through [GitHub private vulnerability reporting](https://github.com/we-the-rebel-alliance/tavily-plugin/security/advisories/new): open the **Security** tab and choose **Report a vulnerability**. Do not open a public issue for a security problem.
 
 Include the plugin version, the OpenCode version, what you did, and what happened. Never include your Tavily API key or an OAuth token.
 
@@ -38,17 +38,17 @@ Search results, page text from Extract and Crawl, and Research reports come from
 
 ## Permissions
 
-- **Every tool is allowed by default.** The `access` option decides whether each tool runs, asks or is denied. At the default `access: "all"` an agent can search the web, read any page it names, map and crawl sites, and run cited research with no prompt, and every call spends your Tavily credits. A tool Tavily adds later runs too. The five tools spend credits, so they are not free reads: `"ask-changes"` asks for each of them and `"read-only"` denies them, and a tool Tavily adds later follows the same rule. Or add a later rule, such as `{ "action": "tavily_tavily_research", "resource": "*", "effect": "deny" }`. See [Configuration](https://github.com/joe-broadhead/opencode-tavily/blob/HEAD/docs/configuration.md#permissions).
+- **Every tool is allowed by default.** The `access` option decides whether each tool runs, asks or is denied. At the default `access: "all"` an agent can search the web, read any page it names, map and crawl sites, and run cited research with no prompt, and every call spends your Tavily credits. A tool Tavily adds later runs too. The five tools spend credits, so they are not free reads: `"ask-changes"` asks for each of them and `"read-only"` denies them, and a tool Tavily adds later follows the same rule. Or add a later rule, such as `{ "action": "tavily_tavily_research", "resource": "*", "effect": "deny" }`. See [Configuration](https://github.com/we-the-rebel-alliance/tavily-plugin/blob/master/docs/configuration.md#permissions).
 - Web content is untrusted. Because nothing asks by default, injected text in a page can make an agent fetch more pages and spend more credits as you: the `tavily` skill's rule not to follow instructions in content reduces the risk, and `access: "ask-changes"` or a per-tool `ask` rule restores a prompt.
 - **A saved "Always allow" applies to the whole project and to every agent in it, Plan included.** OpenCode saves the approval for the project, not for the agent or the session. A `deny` rule in your config still wins over it.
 - A git repository with no commits yet belongs to OpenCode's shared `global` project. An approval saved there also applies in every other repository that has no commits.
-- Agents that you define only in your config do not get the plugin's rules, so they follow OpenCode's own default rather than the `access` you set. `/tavily-status` names these agents and gives the fix; see [Configuration](https://github.com/joe-broadhead/opencode-tavily/blob/HEAD/docs/configuration.md#agents-defined-only-in-your-config).
+- Agents that you define only in your config do not get the plugin's rules, so they follow OpenCode's own default rather than the `access` you set. `/tavily-status` names these agents and gives the fix; see [Configuration](https://github.com/we-the-rebel-alliance/tavily-plugin/blob/master/docs/configuration.md#agents-defined-only-in-your-config).
 - The `tavily_*` rule also matches tools of any other MCP server whose name starts with `tavily_`.
-- In a Code Mode program on OpenCode 2.2.3, a declined call becomes an error that the program can catch, and the program continues. The `tavily` skill tells the model to accept a decline and not to try another route. See [Architecture](https://github.com/joe-broadhead/opencode-tavily/blob/HEAD/docs/architecture.md#code-mode-and-declined-calls).
+- In a Code Mode program on OpenCode 2.4.1, a declined call becomes an error that the program can catch, and the program continues. The `tavily` skill tells the model to accept a decline and not to try another route. See [Architecture](https://github.com/we-the-rebel-alliance/tavily-plugin/blob/master/docs/architecture.md#code-mode-and-declined-calls).
 
 ## Scripts
 
-The tools RPC (`tavily.web.tools`, see [docs/scripting.md](https://github.com/joe-broadhead/opencode-tavily/blob/HEAD/docs/scripting.md)) runs Tavily's five tools for a script, with no model. It adds no authority:
+The tools RPC (`tavily.web.tools`, see [docs/scripting.md](https://github.com/we-the-rebel-alliance/tavily-plugin/blob/master/docs/scripting.md)) runs Tavily's five tools for a script, with no model. It adds no authority:
 
 - A script names a session that names an agent, and runs as them. The rule for the tool's permission action is resolved before it runs, in OpenCode's own order (the agent's rules, then the session's, the last match winning). Only an `allow` runs; an `ask` and a `deny` are refused with no tool call.
 - **A script gets the same default as the model:** at `access: "all"` every known tool runs, so a script can spend credits on all five. Under `"ask-changes"` or `"read-only"` each of the five is refused, because each spends credits, and a later rule can refuse one too. An ask is refused, not prompted: no one is there to answer it. A saved "Always allow" approval is not part of the agent's and the session's rules, so it does not authorize an ad-hoc script. The plugin's permission hook changes only an ask on one of its own script calls in flight, only to a deny, and leaves every other call alone.

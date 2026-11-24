@@ -2,7 +2,7 @@
 
 The plugin is a thin layer over OpenCode's public plugin API. Tavily's hosted MCP server provides the tools, and OpenCode runs them: OAuth, the MCP connection, permission prompts and tool results. The plugin chooses the server's settings, adds default permission rules, chooses the web search default and reports status. It adds no tools of its own. It changes one kind of result only: Tavily's error object, which Tavily's server sends as an ordinary result, becomes an error (see [Tavily's error objects](#tavilys-error-objects)).
 
-It uses only APIs that are public in OpenCode 2.2.3. It is tested on stock OpenCode 2.2.3, 2.2.4, 2.2.5, 2.2.6, 2.2.7, 2.3.0, 2.3.1 and 2.3.2 (`TESTED_HOSTS` in `src/host-version.ts`). A later 2.2 or 2.3 release runs too, and status calls it untested. Outside `>=2.2.3 <2.4.0` the plugin does not start, unless `allowUntestedHost` is set.
+It uses only APIs that are public in OpenCode 2.4.1. It is tested on stock OpenCode 2.4.1 (`TESTED_HOSTS` in `src/host-version.ts`). A later 2.4 release runs too, and status calls it untested. Outside `>=2.4.1 <2.5.0` the plugin does not start, unless `allowUntestedHost` is set.
 
 `setup` runs in this order: options, host check, skills, key, then the MCP, agent, web search, skill and command transforms, the status RPC, the tool namespace and `execute.after` hook, the tools RPC, and last the key and `/connect` watchers. A failed check stops `setup` before the plugin registers anything.
 
@@ -25,6 +25,14 @@ With an API key, it adds `oauth: false` and `headers: { Authorization: "Bearer <
 - **`TAVILY_API_KEY`.** The plugin runs in the OpenCode server, usually the background service. That service gets the environment of the command that started it, plus `opencode service set env` variables, so a variable exported in a terminal later never reaches it. The TUI runs in the terminal: the dialog compares the terminal's `TAVILY_API_KEY` (only whether it is set) with the server's sign-in, and names the mismatch.
 - **Code Mode.** OpenCode's default applies: MCP tools are in Code Mode, as `tools.tavily.tavily_search` and so on. The plugin describes the `tavily` namespace in Code Mode's catalog with `editor.namespace` (`src/tools.ts`). With Code Mode off, they are direct tools named `tavily_tavily_search` and so on. OpenCode's own `websearch` tool covers simple searches outside Code Mode.
 
+## Spend
+
+All five tools are `read` methods that spend Tavily credits. `src/spend.ts` is the one classification: `SPEND_CLASS`
+(`spend`), `SPEND_UNIT` (`credit`), the five tools with Tavily's unit price for each, and `SPEND_TEXT`, the one line
+status, the README, the configuration guide and the `jelly` cost quote. `src/permissions.ts` derives `KNOWN_ACTIONS`
+from it and the tools RPC derives `METHODS`; status carries `cost`. v0 of plugin-contract has no `spend` method class,
+so the class stays `read` and 4b turns the same table into each action's `effect: "spend"` and `cost`.
+
 ## Permissions: default ask rules
 
 The permission mechanism that shipped is **default `ask` rules added through `ctx.agent.transform`**. There is no `allowTools` option and no permission hook.
@@ -41,7 +49,7 @@ An escalating permission hook was rejected. It would run after the rules and sav
 
 ## Web search
 
-When the `websearch` option is `true`, the plugin calls `e.default.set("tavily")` in `ctx.websearch.transform`, but only if no earlier transform chose a provider. It adds no provider of its own: OpenCode 2.2.3 ships one for Tavily, with the `tavily` integration.
+When the `websearch` option is `true`, the plugin calls `e.default.set("tavily")` in `ctx.websearch.transform`, but only if no earlier transform chose a provider. It adds no provider of its own: OpenCode 2.4.1 ships one for Tavily, with the `tavily` integration.
 
 OpenCode applies `websearch` from `opencode.json` in its own plugin, which runs after package plugins, so that choice wins and the plugin cannot see it. OpenCode uses the provider that the user chose when it first asked only when no transform set a provider.
 
@@ -53,12 +61,14 @@ One status object feeds `/tavily-status`, the RPC and the dialog:
 {
   version: string             // the plugin's version
   state: "connected" | "sign_in_required" | "connecting" | "failed" | "disabled" | "not_configured"
+  access: "all" | "ask-changes" | "read-only"
+  cost: { class: "spend"; unit: "credit"; text: string } // the one spend classification, in src/spend.ts
   auth: "oauth" | "key_connected" | "key_env" | "user_server" | "none"
   account?: string            // a credential label, never a secret
   keyCheck?: "accepted" | "rejected" | "unchecked" // with an API key: Tavily's answer from /usage
   tools: { visible: number; unknown: number; unknownNames: string[] } // the tavily server's tools OpenCode lists
   websearchDefault: boolean   // the plugin chose Tavily; opencode.json can still override it
-  host: { version: string | null; range: string; tested: boolean } // tested: 2.2.3, 2.2.4, 2.2.5, 2.2.6, 2.2.7, 2.3.0, 2.3.1 or 2.3.2
+  host: { version: string | null; range: string; tested: boolean } // tested: 2.4.1
   unguardedAgents: string[]   // agents without the default rules; empty when none
   permissionsBlock?: Rule[]   // the block to paste, when unguardedAgents is not empty
   shadowedSkills?: { id: string; path: string }[] // the plugin's skills that a same-id skill replaces, and its file
@@ -113,15 +123,15 @@ Every other result, successful or not, is left exactly as it is.
 
 `dist/tui.js` is prebuilt JavaScript from `src/tui/index.tsx`. OpenCode does not compile `.tsx` files from `node_modules`, so the package ships no TSX. The RPC contract is inlined into it, so it imports only `@opencode/plugin/rpc`, `@opentui/core`, `@opentui/solid` and `solid-js`, which OpenCode supplies.
 
-The TUI part registers one global command from setup: the palette entry **Tavily: Status**, with the slash alias `/tavily`. It opens one dialog that calls the RPC and shows the rows Connection, Account, Access, Sign-in, Web search, Skills, Tools, Agents without default rules (with the block), OpenCode and Next step, in that order; `/tavily-status` prints the same rows. `r` refreshes it and `Esc` closes it; the hint reads `r refresh · esc close`. It subscribes to events only while the dialog is open, and refreshes on `server.connected`, `mcp.status.changed`, `agent.updated`, `integration.updated`, `credential.updated` and `credential.switched`. OpenCode 2.2.3's client has no `mcp.tools.changed` event, and OpenCode lists a server's tools shortly after the server connects, so the tool count can lag until the next refresh or `r`. The part stops every listener, aborts open requests and closes the dialog when it is disposed.
+The TUI part registers one global command from setup: the palette entry **Tavily: Status**, with the slash alias `/tavily`. It opens one dialog that calls the RPC and shows the rows Connection, Account, Access, Sign-in, Web search, Skills, Tools, Agents without default rules (with the block), OpenCode and Next step, in that order; `/tavily-status` prints the same status as text, with the cost line too. `r` refreshes it and `Esc` closes it; the hint reads `r refresh · esc close`. It subscribes to events only while the dialog is open, and refreshes on `server.connected`, `mcp.status.changed`, `agent.updated`, `integration.updated`, `credential.updated` and `credential.switched`. OpenCode 2.4.1's client has no `mcp.tools.changed` event, and OpenCode lists a server's tools shortly after the server connects, so the tool count can lag until the next refresh or `r`. The part stops every listener, aborts open requests and closes the dialog when it is disposed.
 
 ## Package
 
 - JavaScript only: `dist`, `skills`, `README.md`, `LICENSE`, `CHANGELOG.md` and `package.json`.
 - `dist/` holds exactly two self-contained files, built by `scripts/build.mjs` with esbuild: `index.js` (the server part) and `tui.js` (the TUI part, after Babel compiles its JSX). Each inlines every module it uses, the RPC contract included, so neither has a relative import. OpenCode reloads a plugin in place but keeps the module records of unchanged paths, so a sibling module could otherwise be a stale copy. Only `@opencode/plugin`, OpenTUI, Solid and `node:*` stay imports; the build fails on anything else. `tsc` only typechecks.
 - The server part finds `skills/` at `../skills/` from `dist/index.js`, the package root.
-- No `dependencies` and no peer dependencies. OpenCode supplies `@opencode/plugin`, OpenTUI and Solid to plugins at runtime. They are dev dependencies here, for types, the build and the tests, with `@opencode/plugin` pinned at 2.2.3.
-- `"opencode": { "host": ">=2.2.3 <2.4.0" }` states the tested range. The start-up check uses the same range.
+- No `dependencies` and no peer dependencies. OpenCode supplies `@opencode/plugin`, OpenTUI and Solid to plugins at runtime. They are dev dependencies here, for types, the build and the tests, with `@opencode/plugin` pinned at 2.4.1.
+- `"opencode": { "host": ">=2.4.1 <2.5.0" }` states the tested range. The start-up check uses the same range.
 - No lifecycle scripts. OpenCode installs plugins with scripts turned off, so `dist/` is built before packing.
 - Exports: `.` → `./dist/index.js` and `./tui` → `./dist/tui.js`. The package ships no declaration files.
 
@@ -142,7 +152,7 @@ The TUI part registers one global command from setup: the palette entry **Tavily
 
 ## Code Mode and declined calls
 
-On OpenCode 2.2.3, when the user declines a tool call inside a Code Mode program, the program gets an error that it can catch, and the program continues. A program could therefore try a different route after a decline. The `tavily` skill tells the model to accept a decline and not to try another route. The upstream pull request [anomalyco/opencode#60112](https://github.com/anomalyco/opencode/pull/60112) proposes to end the run on a decline instead. This plugin does not work around it.
+On OpenCode 2.4.1, when the user declines a tool call inside a Code Mode program, the program gets an error that it can catch, and the program continues. A program could therefore try a different route after a decline. The `tavily` skill tells the model to accept a decline and not to try another route. The upstream pull request [anomalyco/opencode#60112](https://github.com/anomalyco/opencode/pull/60112) proposes to end the run on a decline instead. This plugin does not work around it.
 
 ## Upstream drift
 
@@ -150,21 +160,21 @@ On OpenCode 2.2.3, when the user declines a tool call inside a Code Mode program
 
 ## OpenCode facts the design relies on
 
-The links point to the OpenCode source at tag `v2.2.3`.
+The links point to the OpenCode source at tag `v2.4.1`.
 
 | Fact | Source |
 | --- | --- |
-| `ctx.mcp.transform` registers a remote server with `type`, `url`, `headers`, `oauth`, `timeout`, `codemode` and `protocol`. | [`packages/schema/src/mcp.ts`](https://github.com/anomalyco/opencode/blob/v2.2.3/packages/schema/src/mcp.ts) |
-| A remote server without `oauth: false` gets an OAuth integration named after the server, with the id `mcp_` and the first 16 hex digits of the SHA-1 of its name and URL. So it cannot collide with the built-in `tavily` integration. | [`packages/core/src/mcp/index.ts`](https://github.com/anomalyco/opencode/blob/v2.2.3/packages/core/src/mcp/index.ts) |
-| Each MCP tool call asserts the permission `<server>_<tool>` on resource `*`. | [`packages/core/src/tool/mcp.ts`](https://github.com/anomalyco/opencode/blob/v2.2.3/packages/core/src/tool/mcp.ts) |
-| The last matching rule wins. Denies are checked first. Saved approvals come after agent and session rules, and are saved for the project. | [`packages/core/src/permission.ts`](https://github.com/anomalyco/opencode/blob/v2.2.3/packages/core/src/permission.ts) |
-| Config `permissions` are appended to every agent after its built-in rules. Agents defined only in config are created after package plugins run: from the default agent, then the top-level rules, then their own. | [`packages/core/src/config/plugin/agent.ts`](https://github.com/anomalyco/opencode/blob/v2.2.3/packages/core/src/config/plugin/agent.ts) |
-| `DEFAULT_EXECUTION_TIMEOUT` is 12 hours. Tool calls pass `onprogress: () => {}`, so progress is never shown. | [`packages/core/src/mcp/client.ts`](https://github.com/anomalyco/opencode/blob/v2.2.3/packages/core/src/mcp/client.ts) |
-| OpenCode ships the `tavily` web search provider and the `tavily` integration (named "Tavily", with `key` and `TAVILY_API_KEY` methods). The provider sends the key, or uses Tavily's keyless mode when there is none. | [`packages/core/src/plugin/websearch/tavily.ts`](https://github.com/anomalyco/opencode/blob/v2.2.3/packages/core/src/plugin/websearch/tavily.ts) |
-| The web search provider is the one chosen by the transforms. The user's stored first-use choice is used only when no transform chose one. | [`packages/core/src/websearch.ts`](https://github.com/anomalyco/opencode/blob/v2.2.3/packages/core/src/websearch.ts) |
-| The `websearch` setting in `opencode.json` is applied by OpenCode's own `opencode.config.websearch` plugin, which runs after package plugins. | [`packages/core/src/config/plugin/websearch.ts`](https://github.com/anomalyco/opencode/blob/v2.2.3/packages/core/src/config/plugin/websearch.ts) |
-| `ctx.integration.connection.active(id)` and `.resolve()` are public. A saved account wins over an environment connection. | [`packages/core/src/integration.ts`](https://github.com/anomalyco/opencode/blob/v2.2.3/packages/core/src/integration.ts) |
-| `ctx.tool.list()` returns each MCP tool with a callable `execute`, which checks `<server>_<tool>` with the agent's and the session's rules and saved approvals, and gives the `evaluate` hook the call's `source`. A deny is a `Tool.Error` with a cause; the server's `isError` is one without. `execute.before` and `execute.after` hooks do not run for it. Not documented as an entry point. | [`packages/core/src/tool/mcp.ts`](https://github.com/anomalyco/opencode/blob/v2.2.3/packages/core/src/tool/mcp.ts) |
-| An RPC input given as a Standard Schema is validated with it; a plain JSON Schema is decoded with Effect, which drops unknown keys of an object that has properties. | `@opencode/core` 2.2.3, the RPC service's `parse` |
-| A permission decline inside a Code Mode program becomes an error that the program can catch. | [`packages/core/src/codemode/tool.ts`](https://github.com/anomalyco/opencode/blob/v2.2.3/packages/core/src/codemode/tool.ts) |
-| Unattended Code Mode: up to 2.3.0 a schedule's `if: { code }` check runs once at creation, with asks settled unattended. From 2.3.1 `experimental.automation` replaces `experimental.schedule`: a code action's tools are authorized at creation the same way (an ask or a deny is refused), and the program runs, under an unattended grant for those tools, when the scheduler finds it due. Only a server process starts the scheduler; the host test starts it in its embedded host. The flag is `experimental.automations`, also read as `experimental.schedules`. | [`automation/code.ts`](https://github.com/anomalyco/opencode/blob/v2.3.2/packages/core/src/automation/code.ts), [`server/process.ts`](https://github.com/anomalyco/opencode/blob/v2.3.2/packages/server/src/process.ts) |
+| `ctx.mcp.transform` registers a remote server with `type`, `url`, `headers`, `oauth`, `timeout`, `codemode` and `protocol`. | [`packages/schema/src/mcp.ts`](https://github.com/anomalyco/opencode/blob/v2.4.1/packages/schema/src/mcp.ts) |
+| A remote server without `oauth: false` gets an OAuth integration named after the server, with the id `mcp_` and the first 16 hex digits of the SHA-1 of its name and URL. So it cannot collide with the built-in `tavily` integration. | [`packages/core/src/mcp/index.ts`](https://github.com/anomalyco/opencode/blob/v2.4.1/packages/core/src/mcp/index.ts) |
+| Each MCP tool call asserts the permission `<server>_<tool>` on resource `*`. | [`packages/core/src/tool/mcp.ts`](https://github.com/anomalyco/opencode/blob/v2.4.1/packages/core/src/tool/mcp.ts) |
+| The last matching rule wins. Denies are checked first. Saved approvals come after agent and session rules, and are saved for the project. | [`packages/core/src/permission.ts`](https://github.com/anomalyco/opencode/blob/v2.4.1/packages/core/src/permission.ts) |
+| Config `permissions` are appended to every agent after its built-in rules. Agents defined only in config are created after package plugins run: from the default agent, then the top-level rules, then their own. | [`packages/core/src/config/plugin/agent.ts`](https://github.com/anomalyco/opencode/blob/v2.4.1/packages/core/src/config/plugin/agent.ts) |
+| `DEFAULT_EXECUTION_TIMEOUT` is 12 hours. Tool calls pass `onprogress: () => {}`, so progress is never shown. | [`packages/core/src/mcp/client.ts`](https://github.com/anomalyco/opencode/blob/v2.4.1/packages/core/src/mcp/client.ts) |
+| OpenCode ships the `tavily` web search provider and the `tavily` integration (named "Tavily", with `key` and `TAVILY_API_KEY` methods). The provider sends the key, or uses Tavily's keyless mode when there is none. | [`packages/core/src/plugin/websearch/tavily.ts`](https://github.com/anomalyco/opencode/blob/v2.4.1/packages/core/src/plugin/websearch/tavily.ts) |
+| The web search provider is the one chosen by the transforms. The user's stored first-use choice is used only when no transform chose one. | [`packages/core/src/websearch.ts`](https://github.com/anomalyco/opencode/blob/v2.4.1/packages/core/src/websearch.ts) |
+| The `websearch` setting in `opencode.json` is applied by OpenCode's own `opencode.config.websearch` plugin, which runs after package plugins. | [`packages/core/src/config/plugin/websearch.ts`](https://github.com/anomalyco/opencode/blob/v2.4.1/packages/core/src/config/plugin/websearch.ts) |
+| `ctx.integration.connection.active(id)` and `.resolve()` are public. A saved account wins over an environment connection. | [`packages/core/src/integration.ts`](https://github.com/anomalyco/opencode/blob/v2.4.1/packages/core/src/integration.ts) |
+| `ctx.tool.list()` returns each MCP tool with a callable `execute`, which checks `<server>_<tool>` with the agent's and the session's rules and saved approvals, and gives the `evaluate` hook the call's `source`. A deny is a `Tool.Error` with a cause; the server's `isError` is one without. `execute.before` and `execute.after` hooks do not run for it. Not documented as an entry point. | [`packages/core/src/tool/mcp.ts`](https://github.com/anomalyco/opencode/blob/v2.4.1/packages/core/src/tool/mcp.ts) |
+| An RPC input given as a Standard Schema is validated with it; a plain JSON Schema is decoded with Effect, which drops unknown keys of an object that has properties. | `@opencode/core` 2.4.1, the RPC service's `parse` |
+| A permission decline inside a Code Mode program becomes an error that the program can catch. | [`packages/core/src/codemode/tool.ts`](https://github.com/anomalyco/opencode/blob/v2.4.1/packages/core/src/codemode/tool.ts) |
+| Unattended Code Mode is an automation's code action: its tools are authorized at creation (an ask or a deny is refused), and the program runs under an unattended grant for those tools when the scheduler finds it due. Only a server process starts the scheduler; the host test starts it in its embedded host. The flag is `experimental.automations`. | [`automation/code.ts`](https://github.com/anomalyco/opencode/blob/v2.4.1/packages/core/src/automation/code.ts), [`server/process.ts`](https://github.com/anomalyco/opencode/blob/v2.4.1/packages/server/src/process.ts) |

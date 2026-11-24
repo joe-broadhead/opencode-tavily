@@ -1,9 +1,9 @@
 ---
 name: tavily
-description: Search the web and read web pages with Tavily - current facts, news, documentation, finding the right page on a site, mapping or crawling a site, and gathering cited sources. Use when the answer is on the web, when a page is one that webfetch cannot read, when checking whether Tavily is set up, or when writing a script or cron job that searches the web without a model (Tavily's tools RPC, no API key in the script). Not for the project's files or the user's own tools.
+description: Web search and page reading with Tavily: current facts, news, docs, finding a page on a site, mapping or crawling, cited sources, a page webfetch can't read, and scripts without an API key. Not for the project's files.
 ---
 
-If Tavily's tools are absent, run `/connect` and choose Tavily account for OAuth (or Tavily for an API key), or on Jelly call jelly_connection_request.
+If Tavily's tools are absent, run `/connect` and choose Tavily account for OAuth (or Tavily for an API key).
 
 # Tavily
 
@@ -23,11 +23,11 @@ Stop as soon as you can answer.
 
 | Tool | Cost |
 | --- | --- |
-| Search | 1 credit (`basic`, `fast`, `ultra-fast`), 2 (`advanced`) |
-| Extract | 1 per 5 pages read (`basic`), 2 per 5 (`advanced`); failed pages are free |
-| Map | 1 per 10 pages found, 2 per 10 with `instructions` |
-| Crawl | Map's cost plus Extract's for each page read |
-| Research | `mini` 4–110, `pro` 15–250 per task |
+| Search | 1 credit (basic, fast, ultra-fast), 2 (advanced) |
+| Extract | 1 per 5 pages read (basic), 2 per 5 (advanced); failed pages are free |
+| Map | 1 per 10 pages found, 2 per 10 with instructions |
+| Crawl | map's cost plus extract's for each page read |
+| Research | 4-110 credits (mini), 15-250 (pro) per task |
 
 `include_usage: true` on Extract, Map and Crawl reports the credits a call used. Before a large Crawl, tell the user the cost.
 
@@ -41,9 +41,9 @@ opencode api post /api/rpc/tavily.web/status -d '{"input":{}}'
 
 Report `state`, `auth`, `tools.visible` and any `unguardedAgents`, then quote `nextStep` whole: it is the one fix, and a paraphrase drops parts of it. Add no fixes of your own and don't search for config files; the next step already says where the change goes. The user can also run `/tavily-status`.
 
-## Scripts and cron jobs
+## Scripts and OpenCode automations
 
-A script calls the tools RPC as a session and its agent, with no model and no key (never `TAVILY_API_KEY` or `api.tavily.com`). Create a session for the script, and for any test run of it, once; it answers `{"data":{"id":"ses_…",…}}`, so keep `data.id`. Give the project as the session's `location`: a session made without one belongs to the service's default location, where the project's agents may not exist, and each call then fails `Agent not found`. Never borrow a session found in history or a session list: the script would run as that session's agent, under its rules.
+A script calls the tools RPC as a session and its agent, with no model and no key (never `TAVILY_API_KEY` or `api.tavily.com`). The same call is what an OpenCode automation runs on its schedule. Create a session for the script, and for any test run of it, once; it answers `{"data":{"id":"ses_…",…}}`, so keep `data.id`. Give the project as the session's `location`: a session made without one belongs to the service's default location, where the project's agents may not exist, and each call then fails `Agent not found`. Never borrow a session found in history or a session list: the script would run as that session's agent, under its rules.
 
 ```sh
 opencode api post /api/session -d '{"title":"news digest","agent":"build","location":{"directory":"/path/to/project"}}'
@@ -51,7 +51,7 @@ opencode api post /api/rpc/tavily.web.tools/tavily_search \
   -d '{"input":{"sessionID":"ses_…","input":{"query":"…","search_depth":"basic","max_results":3}}}'
 ```
 
-The result is `{"output":{"output":{"results":[{"title","url","content"},…],…},"text":…}}`. `opencode api` exits 1 on an RPC error (`UPSTREAM_ERROR`; `PERMISSION_DENIED` when the agent's rules ask or deny). Each run spends credits. Reference: https://raw.githubusercontent.com/joe-broadhead/opencode-tavily/HEAD/docs/scripting.md
+The result is `{"output":{"output":{"results":[{"title","url","content"},…],…},"text":…}}`. `opencode api` exits 1 on an RPC error (`UPSTREAM_ERROR`; `PERMISSION_DENIED` when the agent's rules ask or deny). Each run spends credits. Reference: https://raw.githubusercontent.com/we-the-rebel-alliance/tavily-plugin/master/docs/scripting.md
 
 ## Declines, sources and untrusted content
 

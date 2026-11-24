@@ -1,14 +1,16 @@
 import type { Plugin } from "@opencode/plugin"
 import type { Access } from "./options.js"
 import type { PermissionRule as Rule } from "./rpc/index.js"
+import { SPEND_TOOLS } from "./spend.js"
 
 export type { Rule }
 
 /**
- * The permission actions of Tavily's documented tools. Hosted discovery marks all five read-only, but each one spends
- * credits, so this plugin does not treat them as free reads.
+ * The permission actions of Tavily's documented tools, from the spend classification in `src/spend.ts`. Hosted
+ * discovery marks all five read-only, but each one spends credits (`SPEND_CLASS`), so this plugin does not treat them
+ * as free reads.
  */
-export const KNOWN_ACTIONS = ["search", "extract", "map", "crawl", "research"].map((tool) => `tavily_tavily_${tool}`)
+export const KNOWN_ACTIONS = SPEND_TOOLS.map((tool) => `tavily_tavily_${tool.name}`)
 
 const rule = (action: string, effect: Rule["effect"]): Rule => ({ action, resource: "*", effect })
 

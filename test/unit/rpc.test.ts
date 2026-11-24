@@ -25,17 +25,21 @@ describe("RPC contract", () => {
   })
 
   test("describes every status field and value", () => {
-    expect(status.output.required).toEqual(["version", "state", "access", "auth", "tools", "websearchDefault", "host", "unguardedAgents", "nextStep"])
+    expect(status.output.required).toEqual(["version", "state", "access", "cost", "auth", "tools", "websearchDefault", "host", "unguardedAgents", "nextStep"])
     // The shared states (S13) that Tavily can be in.
     expect(status.output.properties.state.enum).toEqual(["connected", "sign_in_required", "connecting", "failed", "disabled", "not_configured"])
     expect(status.output.properties.host.required).toEqual(["version", "range", "tested"])
     expect(status.output.properties.auth.enum).toEqual(["oauth", "key_connected", "key_env", "user_server", "none"])
     expect(status.output.properties.access.enum).toEqual(["all", "ask-changes", "read-only"])
+    expect(status.output.properties.cost.required).toEqual(["class", "unit", "text"])
+    expect(status.output.properties.cost.properties.class.enum).toEqual(["spend"])
+    expect(status.output.properties.cost.properties.unit.enum).toEqual(["credit"])
     expect(status.output.properties.keyCheck.enum).toEqual(["accepted", "rejected", "unchecked"])
     expect(Object.keys(status.output.properties)).toEqual([
       "version",
       "state",
       "access",
+      "cost",
       "auth",
       "account",
       "keyCheck",
@@ -55,7 +59,7 @@ describe("RPC contract", () => {
       userServerAtTavily: false,
       tools: [{ id: "tavily_tavily_search" }, { id: "tavily_tavily_feedback" }],
       websearchDefault: false,
-      host: { version: "2.2.3", tested: true, inRange: true },
+      host: { version: "2.4.1", tested: true, inRange: true },
       agents: [{ id: "build", permissions: [{ action: "*", resource: "*", effect: "allow" }, ...defaultRules()] }],
     }
     const statuses: Status[] = [

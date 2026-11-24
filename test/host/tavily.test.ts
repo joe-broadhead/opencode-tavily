@@ -166,7 +166,7 @@ describe(`defaults on ${HOST}`, () => {
       state: "sign_in_required",
       auth: "oauth",
       websearchDefault: true,
-      host: { version: HOST_VERSION, range: ">=2.2.3 <2.4.0", tested: true },
+      host: { version: HOST_VERSION, range: ">=2.4.1 <2.5.0", tested: true },
       unguardedAgents: ["reviewer"],
     })
     expect(current.tools).toEqual({ visible: 0, unknown: 0, unknownNames: [] })
@@ -231,8 +231,11 @@ describe(`defaults on ${HOST}`, () => {
     const current = await status(host)
     expect(current).toMatchObject({ state: "sign_in_required", auth: "oauth" })
     expect(current).not.toHaveProperty("keyCheck")
-    // After the reload, the server asks without a key, and Tavily asks for sign-in.
-    const after = (await hostedTavily()).requests.slice(removed).filter((request) => request.method === "initialize")
+    // After the reload, the server asks without a key, and Tavily asks for sign-in. OpenCode 2.4.1 probes a server
+    // with no `protocol` using `server/discover`; the 401 ends the attempt, so no `initialize` follows.
+    const after = (await hostedTavily()).requests
+      .slice(removed)
+      .filter((request) => request.method === "initialize" || request.method === "server/discover")
     expect(after.length).toBeGreaterThan(0)
     expect(after.every((request) => !request.authorized)).toBe(true)
     // OpenCode registers the OAuth integration again on the reload; the plugin names it again.
@@ -265,9 +268,9 @@ describe(`defaults on ${HOST}`, () => {
 })
 
 /**
- * Runs `code` as Code Mode does, through a schedule's check program up to 2.3.0 and an automation's code action from
- * 2.3.1: OpenCode checks each tool's input and output and evaluates permissions with nobody present to answer a prompt.
- * The program reports by throwing "SEEN <json>", so nothing is left behind and no model is involved.
+ * Runs `code` as Code Mode does, as an automation's code action: OpenCode checks each tool's input and output and
+ * evaluates permissions with nobody present to answer a prompt. The program reports by throwing "SEEN <json>", so
+ * nothing is left behind and no model is involved.
  */
 async function codeMode(host: Host, sessionID: string, code: string): Promise<{ seen: unknown } | { refused: string }> {
   const outcome = await unattended(host, sessionID, code)

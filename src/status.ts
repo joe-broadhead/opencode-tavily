@@ -18,6 +18,7 @@ import {
   websearchText,
   type Status,
 } from "./rpc/index.js"
+import { SPEND_CLASS, SPEND_TEXT, SPEND_UNIT } from "./spend.js"
 import { PLUGIN_VERSION } from "./version.js"
 import type { WebsearchState } from "./websearch.js"
 
@@ -145,6 +146,8 @@ export function buildStatus(facts: StatusFacts): Status {
     version: PLUGIN_VERSION,
     state,
     access,
+    // One classification for every tool: 4b turns it into each action's `effect: "spend"` and `cost`.
+    cost: { class: SPEND_CLASS, unit: SPEND_UNIT, text: SPEND_TEXT },
     auth,
     ...(account === undefined ? {} : { account }),
     ...(keyCheck === undefined ? {} : { keyCheck }),
@@ -224,6 +227,7 @@ export function formatStatus(status: Status) {
     `- Connection: ${STATE_LABELS[status.state]}`,
     `- Account: ${accountText(status)}`,
     `- Access: ${accessText(status)}`,
+    `- Cost: ${status.cost.text}`,
     `- Sign-in: ${authText(status)}`,
     `- Web search: ${websearchText(status)}`,
     `- Skills: ${skillsText(status)}`,

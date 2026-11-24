@@ -8,12 +8,12 @@
  *
  * A script runs as a session and the agent it names; the rule for the method's permission action is resolved before
  * dispatch, and only `allow` runs. An MCP method then runs through OpenCode's own executor. The five tools only read
- * from the web, and each one spends credits. The class `describe` reports is `read`; whether a call runs is the
- * session's rules, not the class.
+ * from the web, so their method class is `read`; each call spends credits, which `src/spend.ts` classifies as
+ * `SPEND_CLASS` (`spend`). `describe` reports the method class; whether a call runs is the session's rules.
  */
 import { toolsRpcId, upstreamText, type Failure, type McpResult, type MethodSpec, type NextSteps, type ShapeCall, type ToolsRpcPlugin } from "@we-the-rebel-alliance/source-contract/tools-rpc"
 import { SERVER_NAME } from "../mcp.js"
-import { KNOWN_ACTIONS } from "../permissions.js"
+import { SPEND_TOOLS } from "../spend.js"
 import { tavilyErrorIn, tavilyErrorLine, type TavilyError } from "../tavily-error.js"
 
 /** The plugin's id. The RPC id is `<PLUGIN_ID>.tools`. */
@@ -24,12 +24,13 @@ export const TOOLS_RPC_ID = toolsRpcId(PLUGIN_ID)
 
 /**
  * Every tool this plugin knows, by exact upstream name (the tool id without the `<server>_` prefix), with its class.
- * Tavily's five tools all only read, so all are `read`. An allowlist: a tool the server adds later is not a method
- * until it is classified here, and `describe` lists it as unclassified.
+ * Tavily's five tools all only read, so all are `read`; each spends credits, the plugin's `spend` classification.
+ * An allowlist: a tool the server adds later is not a method until it is classified here, and `describe` lists it as
+ * unclassified.
  */
-export const METHODS: readonly MethodSpec[] = KNOWN_ACTIONS.map((action): MethodSpec => ({
+export const METHODS: readonly MethodSpec[] = SPEND_TOOLS.map((tool): MethodSpec => ({
   kind: "mcp",
-  name: action.slice(`${SERVER_NAME}_`.length),
+  name: `tavily_${tool.name}`,
   class: "read",
 }))
 

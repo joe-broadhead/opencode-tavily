@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test"
 import { readFileSync } from "node:fs"
 import { KNOWN_ACTIONS } from "../../src/permissions.js"
+import { NAMESPACE_DESCRIPTION } from "../../src/tools.js"
 
 /**
  * The skills name only Tavily's known tools and their real parameters. `npm run check:upstream` compares only tool
@@ -52,8 +53,24 @@ describe("the skills' links", () => {
     test(`skills/${id} links to this repository's files only as raw files`, () => {
       const text = readFileSync(new URL(`../../skills/${id}/SKILL.md`, import.meta.url), "utf8")
       const links = [...text.matchAll(/https:\/\/[^\s)`>]+/g)].map((match) => match[0])
-      expect(links.filter((link) => /^https:\/\/github\.com\/joe-broadhead\//.test(link))).toEqual([])
-      for (const link of links.filter((link) => link.includes("joe-broadhead/opencode-tavily")))
-        expect(link).toMatch(/^https:\/\/raw\.githubusercontent\.com\/joe-broadhead\/opencode-tavily\/HEAD\/[\w./-]+$/)
+      expect(links.filter((link) => /^https:\/\/github\.com\/we-the-rebel-alliance\//.test(link))).toEqual([])
+      for (const link of links.filter((link) => link.includes("we-the-rebel-alliance/tavily-plugin")))
+        expect(link).toMatch(/^https:\/\/raw\.githubusercontent\.com\/we-the-rebel-alliance\/tavily-plugin\/master\/[\w./-]+$/)
     })
+})
+
+describe("the fixed-context budgets", () => {
+  test("the namespace line is at most 400 characters", () => {
+    expect(NAMESPACE_DESCRIPTION.length).toBeLessThanOrEqual(400)
+  })
+
+  test.each([
+    ["tavily", "Web search and page reading with Tavily: current facts, news, docs, finding a page on a site, mapping or crawling, cited sources, a page webfetch can't read, and scripts without an API key. Not for the project's files."],
+    ["tavily-research", "A Tavily Research task: a cited, multi-source web report that takes minutes and 4-250 credits. Not for one fact (search) or reports on the user's own files, code or meetings."],
+  ])("skills/%s has the drafted description and stays within 300 characters", (id, description) => {
+    const text = readFileSync(new URL(`../../skills/${id}/SKILL.md`, import.meta.url), "utf8")
+    const found = /^description: (.*)$/m.exec(text)?.[1]
+    expect(found).toBe(description)
+    expect(found!.length).toBeLessThanOrEqual(300)
+  })
 })

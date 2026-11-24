@@ -2,8 +2,9 @@
 // approvals. It asserts that only a rule set whose resolved effect is `allow` runs, that a resolved `ask` or `deny`
 // is refused before dispatch with no tool executed, and that a saved approval never changes the resolve.
 //
-// Why the matrix: Jobs grants a script by writing run-session `allow` rules, and a session allow overrides an agent
-// deny on the host (V3). The one place a mistake widens access is this resolve, so it is tested rather than assumed.
+// Why the matrix: an app or an automation grants a script by writing a session `allow` rule, and a session allow
+// overrides an agent deny on the host (V3). The one place a mistake widens access is this resolve, so it is tested
+// rather than assumed.
 import { describe, expect, test } from "bun:test"
 import { tmpdir } from "node:os"
 import { join } from "node:path"

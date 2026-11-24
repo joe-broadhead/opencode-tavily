@@ -1,4 +1,4 @@
-// Fakes typed against the public @opencode/plugin 2.2.3 Context. No host source.
+// Fakes typed against the public @opencode/plugin 2.4.1 Context. No host source.
 import { Agent, type Credential, type Mcp, type Plugin } from "@opencode/plugin"
 
 type Context = Plugin.Context

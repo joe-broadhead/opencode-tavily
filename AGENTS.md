@@ -1,60 +1,66 @@
 # Repository rules
 
-This repository builds `@joe-broadhead/opencode-tavily`, an OpenCode plugin that registers Tavily's official remote MCP server (`https://mcp.tavily.com/mcp/`) and uses Tavily's own tools. Setup, checks and releases are in [CONTRIBUTING.md](CONTRIBUTING.md).
+This repository builds `@we-the-rebel-alliance/tavily-plugin`, an OpenCode plugin that registers Tavily's official
+remote MCP server (`https://mcp.tavily.com/mcp/`) and uses Tavily's own tools. Setup, checks and releases are in
+[CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Platform
 
-- Use only public `@opencode/plugin` APIs that exist in OpenCode 2.2.3. The host range is exactly `>=2.2.3 <2.4.0`, never `^2.2.3`.
-- Test against stock OpenCode 2.2.3, 2.2.4, 2.2.5, 2.2.6, 2.2.7, 2.3.0, 2.3.1 and 2.3.2, the list in `src/host-version.ts` (`TESTED_HOSTS`). The host, pack and stock stages and CI take their versions from it.
-- `npm run lint` (`test/forbidden`) scans `src/` and `dist/` and fails on any of these:
-  - `ctx.generate.text` or `experimental.generate.text`;
-  - `ctx.experimental.artifact`;
-  - a `permission.hook("evaluate")`, except the one inlined into `dist/index.js` from source-contract's `tools-rpc` module: it turns an `ask` on one of the tools RPC's own script calls in flight into a deny, because no one can answer it, and touches nothing else;
-  - an import of `@opencode/ai`, `effect` or the V1 `@opencode-ai/` packages;
-  - an import of `@opentui/*` or `solid-js` outside `src/tui`.
-- Code outside `src/tui` imports only `@opencode/plugin`, `@opencode/plugin/*`, `node:*`, `@we-the-rebel-alliance/source-contract/tools-rpc` and other files in `src/`. `src/tui` may also import `../rpc/index.js`, which the build inlines.
-- `src/host/tools-rpc.ts` is Tavily's part of the tools RPC. The transport is source-contract's `tools-rpc` module, pinned in `package.json` and bundled into `dist/index.js`. Change the transport in source-contract, never here.
-- Tests import no host source: only `@opencode/plugin`, `@opencode/sdk` and `@opencode/client` at 2.2.3, and `@we-the-rebel-alliance/source-contract` (a devDependency the build bundles). The host stage runs the same suite against each other tested SDK, installed into a temp folder outside the lockfile (`tools/host-tests.mjs`), and fails when a release did not run. On 2.3.1 and later the harness builds that host through `PromiseSdk.create`, which `OpenCode.create` calls, with the SDK's `overrides` so that its Automation service also runs the scheduler, as `opencode serve` does: Code Mode with nobody present runs there as an automation's code action (`unattended` in `test/host/harness.ts`). Write test doubles as narrow `Pick<Plugin.Context, ...>` fakes.
+- Use only public `@opencode/plugin` APIs that exist in OpenCode 2.4.1. The host range is exactly `>=2.4.1 <2.5.0`,
+  never `^2.4.1`, and `TESTED_HOSTS` in `src/host-version.ts` is `["2.4.1"]`. A later 2.4 release runs and is reported
+  as untested; an unsupported release is refused with `HOST_UNTESTED` before anything is registered.
+- `npm run lint` (`test/forbidden`) scans `src/` and `dist/` and fails on an import of `@opencode/ai`, `effect` or the
+  V1 `@opencode-ai/` packages, on `@opentui/*` or `solid-js` outside `src/tui`, and on internal hook APIs.
+- Code outside `src/tui` imports only `@opencode/plugin`, `@opencode/plugin/*`, `node:*`,
+  `@we-the-rebel-alliance/source-contract/tools-rpc` and other files in `src/`. The tools RPC is the transport 4b
+  replaces; change it in source-contract, never here.
+- Tests import no host source: only `@opencode/plugin`, `@opencode/sdk` and `@opencode/client` at 2.4.1, and
+  `@we-the-rebel-alliance/source-contract` (a devDependency the build bundles). The host harness is the embedded 2.4.1
+  SDK with its Automation service running the scheduler, so Code Mode with nobody present runs as an automation's code
+  action (`unattended` in `test/host/harness.ts`). Write test doubles as narrow `Pick<Plugin.Context, ...>` fakes.
 
-## Permissions
+## Spend
 
-- Every tool is allowed by default. The five tools spend credits, so they are not free reads: `"ask-changes"` asks for each and `"read-only"` denies each. `src/permissions.ts` generates the block from the `access` option (`all`, the default; `ask-changes`; `read-only`) and inserts it after each agent's first base allow. A user's rules always win. The plugin sets no spending limit.
-- `defaultRules(access)` is printed in full in the README and in `docs/configuration.md` for each value; `test/unit/docs.test.ts` asserts the docs equal it.
-- The package declares `opencode.icons` and `opencode.vendor`, with `assets/icon.svg`, `icon-128.png` and `icon-256.png`. The icon is Tavily's Brand Mark (black), from https://www.tavily.com/brand, used under Tavily's brand guidelines: the vendor's own rounded-square mark, unmodified, centred on a white rounded holding tile with clear space of the icon's height on every side (so it stays visible on dark backgrounds), never wrapped in the family tile, recoloured, outlined or combined with other graphics. `opencode.vendor.mark: true` tells `scripts/check-icons.mjs` (contract revision 2) so; the README keeps its "not affiliated with Tavily" and trademark lines. Revision 2 of that script is ahead of the kit's copy until the release-kit rollout; do not edit it further here.
+- All five Tavily tools spend credits. `src/spend.ts` is the one classification: the five tools, Tavily's unit prices
+  and the one spend line. `src/permissions.ts` derives the known actions from it, the tools RPC derives `METHODS`, and
+  status carries `cost: { class: "spend", unit: "credit", text }`. 4b turns the same table into each action's
+  `effect: "spend"` and `cost`; do not restate the prices elsewhere.
+- Every tool is allowed by default. The `access` option generates the block (`all`; `ask-changes`; `read-only`) after
+  each agent's first base allow; a user's rules always win. The plugin sets no spending limit.
+- `defaultRules(access)` is printed in full in the README and in `docs/configuration.md` for each value;
+  `test/unit/docs.test.ts` asserts the docs equal it.
 
 ## Greenfield
 
 - No legacy or dead code, exports, dependencies, docs, tests or fixtures. Delete rather than deprecate.
 - No plugin-owned Tavily tools, no plugin web search provider and no keyless MCP mode.
-- No runtime manifests, schema pinning or attestation. `npm run check:upstream` warns about upstream drift and never fails.
-- Never write keys, tokens, personal data or machine-local absolute paths into the repository. Never log or store the Tavily key.
+- Never write keys, tokens, personal data or machine-local absolute paths into the repository. Never log or store the
+  Tavily key.
 
 ## Package
 
-- Releases come only from `.github/workflows/release.yml` ("Releasing" in [CONTRIBUTING.md](CONTRIBUTING.md)). A
-  release-prep PR sets `version` in `package.json` and the install specs and runs `node scripts/changelog.mjs release`;
-  once it is on `master` and CI passed, start the release with
-  `gh workflow run release.yml --ref master -f sha=<its full sha>`. The workflow builds `dist/`, makes the release
-  commit on a temporary `release/v<version>` branch, checks and stages everything, and waits for the owner to approve
-  the `release` environment; only then does it create the tag `v<version>` and the GitHub Release. Never push a tag or a
-  `release/*` branch, and never commit, tag or publish a release by hand. Agents never approve a release, never call the
-  deployment-approval API, and never bypass a ruleset or the environment.
-- No personal email in anything we publish. Every commit is authored and committed as
-  `joe-broadhead <91376460+joe-broadhead@users.noreply.github.com>`, except the release commit and tag, which the
-  release workflow makes as `github-actions[bot]`. Before committing or tagging, check that
-  `git config user.email` is that address: a fresh clone inherits the machine's global identity, which is not that
-  address. Never commit, tag or publish with a work or personal address, or with a local hostname.
-- The version appears only in `package.json` and `CHANGELOG.md`. `scripts/build.mjs` defines `__PLUGIN_VERSION__` from `package.json` for `src/version.ts`, and `bunfig.toml` preloads `test/version.ts`, which does the same for the tests.
-- No `dependencies`, peer dependencies, lifecycle scripts or declaration files. `exports` lists only `.` → `./dist/index.js` and `./tui` → `./dist/tui.js`.
-- `dist/` holds exactly `index.js` and `tui.js`, each a self-contained esbuild bundle with no relative imports (`scripts/build.mjs`). Only `@opencode/plugin*`, `@opentui/*`, `solid-js` and `node:*` stay external. `tsc` only typechecks.
-- `@opencode/plugin`, `@opencode/sdk`, `@opencode/client` and `@opencode/theme` are exact dev dependencies at 2.2.3. Do not add 2.2.4 to `package-lock.json`.
-- npm installs and runs the scripts (`npm ci`, `npm run check`); Bun 1.4.4 runs the tests.
-- The stages are `typecheck`, `build`, `unit`, `tui`, `host`, `pack`, `lint`, `icons` and `actionlint` (a notice when it is not on PATH). CI runs `actionlint` in its own job, and the host and pack stages run every release in `TESTED_HOSTS`.
+- Releases come only from `.github/workflows/release.yml` ("Releasing" in [CONTRIBUTING.md](CONTRIBUTING.md)). Never
+  push a tag or a `release/*` branch, and never commit, tag or publish a release by hand. Agents never approve a
+  release, never call the deployment-approval API, and never bypass a ruleset or the environment.
+- No personal email in anything we publish. Check `git config user.email` before committing: a fresh clone inherits
+  the machine's global identity. The release commit and tag are made by the release workflow as `github-actions[bot]`;
+  never bypass that with a hand-made tag or release.
+- The version appears only in `package.json` and `CHANGELOG.md`. `scripts/build.mjs` defines `__PLUGIN_VERSION__` from
+  `package.json` for `src/version.ts`, and `bunfig.toml` preloads `test/version.ts`, which does the same for the tests.
+- No `dependencies`, peer dependencies, lifecycle scripts or declaration files. `exports` lists `.` → `./dist/index.js`
+  and `./tui` → `./dist/tui.js`. `dist/` holds exactly `index.js` and `tui.js`, each a self-contained esbuild bundle
+  with no relative imports.
+- `@opencode/plugin`, `@opencode/sdk`, `@opencode/client`, `@opencode/theme` and `effect` are exact dev dependencies at
+  2.4.1 (effect 4.1.0, the plugin peer's version). Keep `package-lock.json` in step with `npm install`.
+- npm installs and runs the scripts (`npm ci`, `npm run check`); Bun 1.4.5 runs the tests.
 
 ## Contracts
 
-Keep these stable: plugin id `tavily.web`, TUI id `tavily.web.tui`, MCP server name `tavily`, RPC id `tavily.web` with the method `status`, the tools RPC `tavily.web.tools` with `describe` and one method per known tool, each with its class, and skill ids `tavily` and `tavily-research`. Users' permission rules and saved approvals name the server's tools, and clients call the RPC by its id.
+Keep these stable in 4a: plugin id `tavily.web`, TUI id `tavily.web.tui`, MCP server name `tavily`, RPC id
+`tavily.web` with the method `status`, the tools RPC `tavily.web.tools` with `describe` and one method per known tool,
+and skill ids `tavily` and `tavily-research`. The namespace line and both skill descriptions are fixed context: at most
+400 and 300 characters, and pinned by `test/unit/skill-text.test.ts`.
 
 ## Commits
 
-`npm run check` passes before every commit. Use `type(scope): summary`, with a body line such as `Refs #10`.
+`npm run check` passes before every commit. Use `type(scope): summary`, with a body line such as `Refs #30`.
