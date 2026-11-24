@@ -1,5 +1,6 @@
 import { Rpc } from "@opencode/plugin/rpc"
 import type { Access } from "../options.js"
+import { SPEND_CLASS, SPEND_TEXT, SPEND_UNIT } from "../spend.js"
 
 /** The shared status states (S13) Tavily reports, in machine form; the status rows use STATE_LABELS. */
 const STATES = ["connected", "sign_in_required", "connecting", "failed", "disabled", "not_configured"] as const
@@ -20,6 +21,12 @@ export interface Status {
   readonly state: (typeof STATES)[number]
   /** What the default rules allow: `all`, `ask-changes` or `read-only`. */
   readonly access: Access
+  /**
+   * Every Tavily tool spends credits: the plugin's `spend` classification, with Tavily's unit and the one spend line.
+   * v0 of plugin-contract carries this as each action's `effect: "spend"` and `cost`; 4b builds that from
+   * `src/spend.ts`.
+   */
+  readonly cost: { readonly class: typeof SPEND_CLASS; readonly unit: typeof SPEND_UNIT; readonly text: string }
   readonly auth: (typeof AUTH_SOURCES)[number]
   /** The credential's label, never a secret. */
   readonly account?: string
@@ -143,6 +150,16 @@ const status = {
     version: { type: "string" },
     state: { type: "string", enum: [...STATES] },
     access: { type: "string", enum: ["all", "ask-changes", "read-only"] },
+    cost: {
+      type: "object",
+      properties: {
+        class: { type: "string", enum: [SPEND_CLASS] },
+        unit: { type: "string", enum: [SPEND_UNIT] },
+        text: { type: "string" },
+      },
+      required: ["class", "unit", "text"],
+      additionalProperties: false,
+    },
     auth: { type: "string", enum: [...AUTH_SOURCES] },
     account: { type: "string" },
     keyCheck: { type: "string", enum: [...KEY_CHECKS] },
@@ -172,7 +189,7 @@ const status = {
     },
     nextStep: { type: "string" },
   },
-  required: ["version", "state", "access", "auth", "tools", "websearchDefault", "host", "unguardedAgents", "nextStep"],
+  required: ["version", "state", "access", "cost", "auth", "tools", "websearchDefault", "host", "unguardedAgents", "nextStep"],
   additionalProperties: false,
 } as const
 

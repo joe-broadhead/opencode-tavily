@@ -3,6 +3,7 @@ import { existsSync } from "node:fs"
 import { fileURLToPath } from "node:url"
 import type { Plugin } from "@opencode/plugin/tui"
 import type { Status } from "../../src/rpc/index.js"
+import { SPEND_CLASS, SPEND_TEXT, SPEND_UNIT } from "../../src/spend.js"
 import { DEFAULT_LOCATION, fakeContext, LOCATION, settle } from "./fake.js"
 
 // The first render loads OpenTUI's native renderer, which is slow on a busy machine.
@@ -23,11 +24,12 @@ const connected: Status = {
   version: "0.0.0",
   state: "connected",
   access: "all",
+  cost: { class: SPEND_CLASS, unit: SPEND_UNIT, text: SPEND_TEXT },
   auth: "oauth",
   account: "jo@example.com",
   tools: { visible: 5, unknown: 0, unknownNames: [] },
   websearchDefault: true,
-  host: { version: "2.2.3", range: ">=2.2.3 <2.4.0", tested: true },
+  host: { version: "2.4.1", range: ">=2.4.1 <2.5.0", tested: true },
   unguardedAgents: [],
   nextStep: "Nothing to do.",
 }
@@ -36,10 +38,11 @@ const needsAuth: Status = {
   version: "0.0.0",
   state: "sign_in_required",
   access: "all",
+  cost: { class: SPEND_CLASS, unit: SPEND_UNIT, text: SPEND_TEXT },
   auth: "oauth",
   tools: { visible: 6, unknown: 1, unknownNames: ["tavily_feedback"] },
   websearchDefault: false,
-  host: { version: "2.2.4", range: ">=2.2.3 <2.4.0", tested: true },
+  host: { version: "2.4.1", range: ">=2.4.1 <2.5.0", tested: true },
   unguardedAgents: ["reviewer"],
   permissionsBlock: [
     { action: "tavily_*", resource: "*", effect: "allow" },
@@ -128,7 +131,7 @@ describe("Tavily TUI status view", () => {
       ["Web search", `Tavily, unless opencode.json sets "websearch"`],
       ["Tools", "5 available"],
       ["Agents without default rules", "none"],
-      ["OpenCode", "2.2.3 (tested)"],
+      ["OpenCode", "2.4.1 (tested)"],
       ["Next step", "Nothing to do."],
     ])
       expect(frame).toContain(row(label, value))
@@ -178,7 +181,7 @@ describe("Tavily TUI status view", () => {
       row("Agents without default rules", "reviewer"),
       `{"action":"tavily_*","resource":"*","effect":"allow"},`,
       `{"action":"tavily_tavily_search","resource":"*","effect":"allow"}`,
-      row("OpenCode", "2.2.4 (tested)"),
+      row("OpenCode", "2.4.1 (tested)"),
       row("Next step", "Run /connect and choose Tavily account to sign in"),
     ]
     const positions = order.map((text) => frame.indexOf(text))

@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test"
 import { checkKey, keyChecker } from "../../src/key-check.js"
 import { terminalKeyText, type Status } from "../../src/rpc/index.js"
+import { SPEND_CLASS, SPEND_TEXT, SPEND_UNIT } from "../../src/spend.js"
 
 /** A fetch that answers each request with the next status, or throws for `"throw"`. */
 function fakeFetch(answers: (number | "throw")[]) {
@@ -55,10 +56,11 @@ describe("terminalKeyText", () => {
     version: "0.0.0",
     state: "connected",
     access: "all",
+    cost: { class: SPEND_CLASS, unit: SPEND_UNIT, text: SPEND_TEXT },
     auth,
     tools: { visible: 5, unknown: 0, unknownNames: [] },
     websearchDefault: true,
-    host: { version: "2.2.3", range: ">=2.2.3 <2.4.0", tested: true },
+    host: { version: "2.4.1", range: ">=2.4.1 <2.5.0", tested: true },
     unguardedAgents: [],
     nextStep: "Nothing to do.",
   })

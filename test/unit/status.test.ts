@@ -23,12 +23,15 @@ import {
 } from "./fake.js"
 import type { Plugin } from "@opencode/plugin"
 import pkg from "../../package.json" with { type: "json" }
+import { SPEND_CLASS, SPEND_TEXT, SPEND_UNIT } from "../../src/spend.js"
 
 const BASE: Rule = { action: "*", resource: "*", effect: "allow" }
 const guarded = { id: "build", permissions: [BASE, ...defaultRules()] }
+/** The spend classification every status carries: 4b turns it into the actions' effect and cost. */
+const COST: Status["cost"] = { class: SPEND_CLASS, unit: SPEND_UNIT, text: SPEND_TEXT }
 /** The host check for a tested release, and the same host as status reports it. */
-const CHECK = { version: "2.2.3", tested: true, inRange: true }
-const HOST = { version: "2.2.3", range: ">=2.2.3 <2.4.0", tested: true }
+const CHECK = { version: "2.4.1", tested: true, inRange: true }
+const HOST = { version: "2.4.1", range: ">=2.4.1 <2.5.0", tested: true }
 const USER_SERVER_SCRIPTS =
   "Scripts can't use your own tavily server, because its URL is not Tavily's (https://mcp.tavily.com/mcp/); point it at that URL, or remove it from opencode.json, to use the tools RPC."
 const KNOWN = ["search", "extract", "map", "crawl", "research"].map((name) => ({ id: `tavily_tavily_${name}` }))
@@ -54,6 +57,7 @@ describe("buildStatus", () => {
       version: pkg.version,
       state: "connected",
       access: "all",
+      cost: COST,
       auth: "oauth",
       account: "jo@example.com",
       tools: FIVE,
@@ -199,19 +203,19 @@ describe("buildStatus", () => {
   })
 
   test("an untested release inside the range runs normally: same state and next step, host.tested false", () => {
-    const status = buildStatus(facts({ host: { version: "2.2.99", tested: false, inRange: true } }))
-    expect(status).toMatchObject({ state: "connected", host: { version: "2.2.99", range: ">=2.2.3 <2.4.0", tested: false } })
+    const status = buildStatus(facts({ host: { version: "2.4.99", tested: false, inRange: true } }))
+    expect(status).toMatchObject({ state: "connected", host: { version: "2.4.99", range: ">=2.4.1 <2.5.0", tested: false } })
     expect(status.nextStep).toBe("Nothing to do.")
-    expect(formatStatus(status)).toContain("- OpenCode: 2.2.99 (untested; supported range >=2.2.3 <2.4.0)\n")
+    expect(formatStatus(status)).toContain("- OpenCode: 2.4.99 (untested; supported range >=2.4.1 <2.5.0)\n")
   })
 
   test("a host outside the range, run with allowUntestedHost, is reported once everything else is ready", () => {
     const status = buildStatus(facts({ host: { version: "3.0.0", tested: false, inRange: false } }))
-    expect(status).toMatchObject({ state: "connected", host: { version: "3.0.0", range: ">=2.2.3 <2.4.0", tested: false } })
-    expect(status.nextStep).toBe("If Tavily misbehaves, use OpenCode 2.2.3, 2.2.4, 2.2.5, 2.2.6, 2.2.7, 2.3.0, 2.3.1 or 2.3.2.")
+    expect(status).toMatchObject({ state: "connected", host: { version: "3.0.0", range: ">=2.4.1 <2.5.0", tested: false } })
+    expect(status.nextStep).toBe("If Tavily misbehaves, use OpenCode 2.4.1.")
     const unknown = buildStatus(facts({ host: { version: null, tested: false, inRange: false } }))
     expect(unknown.host.version).toBeNull()
-    expect(formatStatus(unknown)).toContain("- OpenCode: unknown version (untested; supported range >=2.2.3 <2.4.0)\n")
+    expect(formatStatus(unknown)).toContain("- OpenCode: unknown version (untested; supported range >=2.4.1 <2.5.0)\n")
   })
 
   test("never carries the key", () => {
@@ -354,6 +358,7 @@ describe("formatStatus", () => {
       version: "0.0.0",
       state: "sign_in_required",
       access: "all",
+      cost: COST,
       auth: "oauth",
       tools: { visible: 6, unknown: 1, unknownNames: ["tavily_feedback"] },
       websearchDefault: true,
@@ -368,6 +373,7 @@ describe("formatStatus", () => {
         "- Connection: sign-in required",
         "- Account: none",
         '- Access: every tool runs without asking: the five tools, which spend credits, and any tool Tavily adds later. Set the access option to "ask-changes" or "read-only" to ask or deny them.',
+        `- Cost: ${SPEND_TEXT}`,
         "- Sign-in: OAuth (/connect → Tavily account)",
         `- Web search: Tavily, unless opencode.json sets "websearch"`,
         "- Skills: the plugin's own",
@@ -375,7 +381,7 @@ describe("formatStatus", () => {
         "- Agents without default rules: reviewer",
         `  {"action":"tavily_*","resource":"*","effect":"allow"},`,
         `  {"action":"tavily_tavily_search","resource":"*","effect":"allow"}`,
-        "- OpenCode: 2.2.3 (tested)",
+        "- OpenCode: 2.4.1 (tested)",
         "- Next step: Sign in.",
       ].join("\n"),
     )
@@ -386,6 +392,7 @@ describe("formatStatus", () => {
       version: "0.0.0",
       state: "connected",
       access: "all",
+      cost: COST,
       auth: "key_connected",
       account: "Tavily",
       tools: NONE,
@@ -400,6 +407,7 @@ describe("formatStatus", () => {
       version: "0.0.0",
       state: "connected",
       access: "all",
+      cost: COST,
       auth: "key_env",
       keyCheck: "rejected",
       tools: NONE,
@@ -442,6 +450,7 @@ describe("/tavily-status", () => {
       version: "0.0.0",
       state: "connected",
       access: "all",
+      cost: COST,
       auth: "oauth",
       tools: FIVE,
       websearchDefault: true,

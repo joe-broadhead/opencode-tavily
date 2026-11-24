@@ -34,12 +34,12 @@ describe("plugin", () => {
 
   test("an untested host is refused before anything is registered", async () => {
     const { ctx, registered } = context("0.0.0-dev-1", {})
-    await expect(plugin.setup(ctx)).rejects.toThrow("HOST_UNTESTED: This plugin supports OpenCode >=2.2.3 <2.4.0, and this is 0.0.0-dev-1. Next step:")
+    await expect(plugin.setup(ctx)).rejects.toThrow("HOST_UNTESTED: This plugin supports OpenCode >=2.4.1 <2.5.0, and this is 0.0.0-dev-1. Next step:")
     expect(registered).toEqual([])
   })
 
   test("an invalid option is refused before anything is registered", async () => {
-    const { ctx, registered } = context("2.2.3", { websearch: "yes" })
+    const { ctx, registered } = context("2.4.1", { websearch: "yes" })
     await expect(plugin.setup(ctx)).rejects.toThrow(`OPTIONS_INVALID: "websearch" must be true or false.`)
     expect(registered).toEqual([])
   })

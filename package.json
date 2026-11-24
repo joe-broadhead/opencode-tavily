@@ -1,8 +1,8 @@
 {
-  "name": "@joe-broadhead/opencode-tavily",
-  "version": "0.0.7",
+  "name": "@we-the-rebel-alliance/tavily-plugin",
+  "version": "0.0.0",
   "private": true,
-  "description": "Unofficial OpenCode plugin for Tavily web search, extract, map, crawl and research",
+  "description": "Tavily web search, page reading, site maps and crawls, and cited research for OpenCode",
   "keywords": [
     "opencode",
     "opencode-plugin",
@@ -11,11 +11,11 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/joe-broadhead/opencode-tavily.git"
+    "url": "git+https://github.com/we-the-rebel-alliance/tavily-plugin.git"
   },
-  "homepage": "https://github.com/joe-broadhead/opencode-tavily#readme",
+  "homepage": "https://github.com/we-the-rebel-alliance/tavily-plugin#readme",
   "bugs": {
-    "url": "https://github.com/joe-broadhead/opencode-tavily/issues"
+    "url": "https://github.com/we-the-rebel-alliance/tavily-plugin/issues"
   },
   "type": "module",
   "exports": {
@@ -53,21 +53,22 @@
   "devDependencies": {
     "@babel/core": "7.29.7",
     "@babel/preset-typescript": "7.27.1",
-    "@opencode/client": "2.2.3",
-    "@opencode/plugin": "2.2.3",
-    "@opencode/sdk": "2.2.3",
-    "@opencode/theme": "2.2.3",
+    "@opencode/client": "2.4.1",
+    "@opencode/plugin": "2.4.1",
+    "@opencode/sdk": "2.4.1",
+    "@opencode/theme": "2.4.1",
     "@opentui/core": "0.8.0",
     "@opentui/solid": "0.8.0",
-    "@we-the-rebel-alliance/source-contract": "github:we-the-rebel-alliance/source-contract#v0.3.0",
+    "@we-the-rebel-alliance/source-contract": "github:we-the-rebel-alliance/source-contract#2fd55cdc0c6c1067927fefc403a88bfd18c9a971",
     "@types/bun": "1.4.4",
     "babel-preset-solid": "1.9.16",
+    "effect": "4.1.0",
     "esbuild": "0.28.2",
     "solid-js": "1.9.16",
     "typescript": "5.9.3"
   },
   "opencode": {
-    "host": ">=2.2.3 <2.4.0",
+    "host": ">=2.4.1 <2.5.0",
     "icons": [
       {
         "src": "assets/icon.svg",

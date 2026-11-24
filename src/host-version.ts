@@ -1,11 +1,11 @@
 /** The OpenCode releases this plugin supports. Matches `opencode.host` in package.json. */
-export const HOST_RANGE = ">=2.2.3 <2.4.0"
+export const HOST_RANGE = ">=2.4.1 <2.5.0"
 
 /** The releases the checks run on: the host, pack and stock stages, and CI. Every one is inside HOST_RANGE. */
-export const TESTED_HOSTS: readonly string[] = ["2.2.3", "2.2.4", "2.2.5", "2.2.6", "2.2.7", "2.3.0", "2.3.1", "2.3.2"]
+export const TESTED_HOSTS: readonly string[] = ["2.4.1"]
 
-/** The tested releases in words: "2.2.3, 2.2.4, 2.2.5, 2.2.6, 2.2.7, 2.3.0, 2.3.1 or 2.3.2". */
-export const TESTED_TEXT = `${TESTED_HOSTS.slice(0, -1).join(", ")} or ${TESTED_HOSTS.at(-1)}`
+/** The tested releases in words: "2.4.1". */
+export const TESTED_TEXT = TESTED_HOSTS.join(", ")
 
 export interface HostCheck {
   /** OpenCode's version; null when it reports none. */
@@ -16,17 +16,17 @@ export interface HostCheck {
   readonly inRange: boolean
 }
 
-/** `>=2.2.3 <2.4.0`: the 2.2 line from 2.2.3, and the 2.3 line. Later lines, prereleases and dev builds such as `0.0.0-dev-*` are outside. */
+/** `>=2.4.1 <2.5.0`: the 2.4 line from 2.4.1. Earlier lines, 2.5 and later, prereleases and dev builds such as `0.0.0-dev-*` are outside. */
 export function inHostRange(version: string): boolean {
   const match = /^(\d+)\.(\d+)\.(\d+)$/.exec(version)
   if (!match) return false
   const [major, minor, patch] = match.slice(1).map(Number)
-  return major === 2 && ((minor === 2 && patch >= 3) || minor === 3)
+  return major === 2 && minor === 4 && patch >= 1
 }
 
 /**
- * Accepts every release in the range; a release in it that is not tested (a later 2.2 or 2.3 release) runs normally, and status
- * says it is untested. Outside the range the plugin does not start, unless `allowUntestedHost` is set.
+ * Accepts every release in the range; a later 2.4 release that is not tested runs normally, and status says it is
+ * untested. Outside the range the plugin does not start, unless `allowUntestedHost` is set.
  */
 export function checkHost(version: string, allowUntestedHost: boolean, warn: (message: string) => void): HostCheck {
   const reported = version.trim() === "" ? null : version

@@ -1,4 +1,4 @@
-// A narrow fake of the TUI context, typed against the public @opencode/plugin/tui 2.2.3 API. No host source.
+// A narrow fake of the TUI context, typed against the public @opencode/plugin/tui 2.4.1 API. No host source.
 import type { Plugin } from "@opencode/plugin/tui"
 import { RGBA } from "@opentui/core"
 import { testRender } from "@opentui/solid"

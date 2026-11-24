@@ -43,7 +43,7 @@ async function listTools(signal) {
     if (session) headers["mcp-session-id"] = session
     return reply(response, body.id)
   }
-  const init = await post("initialize", { protocolVersion: PROTOCOL, capabilities: {}, clientInfo: { name: "opencode-tavily-check-upstream", version: "0" } })
+  const init = await post("initialize", { protocolVersion: PROTOCOL, capabilities: {}, clientInfo: { name: "tavily-plugin-check-upstream", version: "0" } })
   headers["mcp-protocol-version"] = init.protocolVersion ?? PROTOCOL
   await post("notifications/initialized", {}, true)
   const tools = []

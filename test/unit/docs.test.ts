@@ -40,7 +40,7 @@ describe("the default rules block", () => {
 
   test("every concrete Tavily action the docs name is one the plugin knows", () => {
     const known = new Set(KNOWN_ACTIONS)
-    for (const file of ["README.md", "SECURITY.md", "docs/configuration.md", "docs/scripting.md", "docs/jelly.md", "docs/architecture.md"]) {
+    for (const file of ["README.md", "SECURITY.md", "docs/configuration.md", "docs/scripting.md", "docs/architecture.md"]) {
       const named = [...read(file).matchAll(/\btavily_tavily_[a-z_]+\b/g)].map((match) => match[0])
       expect({ file, unknown: [...new Set(named)].filter((action) => !known.has(action)) }).toEqual({ file, unknown: [] })
     }
@@ -48,12 +48,11 @@ describe("the default rules block", () => {
 })
 
 describe("tested hosts", () => {
-  // The newest CHANGELOG section: [Unreleased] while a release is being prepared, otherwise the newest release's notes.
+  // CHANGELOG.md restarts at 0.0.0 and has one unreleased section until the release.
   const CHANGELOG = (() => {
     const text = read("CHANGELOG.md")
-    const unreleased = /## \[Unreleased\]([\s\S]*?)(?=\n## |$)/.exec(text)?.[1]
-    if (unreleased !== undefined) return { name: "CHANGELOG.md (Unreleased)", text: unreleased }
-    return { name: "CHANGELOG.md (newest release)", text: /## \[[^\]]+\][^\n]*\n([\s\S]*?)(?=\n## |$)/.exec(text)?.[1] ?? "" }
+    const unreleased = /## 0\.0\.0 \(unreleased\)\n([\s\S]*?)(?=\n## |$)/.exec(text)?.[1]
+    return { name: "CHANGELOG.md (0.0.0, unreleased)", text: unreleased ?? "" }
   })()
   const SOURCES: [string, string][] = [
     ["README.md", read("README.md")],
@@ -68,7 +67,7 @@ describe("tested hosts", () => {
       .split("\n")
       .flatMap((line) => line.split(/\.\s+/))
       .filter((sentence) => /\btested\b/i.test(sentence))
-      // A status sample reads `2.2.3 (tested)`, and the supported range is not a tested release.
+      // A status sample reads `2.4.1 (tested)`, and the supported range is not a tested release.
       .filter((sentence) => !/\(\s*tested\s*\)/.test(sentence))
       .map((sentence) => sentence.replace(/`[^`]*>=[^`]*`/g, ""))
       .map((sentence) => [...sentence.matchAll(/\b\d+\.\d+\.\d+\b/g)].map((version) => version[0]!))
@@ -76,9 +75,11 @@ describe("tested hosts", () => {
     for (const versions of mentions) expect({ file, versions: [...new Set(versions)].sort() }).toEqual({ file, versions: [...TESTED_HOSTS].sort() })
   })
 
-  test("the untested example is 2.2.99, and no doc names a future release as tested", () => {
+  test("the untested example is 2.4.99, and no doc names another release as tested", () => {
     const all = SOURCES.map(([, text]) => text).join("\n")
-    expect(all).toContain("2.2.99")
-    expect(all).not.toMatch(/\b2\.(?:2\.(?:8|9[0-8]|[1-9]\d{2,})|3\.(?:[3-9]|[1-9]\d+))\b(?!\d)/)
+    expect(all).toContain("2.4.99")
+    // 2.4.1 is tested; 2.4.99 is the untested example; 2.5.0 is the unsupported one. No other release belongs here.
+    const versions = [...new Set([...all.matchAll(/\b2\.\d+\.\d+\b/g)].map((match) => match[0]))]
+    expect(versions.filter((version) => !["2.4.1", "2.4.99", "2.5.0"].includes(version))).toEqual([])
   })
 })

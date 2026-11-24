@@ -1,7 +1,7 @@
 // The built package as users get it: `npm pack`, then `npm install --ignore-scripts` of the tarball into an empty
 // project, offline, with the npm on PATH. Run it after `npm run build` (check does). PACK_TARBALL tests a tarball that
 // is already packed instead, such as the one the release workflow publishes. The tarball holds only
-// JavaScript, skills, docs and the Jelly icon; the install adds nothing else; and the installed package imports, and
+// JavaScript, skills, docs and the icon; the install adds nothing else; and the installed package imports, and
 // loads in each stock OpenCode release it is tested on (startStock in ../host/harness.ts). On each release it also
 // signs in both ways, OAuth and an API key, against a loopback fake Tavily, and a script calls the tools through the
 // tools RPC.
@@ -24,7 +24,7 @@ const USAGE_URL = "https://api.tavily.com/usage"
 // harness.ts).
 setDefaultTimeout(300_000)
 
-const NAME = "@joe-broadhead/opencode-tavily"
+const NAME = "@we-the-rebel-alliance/tavily-plugin"
 const ALLOWED = /^(package\.json|README\.md|LICENSE|CHANGELOG\.md|assets\/icon(-128|-256)?\.(svg|png)|dist\/.+|skills\/.+)$/
 const REQUIRED = [
   "package.json",
@@ -93,7 +93,7 @@ describe("the tarball", () => {
     for (const field of ["dependencies", "optionalDependencies", "peerDependencies", "peerDependenciesMeta", "bundleDependencies", "bundledDependencies", "overrides"])
       expect(manifest[field]).toBeUndefined()
     expect(Object.keys(manifest.scripts ?? {}).filter((script) => LIFECYCLE.includes(script))).toEqual([])
-    expect(manifest.opencode).toMatchObject({ host: ">=2.2.3 <2.4.0", vendor: { id: "tavily", name: "Tavily", domain: "tavily.com" } })
+    expect(manifest.opencode).toMatchObject({ host: ">=2.4.1 <2.5.0", vendor: { id: "tavily", name: "Tavily", domain: "tavily.com" } })
     expect(manifest.opencode.icons.map((icon: { src: string }) => icon.src)).toEqual(["assets/icon.svg", "assets/icon-128.png", "assets/icon-256.png"])
     expect(manifest.exports).toEqual({
       ".": "./dist/index.js",
@@ -109,8 +109,8 @@ describe("the tarball", () => {
 describe("the install", () => {
   test("adds only this package: no peers, no dependencies, no bundled modules", () => {
     const visible = (directory: string) => readdirSync(directory).filter((entry) => !entry.startsWith("."))
-    expect(visible(join(project, "node_modules"))).toEqual(["@joe-broadhead"])
-    expect(visible(join(project, "node_modules", "@joe-broadhead"))).toEqual(["opencode-tavily"])
+    expect(visible(join(project, "node_modules"))).toEqual(["@we-the-rebel-alliance"])
+    expect(visible(join(project, "node_modules", "@we-the-rebel-alliance"))).toEqual(["tavily-plugin"])
     expect(existsSync(join(installed, "node_modules"))).toBe(false)
   })
 
@@ -185,7 +185,7 @@ for (const version of STOCK_VERSIONS)
       const { output } = await host.client.rpc.call({ rpcID: "tavily.web", method: "status", input: {}, location: host.location })
       expect(schemaErrors(Tavily.methods.status.output, output)).toEqual([])
       // The proxy refuses every request, so the server fails to connect (see startStock).
-      expect(output).toMatchObject({ version: manifest.version, state: "failed", auth: "oauth", host: { version, range: ">=2.2.3 <2.4.0", tested: true }, unguardedAgents: [] })
+      expect(output).toMatchObject({ version: manifest.version, state: "failed", auth: "oauth", host: { version, range: ">=2.4.1 <2.5.0", tested: true }, unguardedAgents: [] })
     })
 
     test("/connect lists the built-in key entry as Tavily and the server's OAuth entry as Tavily account", async () => {
@@ -302,7 +302,11 @@ for (const version of STOCK_VERSIONS)
         return /^mcp_/.test(server?.integrationID ?? "") && server?.status.status === "needs_auth"
       })
       expect(await rpcStatus(oauth)).toMatchObject({ state: "sign_in_required", auth: "oauth" })
-      const after = oauthFake.requests.slice(removed).filter((request) => request.method === "initialize")
+      // OpenCode 2.4.1 probes a server with no `protocol` using `server/discover`; the 401 ends the attempt, so no
+      // `initialize` follows. Either call is the unauthenticated attempt.
+      const after = oauthFake.requests
+        .slice(removed)
+        .filter((request) => request.method === "initialize" || request.method === "server/discover")
       expect(after.length).toBeGreaterThan(0)
       expect(after.every((request) => !request.authorized)).toBe(true)
       await expectHidden(oauth, [CONNECTED_KEY])
