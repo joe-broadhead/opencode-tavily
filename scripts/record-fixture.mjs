@@ -37,7 +37,7 @@ const status = await run(runtimeFor(), "status", {})
 
 const fixture = {
   $comment:
-    "Recorded from the plugin's synthetic two-alias runtime through its own handlers, not from a live Tavily account: the aliases work and personal are invented, and both MCP servers answer connected from an in-memory list. accounts.cursors is empty because the plugin has no cursor-bearing read (it declares no source), which is a known gap the kit reports rather than something a fixture can invent.",
+    "Recorded from the plugin's synthetic two-alias runtime through its own handlers; the provider answers are synthetic, not a live Tavily recording. The aliases work and personal are invented, and both MCP servers answer connected from an in-memory list. accounts.real: true means the conformance kit runs the two-account cases against the real 2.4.1 host (docs/conformance.md), not that a provider was read. accounts.cursors is empty because the plugin has no cursor-bearing read (it declares no source), which is a known gap the kit reports rather than something a fixture can invent.",
   plugin: packageName,
   namespace: manifest.plugin.summary,
   accounts: {

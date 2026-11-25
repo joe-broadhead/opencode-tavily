@@ -11,7 +11,7 @@ import { registerMcpAccounts } from "./accounts.ts"
 import { handlersFor } from "./handlers/index.ts"
 import { manifest, version } from "./manifest.ts"
 import { pluginOptions } from "./options.ts"
-import { loadSkills, registerSkills } from "./skills.ts"
+import { addPackagedSkills, loadSkills } from "./skills.ts"
 import { applyWebsearchDefault } from "./websearch.ts"
 
 /** Dispose every registration, newest first; a failed dispose never hides the others. */
@@ -42,7 +42,7 @@ export default Plugin.define({
 
     const stops: (() => Promise<void>)[] = [() => registration.dispose()]
     try {
-      const skillsRegistration = await registerSkills(context.skill, skills)
+      const skillsRegistration = await context.skill.transform(addPackagedSkills(skills))
       stops.push(() => skillsRegistration.dispose())
       const websearch = applyWebsearchDefault(context.websearch, settings.websearch)
       if (websearch !== undefined) {

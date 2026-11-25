@@ -1,6 +1,6 @@
 ---
 name: tavily-research
-description: A Tavily Research task: a cited, multi-source web report that takes minutes and 4-250 credits. Not for one fact (use search) or reports on the person's own files, code or meetings.
+description: "A Tavily Research task: a cited, multi-source web report that takes minutes and 4-250 credits. Not for one fact (use search) or reports on the person's own files, code or meetings."
 ---
 # Tavily Research
 

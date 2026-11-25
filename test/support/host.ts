@@ -76,7 +76,7 @@ function restoreEnvironment(saved: Record<string, string | undefined>): void {
 }
 
 /** Wrap the plugin so the test sees the MCP configs and the options a real install would give it. */
-function withTestContext(plugin: PluginDefinition, servers: RecordedServer[]): PluginDefinition {
+function withTestContext(plugin: PluginDefinition, servers: RecordedServer[], options: Readonly<Record<string, unknown>>): PluginDefinition {
   return {
     id: plugin.id,
     setup(context) {
@@ -84,7 +84,7 @@ function withTestContext(plugin: PluginDefinition, servers: RecordedServer[]): P
       const mcp = target.mcp as { transform(callback: (editor: unknown) => void): Promise<unknown> }
       const proxy = new Proxy(target, {
         get(from, key) {
-          if (key === "options") return { ...(from.options as Record<string, unknown> | undefined), ...OPTIONS }
+          if (key === "options") return { ...(from.options as Record<string, unknown> | undefined), ...options }
           if (key === "mcp") {
             return new Proxy(mcp, {
               get(mcpTarget, field) {
@@ -141,7 +141,7 @@ async function waitForActive(host: EmbeddedHost, directory: string, pluginID: st
  * loaded, so no ambient skill or plugin config leaks in. A missing `dist/index.js` throws: the host tests run after
  * `npm run bundle` and must fail, never skip, without it.
  */
-export async function activate(): Promise<HostRun> {
+export async function activate(options: Readonly<Record<string, unknown>> = OPTIONS): Promise<HostRun> {
   if (!existsSync(ENTRY)) throw new Error("dist/index.js is missing: run `npm run bundle` before the host test")
   const module = (await import(pathToFileURL(ENTRY).href)) as { default?: PluginDefinition }
   const plugin = module.default
@@ -156,7 +156,7 @@ export async function activate(): Promise<HostRun> {
     const { OpenCode } = await import("@opencode/sdk")
     const servers: RecordedServer[] = []
     const created = await OpenCode.create({
-      plugins: [withTestContext(plugin, servers)],
+      plugins: [withTestContext(plugin, servers, options)],
       config: { directory: project },
       app: { name: "opencode", version: "2.4.1" },
       log: { level: "error", emit: () => undefined },

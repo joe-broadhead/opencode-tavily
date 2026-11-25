@@ -26,7 +26,7 @@ test("the fixture was recorded for this package from the synthetic two-alias run
   assert.equal(fixture.namespace, manifest.plugin.summary)
   assert.equal(fixture.accounts.real, true)
   assert.deepEqual(fixture.accounts.aliases, ["work", "personal"])
-  assert.match(fixture.$comment, /not from a live Tavily account/)
+  assert.match(fixture.$comment, /not a live Tavily recording/)
   assert.match(fixture.$comment, /invented/)
 })
 

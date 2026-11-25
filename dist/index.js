@@ -12124,6 +12124,12 @@ import { fileURLToPath } from "node:url";
 import { Skill } from "@opencode/plugin";
 var SKILLS_DIR = fileURLToPath(new URL("../skills/", import.meta.url));
 var invalid2 = (what) => new Error(`UNAVAILABLE: ${what}. Next step: reinstall the plugin so its skills folder is complete.`);
+var BLOCK_SCALAR = /^[>|][+-]?$/;
+function unquote(value) {
+  const trimmed = value.trim();
+  const quoted = trimmed.length >= 2 && (trimmed.startsWith('"') && trimmed.endsWith('"') || trimmed.startsWith("'") && trimmed.endsWith("'"));
+  return quoted ? trimmed.slice(1, -1) : trimmed;
+}
 function parseSkill(directory, path, text2) {
   const match = /^---\n([\s\S]*?)\n---\n?([\s\S]*)$/.exec(text2.replace(/\r\n/g, "\n"));
   const where = `skills/${directory}/SKILL.md`;
@@ -12134,10 +12140,11 @@ function parseSkill(directory, path, text2) {
       return separator === -1 ? [] : [[line.slice(0, separator).trim(), line.slice(separator + 1).trim()]];
     })
   );
-  const name = fields.get("name");
-  const description = fields.get("description");
-  if (name === void 0 || name === "") throw invalid2(`${where} has no "name" in its front matter`);
-  if (description === void 0 || description === "") throw invalid2(`${where} has no "description" in its front matter`);
+  const name = unquote(fields.get("name") ?? "");
+  const description = unquote(fields.get("description") ?? "");
+  if (name === "") throw invalid2(`${where} has no "name" in its front matter`);
+  if (description === "") throw invalid2(`${where} has no "description" in its front matter`);
+  if (BLOCK_SCALAR.test(description)) throw invalid2(`${where} has an unparsed block-scalar description`);
   if (name !== directory) throw invalid2(`${where} is named "${name}" and must be named "${directory}"`);
   const content = (match[2] ?? "").trim();
   if (content === "") throw invalid2(`${where} has no content after its front matter`);
@@ -12164,8 +12171,8 @@ async function loadSkills(directory = SKILLS_DIR) {
   }
   return skills;
 }
-function registerSkills(skill, skills) {
-  return skill.transform((editor) => {
+function addPackagedSkills(skills) {
+  return (editor) => {
     for (const entry of skills) {
       editor.add({
         id: Skill.ID.make(entry.id),
@@ -12175,7 +12182,7 @@ function registerSkills(skill, skills) {
         content: entry.content
       });
     }
-  });
+  };
 }
 
 // src/websearch.ts
@@ -12210,7 +12217,7 @@ var src_default = Plugin.define({
     const registration = await register(context, manifest, handlers);
     const stops = [() => registration.dispose()];
     try {
-      const skillsRegistration = await registerSkills(context.skill, skills);
+      const skillsRegistration = await context.skill.transform(addPackagedSkills(skills));
       stops.push(() => skillsRegistration.dispose());
       const websearch = applyWebsearchDefault(context.websearch, settings.websearch);
       if (websearch !== void 0) {

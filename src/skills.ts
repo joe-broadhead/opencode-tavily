@@ -8,7 +8,7 @@ import { readdir, readFile } from "node:fs/promises"
 import type { Dirent } from "node:fs"
 import { join } from "node:path"
 import { fileURLToPath } from "node:url"
-import { Skill, type Plugin } from "@opencode/plugin"
+import { Skill } from "@opencode/plugin"
 
 /** `skills/` at the package root, next to `dist/` (and next to `src/` in the repository). */
 const SKILLS_DIR = fileURLToPath(new URL("../skills/", import.meta.url))
@@ -25,6 +25,16 @@ export interface SkillFile {
 
 const invalid = (what: string): Error => new Error(`UNAVAILABLE: ${what}. Next step: reinstall the plugin so its skills folder is complete.`)
 
+/** A YAML block-scalar marker left unexpanded: a description is one line of text, never a marker. */
+const BLOCK_SCALAR = /^[>|][+-]?$/
+
+/** A front-matter scalar without its matching YAML quotes, so a quoted description registers its text. */
+function unquote(value: string): string {
+  const trimmed = value.trim()
+  const quoted = trimmed.length >= 2 && ((trimmed.startsWith('"') && trimmed.endsWith('"')) || (trimmed.startsWith("'") && trimmed.endsWith("'")))
+  return quoted ? trimmed.slice(1, -1) : trimmed
+}
+
 /** Parse one `SKILL.md`: a `---` front matter with `name` and `description`, then the body. */
 export function parseSkill(directory: string, path: string, text: string): SkillFile {
   const match = /^---\n([\s\S]*?)\n---\n?([\s\S]*)$/.exec(text.replace(/\r\n/g, "\n"))
@@ -36,10 +46,11 @@ export function parseSkill(directory: string, path: string, text: string): Skill
       return separator === -1 ? [] : [[line.slice(0, separator).trim(), line.slice(separator + 1).trim()] as const]
     }),
   )
-  const name = fields.get("name")
-  const description = fields.get("description")
-  if (name === undefined || name === "") throw invalid(`${where} has no "name" in its front matter`)
-  if (description === undefined || description === "") throw invalid(`${where} has no "description" in its front matter`)
+  const name = unquote(fields.get("name") ?? "")
+  const description = unquote(fields.get("description") ?? "")
+  if (name === "") throw invalid(`${where} has no "name" in its front matter`)
+  if (description === "") throw invalid(`${where} has no "description" in its front matter`)
+  if (BLOCK_SCALAR.test(description)) throw invalid(`${where} has an unparsed block-scalar description`)
   if (name !== directory) throw invalid(`${where} is named "${name}" and must be named "${directory}"`)
   const content = (match[2] ?? "").trim()
   if (content === "") throw invalid(`${where} has no content after its front matter`)
@@ -69,9 +80,14 @@ export async function loadSkills(directory = SKILLS_DIR): Promise<readonly Skill
   return skills
 }
 
-/** Register every loaded skill with OpenCode. */
-export function registerSkills(skill: Pick<Plugin.Context["skill"], "transform">, skills: readonly SkillFile[]) {
-  return skill.transform((editor) => {
+/** The editor a skill transform gets; this plugin only adds. */
+interface SkillAdder {
+  add(skill: Skill.Info): void
+}
+
+/** The editor callback that adds every packaged skill; `setup` passes it straight to `context.skill.transform`. */
+export function addPackagedSkills(skills: readonly SkillFile[]) {
+  return (editor: SkillAdder): void => {
     for (const entry of skills) {
       editor.add({
         id: Skill.ID.make(entry.id),
@@ -81,5 +97,5 @@ export function registerSkills(skill: Pick<Plugin.Context["skill"], "transform">
         content: entry.content,
       })
     }
-  })
+  }
 }

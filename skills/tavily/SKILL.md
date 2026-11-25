@@ -1,6 +1,6 @@
 ---
 name: tavily
-description: Web search and page reading with Tavily: current facts, news, docs, finding a page on a site, mapping or crawling a site, and cited research. Each call spends credits. Not for the project's files.
+description: "Web search and page reading with Tavily: current facts, news, docs, finding a page on a site, mapping or crawling a site, and cited research. Each call spends credits. Not for the project's files."
 ---
 # Tavily
 

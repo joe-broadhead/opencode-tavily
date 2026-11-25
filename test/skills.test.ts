@@ -3,8 +3,7 @@ import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { test } from "node:test"
-import type { Plugin } from "@opencode/plugin"
-import { loadSkills, parseSkill, registerSkills, type SkillFile } from "../src/skills.ts"
+import { addPackagedSkills, loadSkills, parseSkill, type SkillFile } from "../src/skills.ts"
 
 test("the package ships both skills, named in the plugin's namespace", async () => {
   const skills = await loadSkills()
@@ -26,25 +25,12 @@ test("the skills name the tools the manifest declares and no removed transport",
   }
 })
 
-test("registering the skills adds both with their ids and paths", async () => {
+test("the packaged skills add both with their ids and paths", async () => {
   const skills = await loadSkills()
-  const added: { id: string; name: string; description?: string; path: string }[] = []
-  let disposed = 0
-  const skill = {
-    transform: async (callback: (editor: { add(entry: { id: string; name: string; description?: string; path: string }): void }) => void) => {
-      callback({ add: (entry) => void added.push(entry) })
-      return {
-        dispose: async () => {
-          disposed += 1
-        },
-      }
-    },
-  } as unknown as Pick<Plugin.Context["skill"], "transform">
-  const registration = await registerSkills(skill, skills)
+  const added: { id: string; name: string; description?: string | undefined; path: string }[] = []
+  addPackagedSkills(skills)({ add: (entry) => void added.push(entry) })
   assert.deepEqual(added.map((entry) => entry.id), ["tavily", "tavily-research"])
   assert.ok(added.every((entry) => entry.name === entry.id && entry.path.endsWith("SKILL.md")))
-  await registration.dispose()
-  assert.equal(disposed, 1)
 })
 
 test("a skill with no front matter, or the wrong name, is refused", () => {
@@ -63,6 +49,21 @@ test("a skill with no front matter, or the wrong name, is refused", () => {
   assert.throws(
     () => parseSkill("tavily", "/tmp/skills/tavily/SKILL.md", "---\nname: tavily\ndescription: A skill.\n---\n\n"),
     (error: unknown) => error instanceof Error && error.message.startsWith("UNAVAILABLE: ") && error.message.includes("no content"),
+  )
+  for (const marker of [">", "|", ">-", "|+"]) {
+    assert.throws(
+      () => parseSkill("tavily", "/tmp/skills/tavily/SKILL.md", `---\nname: tavily\ndescription: ${marker}\n---\nBody\n`),
+      (error: unknown) => error instanceof Error && error.message.startsWith("UNAVAILABLE: ") && error.message.includes("block-scalar"),
+      marker,
+    )
+  }
+  assert.throws(
+    () => parseSkill("tavily", "/tmp/skills/tavily/SKILL.md", '---\nname: tavily\ndescription: ""\n---\nBody\n'),
+    (error: unknown) => error instanceof Error && error.message.startsWith("UNAVAILABLE: "),
+  )
+  assert.equal(
+    parseSkill("tavily", "/tmp/skills/tavily/SKILL.md", '---\nname: "tavily"\ndescription: "Quoted: text"\n---\nBody\n').description,
+    "Quoted: text",
   )
 })
 
