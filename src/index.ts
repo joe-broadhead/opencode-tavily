@@ -11,12 +11,12 @@ import { registerMcpAccounts } from "./accounts.ts"
 import { handlersFor } from "./handlers/index.ts"
 import { manifest, version } from "./manifest.ts"
 import { pluginOptions } from "./options.ts"
-import { addPackagedSkills, loadSkills } from "./skills.ts"
+import { readSkills, registerSkills } from "./skills.ts"
 import { applyWebsearchDefault } from "./websearch.ts"
 
-/** Dispose every registration, newest first; a failed dispose never hides the others. */
+/** Dispose every registration in the order it was added; a failed dispose never hides the others. */
 async function disposeAll(stops: readonly (() => Promise<void>)[]): Promise<void> {
-  for (const stop of [...stops].reverse()) await stop().catch(() => undefined)
+  for (const stop of stops) await stop().catch(() => undefined)
 }
 
 export default Plugin.define({
@@ -25,7 +25,8 @@ export default Plugin.define({
     assertHost(context, manifest)
     const options = context.options ?? {}
     const settings = pluginOptions(options)
-    const skills = await loadSkills()
+    // Check every skill before anything registers, so a malformed file fails setup with one clear error.
+    const skills = readSkills()
 
     // The vendor's MCP server holds the credentials: one server per alias, named tavily or tavily-<alias>.
     const accounts = await registerMcpAccounts(context, manifest, options, settings)
@@ -40,9 +41,9 @@ export default Plugin.define({
     })
     const registration = await register(context, manifest, handlers)
 
-    const stops: (() => Promise<void>)[] = [() => registration.dispose()]
+    const stops: (() => Promise<void>)[] = []
     try {
-      const skillsRegistration = await context.skill.transform(addPackagedSkills(skills))
+      const skillsRegistration = await registerSkills(context, skills)
       stops.push(() => skillsRegistration.dispose())
       const websearch = applyWebsearchDefault(context.websearch, settings.websearch)
       if (websearch !== undefined) {
@@ -51,8 +52,10 @@ export default Plugin.define({
       }
     } catch (error) {
       await disposeAll(stops)
+      await registration.dispose().catch(() => undefined)
       throw error
     }
+    stops.push(() => registration.dispose())
     return () => disposeAll(stops)
   },
 })

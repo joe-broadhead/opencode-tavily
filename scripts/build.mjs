@@ -3,7 +3,8 @@
 //   npm run bundle
 //
 // @opencode/* stays external, because OpenCode provides it at run time. The contract modules are bundled, so a tag
-// installs and runs with no build and no runtime dependency. dist/ is generated, never edited by hand.
+// installs and runs with no build and no runtime dependency. dist/ is committed, because a tag must install with no
+// build; run `npm run bundle` after a source change, and never edit dist/ by hand.
 import { readFileSync, rmSync } from "node:fs"
 import { dirname, join } from "node:path"
 import { fileURLToPath } from "node:url"
@@ -24,7 +25,8 @@ await build({
   external: ["@opencode/*"],
   legalComments: "none",
   logLevel: "warning",
-  banner: { js: `// ${pkg.name} ${pkg.version}. Built by scripts/build.mjs; do not edit.` },
+  // The YAML parser is CommonJS and reads `process` with require(); the bundle is ESM, so give it a real require.
+  banner: { js: `import { createRequire } from "node:module";\nconst require = createRequire(import.meta.url);\n// ${pkg.name} ${pkg.version}. Built by scripts/build.mjs; do not edit.` },
 })
 
 console.log(`built ${pkg.name} ${pkg.version} into dist/index.js`)

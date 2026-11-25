@@ -46,7 +46,7 @@ src/handlers/             one file per method: status, probe
 src/provider/client.ts    the one MCP URL, the per-alias server config and the MCP server reads
 src/options.ts            websearch and executionTimeoutMs, with the manifest's defaults
 src/websearch.ts          selects OpenCode's built-in Tavily web search provider
-src/skills.ts             registers skills/<name>/SKILL.md
+src/skills.ts             reads skills/<name>/SKILL.md with the template's YAML loader and registers them
 src/manifest.ts           reads package.json capabilities and checks it with the contract
 test/                     unit tests, the fixture replay, and test/pack for the tarball
 skills/                   the tavily and tavily-research skills
@@ -110,7 +110,10 @@ reviews its class.
 - `test/provider.test.ts` proves each MCP state's signal, the redaction, and the single live read.
 - `test/options.test.ts` proves the two plugin options and their refusals.
 - `test/probe.test.ts` and `test/status.test.ts` drive the real handlers.
-- `test/websearch.test.ts` and `test/skills.test.ts` prove the transforms and the skill files.
+- `test/websearch.test.ts` proves the web search default.
+- `test/unit/skills.test.ts` proves the YAML loader (block scalars, invalid YAML, markers, shape) and registration.
+- `test/bundle.test.ts` proves the committed bundle carries the `.skill.transform` literal.
+- `test/host/skills.test.ts` and `test/host/surfaces.test.ts` prove the skills, both server shapes and `status`/`probe` on the real 2.4.1 host.
 - `test/fixture.test.ts` replays `fixtures/conformance.json` through the handlers.
 - `test/pack/pack.test.mjs` packs the tarball, checks its files, and imports the installed `./server` entry.
 

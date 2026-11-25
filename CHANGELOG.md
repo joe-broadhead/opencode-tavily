@@ -22,9 +22,12 @@
   mechanism; OpenCode holds the OAuth and the plugin holds no key.
 - The `/tavily-status` command and the TUI status page (`./tui`, `src/tui/index.tsx`): the contract `status` is the one
   read, as a tool, in Code Mode and over RPC.
-- The rich `tavily.web/status` fields (`cost`, `auth`, `keyCheck`, `tools`, `websearchDefault`, `shadowedSkills`,
-  `permissionsBlock`): the contract's status shape is closed; costs are in the README and the skills, and every alias's
-  sign-in state is in `status.accounts`.
+- The old `status.access` field: the contract's `status` shape is closed, so the access level is the `access` plugin
+  option and the generated permission rules (`opencode.json`); `status.nextStep` and `unguardedAgents` report a rule
+  that is missing.
+- The rich `tavily.web/status` fields (`account`, `auth`, `keyCheck`, `tools`, `websearchDefault`, `shadowedSkills`,
+  `permissionsBlock`): the contract's status shape is closed; every alias's sign-in state is in `status.accounts`, and
+  costs are in the README and the skills.
 - The old manifest's app metadata block (title, summary, tools, skills, sign-ins, settings): replaced by the
   `capabilities` manifest.
 - The `/connect` rename to “Tavily account”: each alias is now an MCP server named `tavily` or `tavily-<alias>`.

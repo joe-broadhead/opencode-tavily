@@ -34,7 +34,8 @@ None.
 
 - **`status`** reads no account and costs nothing. It reports the plugin's version, the OpenCode host, one entry per
   alias from OpenCode's own MCP server state, the agents whose rules no longer match the generated access rules, and
-  one next step.
+  one next step. It has no `access` field: the level is the `access` option and the rules it generates;
+  `unguardedAgents` and `nextStep` report an agent that no longer holds them.
 - **`probe`** reads one account and costs nothing. Its owner is OpenCode's connection identity, the MCP server it runs
   for the alias (`mcp:tavily-work`), not a Tavily account: `verified: false` says so. It reads no web content and proves
   no Tavily sign-in; `status` reports that.

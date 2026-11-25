@@ -35,6 +35,8 @@ OpenCode's MCP sign-in.
 - **`access`** is the ceiling: `all` runs every method not marked `effect: "ask"`, `ask-changes` asks before a non-read,
   `read-only` turns every non-read off. The five Tavily tools are non-reads because each call spends credits, and they
   carry `effect: "ask"`, so they ask even at `all`. A rule the person or an app adds later still wins for one tool.
+  `status` does not repeat the level; `status.unguardedAgents` and `nextStep` report an agent whose generated rules are
+  missing.
 - **`accounts`** is one profile per alias. The profile is empty: the alias is the whole setting, and no secret goes in
   a profile. Each alias gets its own MCP server (`tavily-work`, `tavily-personal`) and its own OAuth sign-in.
 - **`websearch`** (default `true`) selects OpenCode's built-in Tavily web search provider when nothing earlier chose

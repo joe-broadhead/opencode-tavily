@@ -24,16 +24,16 @@ test("every packaged skill is registered and listed by the real 2.4.1 host", asy
       const parsed = parseYaml(front[1] ?? "") as { name?: unknown; description?: unknown }
       assert.equal(parsed.name, directory, `${directory} front-matter name equals its directory`)
       assert.equal(typeof parsed.description, "string", `${directory} has a parsed description`)
-      assert.notEqual(parsed.description, ">", `${directory} description is not an unparsed block scalar`)
-      assert.notEqual(parsed.description, "|", `${directory} description is not an unparsed block scalar`)
-      assert.ok((parsed.description as string).trim().length > 0, `${directory} description is not empty`)
+      const expected = parsed.description as string
+      assert.ok(expected.trim().length > 0, `${directory} description is not empty`)
+      for (const marker of [">", "|", ">-", "|-", ">+", "|+"]) assert.notEqual(expected.trim(), marker, `${directory} registers the block marker ${marker}, not its text`)
 
       const skill = listed.get(directory)
       assert.ok(skill !== undefined, `${directory} is listed by the host`)
       assert.equal(skill.name, directory)
-      assert.equal(skill.description, parsed.description, `${directory} registers the parsed description exactly`)
-      assert.ok(skill.content.length > 0, `${directory} has content`)
-      assert.ok(skill.path.endsWith(`skills/${directory}/SKILL.md`), `${directory} is read from its file`)
+      assert.equal(skill.description, expected, `${directory} registers the parsed description exactly`)
+      assert.ok(skill.content.trim().length > 0, `${directory} has a body`)
+      assert.equal(skill.path, join(run.repository, "skills", directory, "SKILL.md"))
     }
   } finally {
     await run.host.close()
