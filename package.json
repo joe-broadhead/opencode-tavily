@@ -1,7 +1,7 @@
 {
   "name": "@we-the-rebel-alliance/tavily-plugin",
   "version": "0.0.0",
-  "description": "Tavily web search, page reading, site maps and crawls, and cited research for OpenCode: the vendor's MCP server holds the account and the tools.",
+  "description": "Tavily web search, page reading, site maps, crawls and cited research for OpenCode agents, with one Tavily account per alias.",
   "keywords": [
     "opencode",
     "opencode-plugin",
@@ -13,6 +13,10 @@
   "repository": {
     "type": "git",
     "url": "git+https://github.com/we-the-rebel-alliance/tavily-plugin.git"
+  },
+  "homepage": "https://github.com/we-the-rebel-alliance/tavily-plugin#readme",
+  "bugs": {
+    "url": "https://github.com/we-the-rebel-alliance/tavily-plugin/issues"
   },
   "engines": {
     "node": ">=24"
@@ -166,14 +170,16 @@
   "scripts": {
     "build": "node scripts/build.mjs",
     "typecheck": "tsc -p tsconfig.json",
+    "lint": "biome check .",
     "test": "node --test \"test/**/*.test.ts\"",
     "test:pack": "node --test test/pack/pack.test.mjs",
     "fixtures": "node scripts/record-fixture.mjs",
     "docs": "plugin-kit docs",
     "docs:check": "plugin-kit docs --check",
-    "check": "npm run typecheck && npm run build && npm run test && npm run test:pack && plugin-kit check && plugin-kit docs --check"
+    "check": "npm run lint && npm run typecheck && npm run build && npm run test && npm run test:pack && plugin-kit check && plugin-kit docs --check"
   },
   "devDependencies": {
+    "@biomejs/biome": "2.6.9",
     "@opencode/plugin": "2.4.1",
     "@opencode/sdk": "2.4.1",
     "@types/node": "24.19.2",

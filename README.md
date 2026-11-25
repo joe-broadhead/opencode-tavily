@@ -1,20 +1,20 @@
 # Tavily
 
 Tavily's hosted MCP server gives OpenCode five web tools: search, page extraction, site maps, site crawls and cited
-research. This plugin is the connector around it. It adds one named account per alias, the `status` and `probe` reads,
-the permission rules and this documentation. Tavily's server owns the tools and the sign-in; the plugin adds no tools of
-its own, reads no web content and stores no credential.
+research. This plugin is the connector around it, on
+[plugin-contract](https://github.com/we-the-rebel-alliance/plugin-contract) v0. It adds one named account per alias, the
+`status` and `probe` reads, the permission rules and this documentation. Tavily's server owns the tools and the sign-in;
+the plugin adds no tools of its own, reads no web content and stores no credential.
 
 **Every tool call spends Tavily credits**, and the plugin sets no spending limit.
 
 ## Install
 
-The plugin is prepared for `v0.0.0`. The maintainer deletes the old `v0.0.0` and cuts this line's `v0.0.0` after the
-pull request merges; the existing `v0.0.0`–`v0.0.7` tags are the previous package and do not contain this build. A
-release then installs from its tag:
+The maintainer cuts this line's `v0.0.0` after the pull request merges, and deletes the old pre-transfer `v0.0.0`–`v0.0.7`
+tags first. Then:
 
 ```sh
-opencode plugin add github:we-the-rebel-alliance/tavily-plugin#v<version>
+opencode plugin add github:we-the-rebel-alliance/tavily-plugin#v0.0.0
 ```
 
 ## Sign in
@@ -57,6 +57,34 @@ is refused with `ACCOUNT_REQUIRED`, whose next step lists the aliases.
 The five tools are classified `write` for access, not because they change anything at Tavily but because each call
 spends credits: a free-looking read that bills the person is not a read. `read-only` therefore turns all five off, and
 a Tavily tool added later is covered by the same `mcp:*` rule until a release reviews it.
+
+## Options
+
+| Option | Default | Meaning |
+|---|---|---|
+| `access` | `all` | `all`, `ask-changes` or `read-only`: the ceiling for every method. |
+| `accounts` | one `default` | One empty profile per alias; the alias is the whole setting. |
+| `allowUntestedHost` | `false` | Start outside `>=2.4.1 <2.5.0`. Leave it off. |
+| `websearch` | `true` | Select OpenCode's built-in Tavily web search provider when nothing earlier chose one. |
+| `executionTimeoutMs` | `900000` | The MCP server's `timeout.execution`: 1 minute to 1 hour. |
+
+[Configuration](docs/configuration.md) has the schema, the defaults and examples.
+
+## Troubleshooting
+
+- **`status` says `needs_sign_in` for an alias.** Sign in to that alias's MCP server (`tavily`, or `tavily-<alias>`) through
+  OpenCode's MCP sign-in, then read `status` again. Each alias has its own OAuth session.
+- **`status` says `error` for an alias.** Read its `reason`: `the server is disabled` or `OpenCode lists no such server`
+  means the server did not load; restart OpenCode, and check that the plugin is installed and enabled. A `failed` server
+  reports the host's reason, redacted; if it keeps failing, sign in again.
+- **`status.nextStep` names a problem.** Quote it whole; it is the one fix. A registration problem means the MCP server
+  could not be added; an unreadable server list means OpenCode could not answer, so nothing is known.
+- **The Tavily tools are absent.** Check that OpenCode is 2.4.1 or another 2.4.x, the plugin is installed, and the
+  alias's server is signed in. The tools are `tavily_tavily_search` for `default` and `tavily-<alias>_tavily_search` for
+  another alias, or `tools.tavily.tavily_search` in Code Mode.
+- **A call is refused.** `ACCOUNT_REQUIRED` means pass `account`; `ACCOUNT_UNKNOWN` means the alias is not configured;
+  `PERMISSION_DENIED` means the access level or a rule refuses it (under `read-only` every Tavily tool is off);
+  `INPUT_INVALID` means the tool's own schema was not met; `UNAVAILABLE` means the host could not answer — read `status`.
 
 ## Cost
 
@@ -143,3 +171,4 @@ None.
 - [Automations](docs/automations.md)
 - [Architecture](docs/architecture.md)
 - [Security](docs/security.md)
+- [Plugin contract](https://github.com/we-the-rebel-alliance/plugin-contract)

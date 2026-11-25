@@ -53,9 +53,9 @@ test("the recorded status is what the status handler answers today", async () =>
 test("probe answers for every recorded alias from the server the runtime lists", async () => {
   for (const [index, alias] of fixture.accounts.aliases.entries()) {
     const answer = (await run(runtimeFor(), "probe", {}, alias)) as Record<string, unknown>
-    assert.equal(answer["account"], alias)
-    assert.equal(answer["trust"], "untrusted")
-    assert.deepEqual(answer["owner"], {
+    assert.equal(answer.account, alias)
+    assert.equal(answer.trust, "untrusted")
+    assert.deepEqual(answer.owner, {
       id: `mcp:tavily-${alias}`,
       label: `Tavily (${alias})`,
       verified: false,

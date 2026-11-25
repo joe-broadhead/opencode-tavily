@@ -18,7 +18,11 @@ function editor(initial: Selection) {
           },
         },
       })
-      return { dispose: async () => void (state.disposed += 1) }
+      return {
+        dispose: async () => {
+          state.disposed += 1
+        },
+      }
     },
   } as unknown as Pick<Plugin.Context["websearch"], "transform">
   return { state, websearch }

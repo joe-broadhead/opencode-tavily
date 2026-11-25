@@ -79,7 +79,7 @@ test("every alias's state comes from one live read of OpenCode's list", async ()
 
 test("a missing server is that alias's error, and the other alias still answers", async () => {
   const states = await signals({ list: async () => ({ data: [{ name: "tavily-work", status: { status: "connected" } }] }) }, "tavily", ["work", "personal"])
-  const personal = accountStatus("personal", states["personal"])
+  const personal = accountStatus("personal", states.personal)
   assert.deepEqual(states, { work: { state: "ready" }, personal: { state: "error", reason: "OpenCode lists no such server" } })
   assert.deepEqual(personal, { alias: "personal", state: "error", reason: "OpenCode lists no such server" })
 })

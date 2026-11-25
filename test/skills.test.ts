@@ -33,7 +33,11 @@ test("registering the skills adds both with their ids and paths", async () => {
   const skill = {
     transform: async (callback: (editor: { add(entry: { id: string; name: string; description?: string; path: string }): void }) => void) => {
       callback({ add: (entry) => void added.push(entry) })
-      return { dispose: async () => void (disposed += 1) }
+      return {
+        dispose: async () => {
+          disposed += 1
+        },
+      }
     },
   } as unknown as Pick<Plugin.Context["skill"], "transform">
   const registration = await registerSkills(skill, skills)

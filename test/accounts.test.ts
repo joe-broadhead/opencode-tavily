@@ -65,7 +65,7 @@ test("the call time limit reaches every server's timeout.execution", async () =>
   const { fake, servers } = context()
   await registerMcpAccounts(fake, manifest, { accounts: { work: {}, personal: {} } }, pluginOptions({ executionTimeoutMs: 600_000 }))
   for (const name of ["tavily-work", "tavily-personal"]) {
-    assert.deepEqual(servers.get(name)?.["timeout"], { execution: 600_000 })
+    assert.deepEqual(servers.get(name)?.timeout, { execution: 600_000 })
   }
 })
 

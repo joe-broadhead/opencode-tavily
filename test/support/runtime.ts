@@ -64,7 +64,9 @@ export async function run(
   account = "work",
   call: CallOverrides = {},
 ): Promise<unknown> {
-  return handlersFor(runtime)[method]!.run(input, callFor(account, call))
+  const handler = handlersFor(runtime)[method]
+  if (handler === undefined) throw new Error(`the plugin declares no ${method} handler`)
+  return handler.run(input, callFor(account, call))
 }
 
 /** The code and message a call refuses with, or undefined when it answers. */

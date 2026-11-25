@@ -32,10 +32,10 @@ const invalid = (what: string): Error => new Error(`OPTIONS_INVALID: ${what}. Ne
 export function pluginOptions(options: Readonly<Record<string, unknown>>): PluginOptions {
   for (const key of Object.keys(options)) if (!KNOWN.has(key)) throw invalid(`"${key}" is not an option; the options are ${[...KNOWN].join(", ")}`)
 
-  const websearch = options["websearch"] === undefined ? true : options["websearch"]
+  const websearch = options.websearch === undefined ? true : options.websearch
   if (typeof websearch !== "boolean") throw invalid(`"websearch" must be true or false`)
 
-  const executionTimeoutMs = options["executionTimeoutMs"] === undefined ? DEFAULT_EXECUTION_TIMEOUT_MS : options["executionTimeoutMs"]
+  const executionTimeoutMs = options.executionTimeoutMs === undefined ? DEFAULT_EXECUTION_TIMEOUT_MS : options.executionTimeoutMs
   if (typeof executionTimeoutMs !== "number" || !Number.isInteger(executionTimeoutMs) || executionTimeoutMs < MIN_EXECUTION_TIMEOUT_MS || executionTimeoutMs > MAX_EXECUTION_TIMEOUT_MS) {
     throw invalid(`"executionTimeoutMs" must be an integer from ${MIN_EXECUTION_TIMEOUT_MS} to ${MAX_EXECUTION_TIMEOUT_MS}`)
   }

@@ -32,9 +32,9 @@ test("the plugin is the tools-only connector: no sources, actions or bus events"
 test("accounts are held by the vendor's MCP server, one empty profile per alias", () => {
   assert.deepEqual(manifest.accounts, { via: "mcp", profile: { $ref: "#/options/properties/accounts/additionalProperties" }, owner: "mcp" })
   const options = manifest.options as { readonly properties: Record<string, Record<string, unknown>> }
-  const accounts = options.properties["accounts"]
+  const accounts = options.properties.accounts
   assert.ok(accounts !== undefined)
-  assert.deepEqual(accounts["additionalProperties"], { type: "object", properties: {}, additionalProperties: false })
+  assert.deepEqual(accounts.additionalProperties, { type: "object", properties: {}, additionalProperties: false })
 })
 
 test("every callable is classified, including the pass-through tools", () => {
@@ -59,19 +59,19 @@ test("the namespace line is one line within the fixed-context budget", () => {
 
 test("the plugin options declare the contract's settings and the plugin's two", () => {
   const options = manifest.options as { readonly properties: Record<string, Record<string, unknown>> }
-  const access = options.properties["access"]
+  const access = options.properties.access
   assert.ok(access !== undefined)
-  assert.equal(access["type"], "string")
-  assert.deepEqual(access["enum"], ["all", "ask-changes", "read-only"])
-  assert.equal(access["default"], "all")
-  assert.equal(typeof access["description"], "string")
-  assert.equal(options.properties["allowUntestedHost"]?.["default"], false)
-  assert.equal(options.properties["websearch"]?.["type"], "boolean")
-  assert.equal(options.properties["websearch"]?.["default"], true)
-  assert.equal(typeof options.properties["websearch"]?.["description"], "string")
-  assert.equal(options.properties["executionTimeoutMs"]?.["type"], "integer")
-  assert.equal(options.properties["executionTimeoutMs"]?.["minimum"], MIN_EXECUTION_TIMEOUT_MS)
-  assert.equal(options.properties["executionTimeoutMs"]?.["maximum"], MAX_EXECUTION_TIMEOUT_MS)
-  assert.equal(options.properties["executionTimeoutMs"]?.["default"], DEFAULT_EXECUTION_TIMEOUT_MS)
-  assert.equal(typeof options.properties["executionTimeoutMs"]?.["description"], "string")
+  assert.equal(access.type, "string")
+  assert.deepEqual(access.enum, ["all", "ask-changes", "read-only"])
+  assert.equal(access.default, "all")
+  assert.equal(typeof access.description, "string")
+  assert.equal(options.properties.allowUntestedHost?.default, false)
+  assert.equal(options.properties.websearch?.type, "boolean")
+  assert.equal(options.properties.websearch?.default, true)
+  assert.equal(typeof options.properties.websearch?.description, "string")
+  assert.equal(options.properties.executionTimeoutMs?.type, "integer")
+  assert.equal(options.properties.executionTimeoutMs?.minimum, MIN_EXECUTION_TIMEOUT_MS)
+  assert.equal(options.properties.executionTimeoutMs?.maximum, MAX_EXECUTION_TIMEOUT_MS)
+  assert.equal(options.properties.executionTimeoutMs?.default, DEFAULT_EXECUTION_TIMEOUT_MS)
+  assert.equal(typeof options.properties.executionTimeoutMs?.description, "string")
 })

@@ -5,6 +5,7 @@
  * malformed file is `UNAVAILABLE` and stops setup: a skill that cannot load is a broken install, not a warning.
  */
 import { readdir, readFile } from "node:fs/promises"
+import type { Dirent } from "node:fs"
 import { join } from "node:path"
 import { fileURLToPath } from "node:url"
 import { Skill, type Plugin } from "@opencode/plugin"
@@ -45,7 +46,7 @@ export function parseSkill(directory: string, path: string, text: string): Skill
 
 /** Every skill under `directory`, sorted by directory name. */
 export async function loadSkills(directory = SKILLS_DIR): Promise<readonly SkillFile[]> {
-  let entries
+  let entries: Dirent[]
   try {
     entries = await readdir(directory, { withFileTypes: true })
   } catch {
