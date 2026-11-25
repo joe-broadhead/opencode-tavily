@@ -19,6 +19,7 @@ const REQUIRED = [
   "package.json",
   "README.md",
   "LICENSE",
+  "NOTICE",
   "dist/index.js",
   "skills/tavily/SKILL.md",
   "skills/tavily-research/SKILL.md",
@@ -71,7 +72,7 @@ test("the package declares no runtime dependency and no lifecycle script", () =>
   }
   for (const name of LIFECYCLE) assert.equal(pkg.scripts?.[name], undefined, `package.json has no ${name} script`)
   assert.equal(pkg.exports["./server"], "./dist/index.js")
-  assert.deepEqual(pkg.files, ["dist", "skills", "assets", "README.md", "LICENSE"])
+  assert.deepEqual(pkg.files, ["dist", "skills", "assets", "README.md", "LICENSE", "NOTICE"])
 })
 
 test("the packed server entry imports as a Plugin.define value, without running setup", () => {
@@ -90,6 +91,7 @@ test("the packed server entry imports as a Plugin.define value, without running 
     const installed = JSON.parse(readFileSync(join(project, "node_modules", PACKAGE, "package.json"), "utf8"))
     assert.equal(installed.name, PACKAGE)
     assert.equal(installed.version, "0.0.0")
+    assert.ok(existsSync(join(project, "node_modules", PACKAGE, "NOTICE")), "the installed package carries NOTICE")
 
     writeFileSync(
       join(project, "main.mjs"),

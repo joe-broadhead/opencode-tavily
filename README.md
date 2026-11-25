@@ -178,3 +178,4 @@ None.
 - [Architecture](docs/architecture.md)
 - [Security](docs/security.md)
 - [Plugin contract](https://github.com/we-the-rebel-alliance/plugin-contract)
+- [Third-party notices](NOTICE)
