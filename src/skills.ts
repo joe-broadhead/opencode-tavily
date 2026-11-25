@@ -2,7 +2,7 @@
  * The plugin's skills: `skills/<name>/SKILL.md`, registered with OpenCode through `ctx.skill`.
  *
  * A plugin package's `skills/` folder is not read by OpenCode on its own, so setup registers both skill files. A
- * malformed file is `SKILLS_INVALID` and stops setup: a skill that cannot load is a broken install, not a warning.
+ * malformed file is `UNAVAILABLE` and stops setup: a skill that cannot load is a broken install, not a warning.
  */
 import { readdir, readFile } from "node:fs/promises"
 import { join } from "node:path"
@@ -22,7 +22,7 @@ export interface SkillFile {
   readonly content: string
 }
 
-const invalid = (what: string): Error => new Error(`SKILLS_INVALID: ${what}. Next step: reinstall the plugin so its skills folder is complete.`)
+const invalid = (what: string): Error => new Error(`UNAVAILABLE: ${what}. Next step: reinstall the plugin so its skills folder is complete.`)
 
 /** Parse one `SKILL.md`: a `---` front matter with `name` and `description`, then the body. */
 export function parseSkill(directory: string, path: string, text: string): SkillFile {

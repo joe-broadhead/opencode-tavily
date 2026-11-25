@@ -46,22 +46,22 @@ test("registering the skills adds both with their ids and paths", async () => {
 test("a skill with no front matter, or the wrong name, is refused", () => {
   assert.throws(
     () => parseSkill("tavily", "/tmp/skills/tavily/SKILL.md", "# No front matter\n"),
-    (error: unknown) => error instanceof Error && error.message.startsWith("SKILLS_INVALID: ") && error.message.includes("Next step: "),
+    (error: unknown) => error instanceof Error && error.message.startsWith("UNAVAILABLE: ") && error.message.includes("Next step: "),
   )
   assert.throws(
     () => parseSkill("tavily", "/tmp/skills/tavily/SKILL.md", "---\nname: other\ndescription: A skill.\n---\nBody\n"),
-    (error: unknown) => error instanceof Error && error.message.startsWith("SKILLS_INVALID: "),
+    (error: unknown) => error instanceof Error && error.message.startsWith("UNAVAILABLE: "),
   )
   assert.throws(
     () => parseSkill("tavily", "/tmp/skills/tavily/SKILL.md", "---\nname: tavily\n---\nBody\n"),
-    (error: unknown) => error instanceof Error && error.message.startsWith("SKILLS_INVALID: "),
+    (error: unknown) => error instanceof Error && error.message.startsWith("UNAVAILABLE: "),
   )
 })
 
 test("a missing skills folder is a clean refusal, not a crash", async () => {
   await assert.rejects(
     () => loadSkills("/tmp/opencode/definitely-no-skills-here"),
-    (error: unknown) => error instanceof Error && error.message.startsWith("SKILLS_INVALID: "),
+    (error: unknown) => error instanceof Error && error.message.startsWith("UNAVAILABLE: "),
   )
 })
 
@@ -71,7 +71,7 @@ test("a skills folder with a directory but no SKILL.md is refused", async () => 
     await mkdir(join(root, "tavily"))
     await assert.rejects(
       () => loadSkills(root),
-      (error: unknown) => error instanceof Error && error.message.startsWith("SKILLS_INVALID: "),
+      (error: unknown) => error instanceof Error && error.message.startsWith("UNAVAILABLE: "),
     )
     await writeFile(join(root, "tavily", "SKILL.md"), "---\nname: tavily\ndescription: A skill.\n---\nBody\n")
     const skills: readonly SkillFile[] = await loadSkills(root)

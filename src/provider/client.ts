@@ -28,11 +28,8 @@ export interface ServerList {
   list(): Promise<{ readonly data: readonly ServerEntry[] }>
 }
 
-/** What the per-alias server config names. */
+/** What the per-alias server config sets: how long one call may run. */
 export interface ServerConfigInput {
-  /** The vendor's title, from the manifest: "Tavily". */
-  readonly title: string
-  readonly alias: string
   /** The MCP server's `timeout.execution`, from the plugin's `executionTimeoutMs`. */
   readonly executionTimeoutMs: number
 }
@@ -40,8 +37,8 @@ export interface ServerConfigInput {
 /**
  * The MCP server config for one alias. OpenCode keys OAuth per server, so two aliases are two independent sign-ins.
  *
- * `title` is the alias as a person reads it. OpenCode 2.4.1's remote config has no `title` field and drops it, showing
- * the server's own `serverInfo.title` instead; the server name (`tavily`, `tavily-work`) is what tells aliases apart.
+ * Only the fields 2.4.1's remote config defines: the server name (`tavily`, `tavily-work`) is what tells aliases
+ * apart, because that config has no display-title field.
  */
 export function serverConfig(input: ServerConfigInput): MCPServerConfig {
   return {
@@ -49,7 +46,6 @@ export function serverConfig(input: ServerConfigInput): MCPServerConfig {
     url: MCP_URL,
     oauth: {},
     timeout: { execution: input.executionTimeoutMs },
-    title: accountLabel(input.title, input.alias),
   }
 }
 
@@ -108,16 +104,10 @@ export function signalFor(entry: ServerEntry | undefined): AccountSignal {
 /**
  * Every alias's signal, from one live read of OpenCode's server list.
  *
- * An unreadable list makes every alias an error with the same redacted reason: a missing answer is unknown, never
- * `ready`, and one host failure must not hide the other aliases behind an empty list.
+ * A host that cannot list its MCP servers throws, and the caller owns the answer: `status` turns a failed read into an
+ * error for every declared alias and one problem, because an answer it does not have is unknown, never `ready`.
  */
 export async function signals(mcp: ServerList, plugin: string, aliases: readonly string[]): Promise<Record<string, AccountSignal>> {
-  let entries: readonly ServerEntry[]
-  try {
-    entries = await serverEntries(mcp)
-  } catch (error) {
-    const reason = redactReason(error instanceof Error ? error.message : String(error))
-    return Object.fromEntries(aliases.map((alias) => [alias, { state: "error", reason } satisfies AccountSignal]))
-  }
+  const entries = await serverEntries(mcp)
   return Object.fromEntries(aliases.map((alias) => [alias, signalFor(findServer(entries, serverName(plugin, alias)))]))
 }

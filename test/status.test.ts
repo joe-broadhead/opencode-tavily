@@ -96,6 +96,28 @@ test("a server OpenCode does not list is that alias's error, and the plugin stay
   ])
 })
 
+test("an unreadable MCP server list is an error for every alias and for the plugin", async () => {
+  const reason = "the host failed at https://mcp.tavily.com/cb?access_token=…"
+  const answer = (await run(
+    runtimeFor({
+      mcp: {
+        list: async () => {
+          throw new Error("the host failed at https://mcp.tavily.com/cb?access_token=hidden-secret")
+        },
+      },
+    }),
+    "status",
+    {},
+  )) as Record<string, unknown>
+  assert.equal(answer["state"], "error")
+  assert.equal(answer["nextStep"], `OpenCode's MCP server list could not be read: ${reason}`)
+  assert.deepEqual(answer["accounts"], [
+    { alias: "work", state: "error", reason },
+    { alias: "personal", state: "error", reason },
+  ])
+  assert.doesNotMatch(JSON.stringify(answer), /hidden-secret/)
+})
+
 test("status reports an agent that no longer holds the generated rules", async () => {
   const answer = (await run(runtimeFor(), "status", {}, "work", { unguardedAgents: async () => ["build"] })) as Record<string, unknown>
   assert.deepEqual(answer["unguardedAgents"], ["build"])

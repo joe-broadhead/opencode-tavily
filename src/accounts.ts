@@ -31,11 +31,6 @@ export function registerMcpAccounts(
   return registerAccounts(context, {
     manifest,
     options,
-    server: (account, _name) =>
-      serverConfig({
-        title: manifest.plugin.title,
-        alias: account.alias,
-        executionTimeoutMs: settings.executionTimeoutMs,
-      }),
+    server: (_account, _name) => serverConfig({ executionTimeoutMs: settings.executionTimeoutMs }),
   })
 }

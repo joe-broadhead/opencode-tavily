@@ -5,7 +5,7 @@
  * The answer is the contract's `statusAnswer` over `STATUS_SCHEMA`: the plugin and host identity, one entry per alias
  * from OpenCode's own server state, the agents that no longer hold the generated rules, and one next step.
  */
-import { accountStatuses, accountsOf, redactReason, statusAnswer, STATUS_SCHEMA } from "@we-the-rebel-alliance/plugin-contract/accounts"
+import { accountStatuses, accountsOf, redactReason, statusAnswer, STATUS_SCHEMA, type AccountSignal } from "@we-the-rebel-alliance/plugin-contract/accounts"
 import type { MethodHandler } from "@we-the-rebel-alliance/plugin-contract/register"
 import { signals } from "../provider/client.ts"
 import { EMPTY } from "./shared.ts"
@@ -23,7 +23,15 @@ export function statusHandler(runtime: HandlerRuntime): MethodHandler {
       const problems: string[] = [...runtime.accountProblems]
       if (!plan.ok) problems.unshift(...plan.problems)
       const profiles = plan.ok ? plan.value.accounts : []
-      const accountSignals = await signals(runtime.mcp, runtime.manifest.plugin.name, profiles.map((profile) => profile.alias))
+      let accountSignals: Record<string, AccountSignal>
+      try {
+        accountSignals = await signals(runtime.mcp, runtime.manifest.plugin.name, profiles.map((profile) => profile.alias))
+      } catch (error) {
+        // An unreadable server list is unknown, never zero: every alias is an error, and the plugin says so once.
+        const reason = redactReason(error instanceof Error ? error.message : String(error))
+        accountSignals = Object.fromEntries(profiles.map((profile) => [profile.alias, { state: "error", reason } satisfies AccountSignal]))
+        problems.push(`OpenCode's MCP server list could not be read: ${reason}`)
+      }
       const accounts = accountStatuses(profiles, accountSignals)
 
       let unguardedAgents: readonly string[] = []

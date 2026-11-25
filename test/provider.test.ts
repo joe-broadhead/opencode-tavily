@@ -3,7 +3,7 @@ import { test } from "node:test"
 import { accountStatus, redactReason } from "@we-the-rebel-alliance/plugin-contract/accounts"
 import { connectionOwner, findServer, MCP_URL, serverConfig, serverName, signalFor, signals, type ServerEntry } from "../src/provider/client.ts"
 
-const CONFIG = { title: "Tavily", alias: "work", executionTimeoutMs: 900_000 } as const
+const CONFIG = { executionTimeoutMs: 900_000 } as const
 
 test("the per-alias server is Tavily's one MCP URL with its own OAuth", () => {
   assert.equal(MCP_URL, "https://mcp.tavily.com/mcp/")
@@ -12,9 +12,8 @@ test("the per-alias server is Tavily's one MCP URL with its own OAuth", () => {
     url: "https://mcp.tavily.com/mcp/",
     oauth: {},
     timeout: { execution: 900_000 },
-    title: "Tavily (work)",
   })
-  assert.deepEqual(serverConfig({ ...CONFIG, alias: "default" })["title"], "Tavily")
+  assert.deepEqual(Object.keys(serverConfig(CONFIG)).sort(), ["oauth", "timeout", "type", "url"])
 })
 
 test("the account name is the one OpenCode signs in to", () => {
@@ -85,22 +84,20 @@ test("a missing server is that alias's error, and the other alias still answers"
   assert.deepEqual(personal, { alias: "personal", state: "error", reason: "OpenCode lists no such server" })
 })
 
-test("an unreadable server list is unknown for every alias, never ready", async () => {
-  const states = await signals(
-    {
-      list: async () => {
-        throw new Error("permission denied at https://mcp.tavily.com/cb?token=hidden-value")
-      },
-    },
-    "tavily",
-    ["work", "personal"],
+test("a server list the host cannot read is thrown to the caller, never read as ready", async () => {
+  await assert.rejects(
+    () =>
+      signals(
+        {
+          list: async () => {
+            throw new Error("permission denied at https://mcp.tavily.com/cb?token=hidden-value")
+          },
+        },
+        "tavily",
+        ["work", "personal"],
+      ),
+    (error: unknown) => error instanceof Error && error.message.includes("permission denied"),
   )
-  for (const alias of ["work", "personal"]) {
-    const signal = states[alias]
-    assert.equal(signal?.state, "error")
-    assert.doesNotMatch(signal?.reason ?? "", /hidden-value/)
-    assert.doesNotMatch(signal?.reason ?? "", /token=[^…]/)
-  }
 })
 
 test("findServer names the entry OpenCode lists", () => {

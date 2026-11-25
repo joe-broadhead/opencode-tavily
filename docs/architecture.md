@@ -39,9 +39,9 @@ reads of OpenCode's own MCP server list:
 - `probe` answers the server entry's name as OpenCode's connection identity, `mcp:tavily-<alias>`.
 
 There is no network client: Tavily's server owns every call, and the plugin never talks to the provider itself. The
-plugin keeps no cache and no credential. The server config carries the alias as a `title`; OpenCode 2.4.1's remote
-config has no `title` field and drops it, showing the server's own `serverInfo.title` instead, so the server name
-(`tavily`, `tavily-work`) is what tells aliases apart. The name is the contract's, from `accountName`.
+plugin keeps no cache and no credential. Each server config sets only the fields OpenCode 2.4.1's remote config
+defines: `type`, `url`, `oauth` and `timeout.execution`. The server name (`tavily`, `tavily-work`, from the contract's
+`accountName`) is what tells aliases apart; that config has no display-title field.
 
 ## OpenCode APIs
 

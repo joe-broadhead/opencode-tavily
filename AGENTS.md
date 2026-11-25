@@ -103,7 +103,7 @@ reviews its class.
 ## Tests
 
 - `test/manifest.test.ts` proves the package, the manifest shape, the method classes and the fixed-context line.
-- `test/accounts.test.ts` proves one server per alias, the names, the URL, `oauth`, `timeout.execution` and `title`.
+- `test/accounts.test.ts` proves one server per alias, the names, the URL, `oauth` and `timeout.execution`.
 - `test/provider.test.ts` proves each MCP state's signal, the redaction, and the single live read.
 - `test/options.test.ts` proves the two plugin options and their refusals.
 - `test/probe.test.ts` and `test/status.test.ts` drive the real handlers.

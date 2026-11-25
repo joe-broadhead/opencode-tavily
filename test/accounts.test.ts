@@ -40,14 +40,12 @@ test("the mcp mechanism registers one server per alias, named for the account", 
     url: "https://mcp.tavily.com/mcp/",
     oauth: {},
     timeout: { execution: 900_000 },
-    title: "Tavily (work)",
   })
   assert.deepEqual(servers.get("tavily-personal"), {
     type: "remote",
     url: "https://mcp.tavily.com/mcp/",
     oauth: {},
     timeout: { execution: 900_000 },
-    title: "Tavily (personal)",
   })
 })
 
@@ -60,7 +58,6 @@ test("with no accounts option the plugin has one default server", async () => {
     url: "https://mcp.tavily.com/mcp/",
     oauth: {},
     timeout: { execution: 900_000 },
-    title: "Tavily",
   })
 })
 
@@ -90,6 +87,5 @@ test("a server already named for an alias is set to the plugin's config", async 
     url: "https://mcp.tavily.com/mcp/",
     oauth: {},
     timeout: { execution: 900_000 },
-    title: "Tavily (work)",
   })
 })

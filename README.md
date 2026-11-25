@@ -9,11 +9,12 @@ its own, reads no web content and stores no credential.
 
 ## Install
 
-The plugin is prepared for `v0.0.0`. The maintainer cuts that tag after the pull request merges; this repository's older
-tags belong to the previous package line and do not contain this build. Once `v0.0.0` exists:
+The plugin is prepared for `v0.0.0`. The maintainer deletes the old `v0.0.0` and cuts this line's `v0.0.0` after the
+pull request merges; the existing `v0.0.0`–`v0.0.7` tags are the previous package and do not contain this build. A
+release then installs from its tag:
 
 ```sh
-opencode plugin add github:we-the-rebel-alliance/tavily-plugin#v0.0.0
+opencode plugin add github:we-the-rebel-alliance/tavily-plugin#v<version>
 ```
 
 ## Sign in

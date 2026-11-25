@@ -63,5 +63,6 @@ Releases are tags, not npm packages. A release is prepared in one pull request,
 `npx plugin-kit docs` if the manifest changed. The maintainer pushes the tag; the release workflow checks the tag,
 builds, and creates the GitHub release with the packed tarball, the conformance report and `SHA256SUMS`.
 
-The repository still carries tags from the package's life before the transfer. They do not contain this build, and the
-maintainer must remove the old `v0.0.0` before cutting this line's `v0.0.0`.
+The repository still carries `v0.0.0`–`v0.0.7`, tags from the package's life before the transfer. They are the previous
+package and do not contain this build; the maintainer deletes the old `v0.0.0` and cuts this line's `v0.0.0` after the
+merge.
