@@ -1,6 +1,6 @@
 // Builds dist/index.js: the one server entry package.json exports, as one self-contained ES module.
 //
-//   npm run build
+//   npm run bundle
 //
 // @opencode/* stays external, because OpenCode provides it at run time. The contract modules are bundled, so a tag
 // installs and runs with no build and no runtime dependency. dist/ is generated, never edited by hand.

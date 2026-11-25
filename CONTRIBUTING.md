@@ -20,14 +20,14 @@ npm run check
 | Step | What it proves |
 |---|---|
 | `npm run typecheck` | the sources and tests typecheck under strict settings |
-| `npm run build` | `dist/index.js` is built from `src/index.ts` with esbuild |
+| `npm run bundle` | `dist/index.js` is built from `src/index.ts` with esbuild and committed |
 | `npm test` | the manifest, accounts, provider, options, handlers, web search, skills and fixture tests pass |
 | `npm run test:pack` | the packed tarball carries the right files and its `./server` entry loads as a plugin |
 | `plugin-kit check` | conformance T0 and T1 on 2.4.1, the doc file set, the forbidden patterns and no bundled kit |
 | `plugin-kit docs --check` | every generated doc section matches the manifest |
 
-CI runs the same steps in one job named `ci`. `dist/` is generated and is not committed, so CI builds it before
-`plugin-kit check`. One full check at a time on a shared machine:
+CI runs the same steps in one job named `ci`, after a freshness gate: it rebuilds `dist/` and fails when
+`git diff --exit-code dist/` finds the committed bundle stale. One full check at a time on a shared machine:
 `flock /tmp/opencode/p4b-check.lock -c 'npm run check'`.
 
 ## The contract pin

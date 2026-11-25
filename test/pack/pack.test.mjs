@@ -32,7 +32,7 @@ const NOT_PACKED = ["src/", "test/", "scripts/", "docs/", "fixtures/", "AGENTS.m
 const LIFECYCLE = ["preinstall", "install", "postinstall", "prepare", "prepack", "postpack", "prepublish", "prepublishOnly"]
 
 function pack(destination) {
-  if (!existsSync(join(root, "dist", "index.js"))) execFileSync("npm", ["run", "build"], { cwd: root, stdio: "inherit" })
+  if (!existsSync(join(root, "dist", "index.js"))) execFileSync("npm", ["run", "bundle"], { cwd: root, stdio: "inherit" })
   const output = execFileSync("npm", ["pack", "--json", "--pack-destination", destination], { cwd: root, encoding: "utf8" })
   const [packed] = JSON.parse(output)
   assert.ok(packed !== undefined, "npm pack answered one tarball")

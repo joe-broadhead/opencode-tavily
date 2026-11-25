@@ -41,7 +41,9 @@ export function parseSkill(directory: string, path: string, text: string): Skill
   if (name === undefined || name === "") throw invalid(`${where} has no "name" in its front matter`)
   if (description === undefined || description === "") throw invalid(`${where} has no "description" in its front matter`)
   if (name !== directory) throw invalid(`${where} is named "${name}" and must be named "${directory}"`)
-  return { id: name, description, path, content: (match[2] ?? "").trim() }
+  const content = (match[2] ?? "").trim()
+  if (content === "") throw invalid(`${where} has no content after its front matter`)
+  return { id: name, description, path, content }
 }
 
 /** Every skill under `directory`, sorted by directory name. */

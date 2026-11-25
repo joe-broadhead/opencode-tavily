@@ -60,6 +60,10 @@ test("a skill with no front matter, or the wrong name, is refused", () => {
     () => parseSkill("tavily", "/tmp/skills/tavily/SKILL.md", "---\nname: tavily\n---\nBody\n"),
     (error: unknown) => error instanceof Error && error.message.startsWith("UNAVAILABLE: "),
   )
+  assert.throws(
+    () => parseSkill("tavily", "/tmp/skills/tavily/SKILL.md", "---\nname: tavily\ndescription: A skill.\n---\n\n"),
+    (error: unknown) => error instanceof Error && error.message.startsWith("UNAVAILABLE: ") && error.message.includes("no content"),
+  )
 })
 
 test("a missing skills folder is a clean refusal, not a crash", async () => {
