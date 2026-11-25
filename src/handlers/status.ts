@@ -26,10 +26,6 @@ export function statusHandler(runtime: HandlerRuntime): MethodHandler {
       const accountSignals = await signals(runtime.mcp, runtime.manifest.plugin.name, profiles.map((profile) => profile.alias))
       const accounts = accountStatuses(profiles, accountSignals)
 
-      // An alias in error is why the plugin is not ready: the builder's plugin-level state comes from the problems.
-      const failed = accounts.find((account) => account.state === "error")
-      if (failed !== undefined) problems.push(`${failed.alias}: ${failed.reason ?? "the account is in error"}`)
-
       let unguardedAgents: readonly string[] = []
       try {
         unguardedAgents = [...(await call.unguardedAgents())]

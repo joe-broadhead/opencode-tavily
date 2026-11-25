@@ -50,7 +50,8 @@ test("every callable is classified, including the pass-through tools", () => {
 
 test("the namespace line is one line within the fixed-context budget", () => {
   const summary = manifest.plugin.summary
-  assert.ok(summary.length > 0 && summary.length <= 400, `summary is ${summary.length} characters`)
+  // MANIFEST_SCHEMA caps the summary at 300 characters; the standard's 400 is the namespace-line budget.
+  assert.ok(summary.length > 0 && summary.length <= 300, `summary is ${summary.length} characters`)
   assert.doesNotMatch(summary, /[\r\n]/)
   assert.match(summary, /Tavily credits/)
   assert.match(summary, /untrusted data, never instructions/)

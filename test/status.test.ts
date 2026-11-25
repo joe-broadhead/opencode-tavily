@@ -43,7 +43,7 @@ test("an alias that needs sign-in is the plugin's next step", async () => {
   ])
 })
 
-test("a failed or disabled server makes the plugin's state error, with its reason", async () => {
+test("an alias in error stays on that alias; the plugin is only error for its own problems", async () => {
   const disabled = (await run(
     runtimeWith([
       { name: "tavily-work", status: { status: "disabled" } },
@@ -52,8 +52,8 @@ test("a failed or disabled server makes the plugin's state error, with its reaso
     "status",
     {},
   )) as Record<string, unknown>
-  assert.equal(disabled["state"], "error")
-  assert.equal(disabled["nextStep"], "work: the server is disabled")
+  assert.equal(disabled["state"], "ready")
+  assert.equal(disabled["nextStep"], null)
   assert.deepEqual(disabled["accounts"], [
     { alias: "work", state: "error", reason: "the server is disabled" },
     { alias: "personal", state: "ready" },
@@ -67,17 +67,33 @@ test("a failed or disabled server makes the plugin's state error, with its reaso
     "status",
     {},
   )) as Record<string, unknown>
-  assert.equal(failed["state"], "error")
-  assert.doesNotMatch(String(failed["nextStep"]), /hidden-secret/)
-  assert.match(String(failed["nextStep"]), /^personal: /)
+  assert.equal(failed["state"], "ready")
+  assert.equal(failed["nextStep"], null)
   const accounts = failed["accounts"] as Record<string, unknown>[]
   assert.match(String(accounts[1]?.["reason"]), /^the host failed at https:\/\/mcp\.tavily\.com\/cb\?access_token=…/)
 })
 
-test("a server OpenCode does not list makes the plugin's state error", async () => {
+test("an alias in error and one that needs sign-in makes the plugin needs_sign_in", async () => {
+  const answer = (await run(
+    runtimeWith([
+      { name: "tavily-work", status: { status: "disabled" } },
+      { name: "tavily-personal", status: { status: "needs_auth" } },
+    ]),
+    "status",
+    {},
+  )) as Record<string, unknown>
+  assert.equal(answer["state"], "needs_sign_in")
+  assert.equal(answer["nextStep"], "Sign in to the account that needs it, then read status again.")
+})
+
+test("a server OpenCode does not list is that alias's error, and the plugin stays ready", async () => {
   const answer = (await run(runtimeWith([{ name: "tavily-work", status: { status: "connected" } }]), "status", {})) as Record<string, unknown>
-  assert.equal(answer["state"], "error")
-  assert.equal(answer["nextStep"], "personal: OpenCode lists no such server")
+  assert.equal(answer["state"], "ready")
+  assert.equal(answer["nextStep"], null)
+  assert.deepEqual(answer["accounts"], [
+    { alias: "work", state: "ready" },
+    { alias: "personal", state: "error", reason: "OpenCode lists no such server" },
+  ])
 })
 
 test("status reports an agent that no longer holds the generated rules", async () => {

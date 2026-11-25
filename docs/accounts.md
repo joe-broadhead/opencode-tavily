@@ -46,8 +46,9 @@ OpenCode's own MCP server state:
 | `pending` | `error`, "the server is still connecting" |
 | no entry under the server's name | `error`, "OpenCode lists no such server" |
 
-The plugin's own state is `error` when any alias is, else `needs_sign_in` when any is, else `ready`. `nextStep` names
-the first thing to fix.
+The plugin's own state is `error` when the plugin has a problem of its own, such as a server it could not register or an
+agent list it could not read; else `needs_sign_in` when an alias does; else `ready`. An alias's own `error` stays on
+that alias in `accounts[]`, and `nextStep` is the first plugin problem, the sign-in sentence, or null.
 
 ## Probe
 
