@@ -1,63 +1,58 @@
+/**
+ * The plugin's one entry: `Plugin.define({ id, setup })`, the host gate, the accounts, the skills, the web search
+ * default, and one `register` call.
+ *
+ * `register` wires doors 1–3 from `handlers`, resolves accounts, generates the access rules and builds the bus writer.
+ * This file never calls `ctx.tool`, `ctx.rpc` or `ctx.permission` itself.
+ */
 import { Plugin } from "@opencode/plugin"
-import { registerToolsRpc } from "@we-the-rebel-alliance/source-contract/tools-rpc"
-import { watchConnect } from "./connect.js"
-import { checkHost } from "./host-version.js"
-import { keyChecker } from "./key-check.js"
-import { METHODS, PLUGIN } from "./host/tools-rpc.js"
-import { readKey, registerServer, SERVER_NAME, watchKey, type ServerState } from "./mcp.js"
-import { parseOptions } from "./options.js"
-import { registerDefaultRules } from "./permissions.js"
-import { Tavily } from "./rpc/index.js"
-import { loadSkills, registerSkills } from "./skills.js"
-import { registerTools } from "./tools.js"
-import { readStatus, registerStatusCommand, unavailable } from "./status.js"
-import { selectWebsearchDefault, type WebsearchState } from "./websearch.js"
+import { assertHost, register } from "@we-the-rebel-alliance/plugin-contract/register"
+import { registerMcpAccounts } from "./accounts.ts"
+import { handlersFor } from "./handlers/index.ts"
+import { manifest, version } from "./manifest.ts"
+import { pluginOptions } from "./options.ts"
+import { loadSkills, registerSkills } from "./skills.ts"
+import { applyWebsearchDefault } from "./websearch.ts"
 
-const warn = (message: string) => console.warn(message)
+/** Dispose every registration, newest first; a failed dispose never hides the others. */
+async function disposeAll(stops: readonly (() => Promise<void>)[]): Promise<void> {
+  for (const stop of [...stops].reverse()) await stop().catch(() => undefined)
+}
 
 export default Plugin.define({
-  id: "tavily.web",
-  async setup(ctx) {
-    // Options first: they hold the host check's override. Validation has no side effects.
-    const options = parseOptions(ctx.options)
-    const host = checkHost(ctx.app.version, options.allowUntestedHost, warn)
+  id: manifest.plugin.name,
+  async setup(context) {
+    assertHost(context, manifest)
+    const options = context.options ?? {}
+    const settings = pluginOptions(options)
     const skills = await loadSkills()
-    const server: ServerState = { key: await readKey(ctx.integration, undefined, warn), userServer: false, userServerAtTavily: false }
-    const websearch: WebsearchState = { tavilyDefault: false }
-    const checkKey = keyChecker()
-    // Ask Tavily about the key now, so status has the answer; the check never throws.
-    if (server.key) void checkKey(server.key.key)
 
-    await registerServer(ctx.mcp, server, options.executionTimeoutMs)
-    await registerDefaultRules(ctx.agent, options.access)
-    if (options.websearch) await selectWebsearchDefault(ctx.websearch, websearch)
-    await registerSkills(ctx.skill, skills)
-    const read = () => readStatus(ctx, { server, websearch, host, checkKey, skills, access: options.access })
-    await registerStatusCommand(ctx, read)
-    await ctx.rpc.register(Tavily, {
-      status: (_input, { error }) =>
-        read().catch((cause: unknown) => {
-          const { message, nextStep } = unavailable(cause)
-          return error("unavailable", message, { nextStep })
-        }),
+    // The vendor's MCP server holds the credentials: one server per alias, named tavily or tavily-<alias>.
+    const accounts = await registerMcpAccounts(context, manifest, options, settings)
+
+    const handlers = handlersFor({
+      manifest,
+      version,
+      hostVersion: context.app.version,
+      options,
+      mcp: context.mcp,
+      accountProblems: accounts.problems,
     })
+    const registration = await register(context, manifest, handlers)
 
-    // The Code Mode namespace line, and Tavily's error objects as errors for the model (shapeResult does it for scripts).
-    await registerTools(ctx.tool)
-    // Scripts call the five tools with no model, as a session and its agent. A user's own server is used only when it
-    // is at Tavily's URL; any other is not the plugin's to vouch for.
-    const stopTools = await registerToolsRpc(ctx as never, {
-      plugin: PLUGIN,
-      methods: METHODS,
-      mcp: { server: SERVER_NAME, managed: () => !server.userServer || server.userServerAtTavily },
-    })
-
-    const controller = new AbortController()
-    void watchKey(ctx, server, controller.signal, warn)
-    void watchConnect(ctx, server, checkKey, controller.signal)
-    return async () => {
-      controller.abort()
-      await stopTools()
+    const stops: (() => Promise<void>)[] = [() => registration.dispose()]
+    try {
+      const skillsRegistration = await registerSkills(context.skill, skills)
+      stops.push(() => skillsRegistration.dispose())
+      const websearch = applyWebsearchDefault(context.websearch, settings.websearch)
+      if (websearch !== undefined) {
+        const websearchRegistration = await websearch
+        stops.push(() => websearchRegistration.dispose())
+      }
+    } catch (error) {
+      await disposeAll(stops)
+      throw error
     }
+    return () => disposeAll(stops)
   },
 })

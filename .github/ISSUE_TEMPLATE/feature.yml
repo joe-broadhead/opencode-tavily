@@ -1,0 +1,41 @@
+name: Feature request
+description: A capability or a change the plugin should make.
+title: "feat: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        A new capability starts in the manifest and needs a handler, tests and a recorded fixture. Read AGENTS.md
+        before you open the pull request.
+  - type: dropdown
+    id: kind
+    attributes:
+      label: What kind of capability
+      options:
+        - A passthrough MCP tool row
+        - A read method
+        - An account mechanism
+        - Documentation or layout
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: The problem
+      description: What a person cannot do today, and why the plugin is the right owner.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: The proposal
+      description: The method or tool row, its class and operations, and what its answer looks like.
+    validations:
+      required: true
+  - type: textarea
+    id: risk
+    attributes:
+      label: Risk and cost
+      description: For a billing tool, say what one call spends and how the access level treats it. For a read, say what it reads.
+    validations:
+      required: false

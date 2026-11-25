@@ -1,3 +1,0 @@
-# Every `bun test` run: define the plugin version, as scripts/build.mjs does for dist/.
-[test]
-preload = ["./test/version.ts"]
