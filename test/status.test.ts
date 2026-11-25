@@ -119,19 +119,17 @@ test("an unreadable MCP server list is an error for every alias and for the plug
 })
 
 test("status reports an agent that no longer holds the generated rules", async () => {
-  const answer = (await run(runtimeFor(), "status", {}, "work", { unguardedAgents: async () => ["build"] })) as Record<string, unknown>
+  const answer = (await run(runtimeFor(), "status", {}, "work", { unguardedAgents: async () => ({ ok: true, agents: ["build"] }) })) as Record<string, unknown>
   assert.deepEqual(answer["unguardedAgents"], ["build"])
 })
 
 test("an unreadable agent list is an error, never zero", async () => {
   const answer = (await run(runtimeFor(), "status", {}, "work", {
-    unguardedAgents: async () => {
-      throw new Error("the agent list failed at https://mcp.tavily.com/cb?token=hidden-value")
-    },
+    unguardedAgents: async () => ({ ok: false, error: "the agent list failed at https://mcp.tavily.com/cb?token=hidden-value" }),
   })) as Record<string, unknown>
   assert.equal(answer["state"], "error")
-  assert.doesNotMatch(String(answer["nextStep"]), /hidden-value/)
-  assert.match(String(answer["nextStep"]), /Next step|the agent list failed/)
+  assert.deepEqual(answer["unguardedAgents"], [])
+  assert.equal(answer["nextStep"], "the agent list failed at https://mcp.tavily.com/cb?token=…")
 })
 
 test("what account registration could not do is the first next step", async () => {

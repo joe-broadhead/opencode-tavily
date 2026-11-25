@@ -1,4 +1,5 @@
 /** The handlers, driven through their real entry, with a synthetic MCP server list and no host. */
+import type { UnguardedAgentsResult } from "@we-the-rebel-alliance/plugin-contract/access"
 import type { Bus } from "@we-the-rebel-alliance/plugin-contract/bus"
 import type { MethodCall } from "@we-the-rebel-alliance/plugin-contract/register"
 import { handlersFor, type HandlerRuntime } from "../../src/handlers/index.ts"
@@ -45,15 +46,14 @@ export function callFor(account: string, overrides: CallOverrides = {}): MethodC
     progress: async () => undefined,
     account,
     bus: BUS,
-    access: { level: "all", aliases: ["work", "personal"], rules: [], problems: [], dispose: async () => undefined },
-    unguardedAgents: overrides.unguardedAgents ?? (async () => []),
+    unguardedAgents: overrides.unguardedAgents ?? (async () => ({ ok: true, agents: [] })),
     door: "tool",
   }
 }
 
-/** The parts of a call a test overrides: the agent list it answers, or the error it throws. */
+/** The parts of a call a test overrides: the agent list it answers, or the error it reports. */
 export interface CallOverrides {
-  readonly unguardedAgents?: () => Promise<readonly string[]>
+  readonly unguardedAgents?: () => Promise<UnguardedAgentsResult>
 }
 
 /** Run one handler with an account and the input `register` would pass. */

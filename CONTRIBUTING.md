@@ -32,9 +32,8 @@ CI runs the same steps in one job named `ci`. `dist/` is generated and is not co
 
 ## The contract pin
 
-`package.json` pins the contract to a commit while it is unreleased. A released plugin pins the release tag instead,
-`github:we-the-rebel-alliance/plugin-contract#v0.0.0`, and moves the pin with the contract's release. Never copy a
-contract module into this repository.
+`package.json` pins the contract to its release tag, `github:we-the-rebel-alliance/plugin-contract#v0.0.0`, and moves
+the pin with the contract's release. Never copy a contract module into this repository.
 
 The committed `package-lock.json` may record the contract's repository over `git+ssh`; CI rewrites that URL to HTTPS
 before `npm ci`, so a runner needs no SSH key. Keep the GitHub dependency form the contract documents.

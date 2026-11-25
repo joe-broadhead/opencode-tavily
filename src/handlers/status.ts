@@ -34,21 +34,13 @@ export function statusHandler(runtime: HandlerRuntime): MethodHandler {
       }
       const accounts = accountStatuses(profiles, accountSignals)
 
-      let unguardedAgents: readonly string[] = []
-      try {
-        unguardedAgents = [...(await call.unguardedAgents())]
-      } catch (error) {
-        // An unreadable agent list is unknown, never zero: status says error, with a redacted next step.
-        problems.unshift(redactReason(error instanceof Error ? error.message : String(error)))
-      }
-
       return statusAnswer({
         manifest: runtime.manifest,
         version: runtime.version,
         hostVersion: runtime.hostVersion,
         accounts,
         problems,
-        unguardedAgents,
+        unguardedAgents: await call.unguardedAgents(),
       })
     },
   }
