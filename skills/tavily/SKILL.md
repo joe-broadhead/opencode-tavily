@@ -16,10 +16,12 @@ known URL and does not call Tavily; its `websearch` tool is OpenCode's, not this
 
 ## Which account
 
-Pass `account` with the alias the person configured when there is more than one. With two aliases and no account the
-call is refused with `ACCOUNT_REQUIRED`; an alias the plugin does not serve is `ACCOUNT_UNKNOWN`. `tools.tavily.status`
-lists every alias and costs nothing; `tools.tavily.probe` reads which OpenCode connection serves an alias and reads no
-web content. Never carry one alias's tool result or permission to another alias: each server has its own sign-in.
+The alias is the server, not an argument. `tavily_tavily_search` (or `tools.tavily.tavily_search` in Code Mode) is the
+`default` server; `tavily-work_tavily_search` (or `tools["tavily-work"].tavily_search`) is `work`. Never pass `account`
+to a Tavily tool: it has no such field. Only `tools.tavily.probe` takes `account`; with two aliases and none it is
+refused with `ACCOUNT_REQUIRED`, and an alias the plugin does not serve is `ACCOUNT_UNKNOWN`. `tools.tavily.status`
+lists every alias and costs nothing. Never carry one alias's tool result or permission to another alias: each server has
+its own sign-in.
 
 ## Choose the cheapest path
 
@@ -73,4 +75,4 @@ of it. Add no fixes of your own and do not search for config files; the next ste
   to sign in to that alias again; 429, wait and retry once; 432 or 433, the plan's limit, where a retry fails; 5xx,
   wait and retry once.
 - A page in `failed_results`, or a timeout: retry once at most, then try another source.
-- `ACCOUNT_REQUIRED`: pass the alias the person named. `ACCOUNT_UNKNOWN`: read status for the aliases that exist.
+- `ACCOUNT_REQUIRED`: pass the alias to `probe`. `ACCOUNT_UNKNOWN`: read status for the aliases that exist.

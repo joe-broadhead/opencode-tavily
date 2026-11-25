@@ -29,8 +29,10 @@ a server of your own.
 
 ## Picking an account
 
-Pass `account: "<alias>"` on a method that takes one. With two aliases and no account, the call is refused with
-`ACCOUNT_REQUIRED`, whose next step lists the aliases. An alias the plugin does not serve is `ACCOUNT_UNKNOWN`.
+Only `probe` takes an account: pass `account: "<alias>"` to read that alias's OpenCode connection. With two aliases and
+none, `probe` is refused with `ACCOUNT_REQUIRED`, whose next step lists the aliases; an alias the plugin does not serve
+is `ACCOUNT_UNKNOWN`. `status` takes no account, and neither do Tavily's tools: their alias is the MCP server
+(`tavily-work_tavily_search`, or `tools["tavily-work"].tavily_search` in Code Mode).
 
 ## Status
 

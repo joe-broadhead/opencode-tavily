@@ -44,9 +44,10 @@ None.
 - **`mcp:*`** is the same class, `write`: a Tavily tool added later is a change until a release reviews it. The
   explicit rows give each known tool its true class, and the access rules put the wildcard before the specific rules so
   a known tool keeps its own.
-- **Per-alias names.** OpenCode names an MCP tool `<server>_<tool>`: `tavily_tavily_search` for `default`,
-  `tavily-work_tavily_search` for `work`. In Code Mode they are `tools.tavily.tavily_search` and so on, and the alias is
-  the `account` argument, not part of the Code Mode name. A permission rule for one alias never matches another alias's
+- **Per-alias names.** The alias is the MCP server, and the tool name carries it. OpenCode names a native tool
+  `<server>_<tool>`: `tavily_tavily_search` for `default`, `tavily-work_tavily_search` for `work`. In Code Mode the alias
+  is the namespace: `tools.tavily.tavily_search` for `default`, `tools["tavily-work"].tavily_search` for `work`. A Tavily
+  tool takes no `account` field; only `probe` takes one. A permission rule for one alias never matches another alias's
   tool.
 - **No sources, actions or bus events.** There is no feed to poll (the vendor's MCP server owns its answers and the
   plugin cannot read it) and no write for the plugin to make, so it has no cursor, no preview and no `changed` nudge.

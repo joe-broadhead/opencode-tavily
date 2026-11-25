@@ -60,8 +60,9 @@ scripts/record-fixture.mjs rebuilds the synthetic recording
 
 1. **The manifest is the source of truth.** Add or change a method in `package.json` `capabilities` first, then its
    handler, then its tests. Never register a tool by hand: `contract.register` does it.
-2. **Every method takes the account** when it signs in to the provider. Never assume `default`. The contract's
-   `accounts` module resolves it.
+2. **The plugin's own methods take the account** when they read a provider identity: `probe` takes `account`, and
+   `status` takes none. A pass-through MCP tool takes no `account`; its alias is the MCP server and the tool name. Never
+   assume `default`.
 3. **Classify every method truthfully.** A delete is `delete`, a send is `send`, a share is `share`; a tool that spends
    money is never `read`. Every Tavily tool is `write`, so `read-only` turns it off.
 4. **The vendor owns the tools.** Never add a handler for an `mcp:` method, never wrap a Tavily tool, and never copy its

@@ -26,8 +26,9 @@ access rules inserted into every agent. This repository never calls `ctx.tool`, 
    Tavily's URL, with its own OAuth and the configured `timeout.execution`.
 5. `register` checks the handler table against `capabilities.methods`, resolves the accounts from the options, generates
    the access rules into every agent, and registers the tools and the one RPC id.
-6. A call resolves the account, validates the input, asserts the method's operations, runs the handler, checks the
-   answer and maps a failure to the contract's error table.
+6. A plugin-method call resolves the account where it takes one (`probe`), validates the input, asserts the method's
+   operations, runs the handler, checks the answer and maps a failure to the contract's error table. A pass-through MCP
+   tool runs on its alias's server and the plugin resolves no account for it.
 
 ## The provider
 

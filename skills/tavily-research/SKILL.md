@@ -6,8 +6,9 @@ description: A Tavily Research task: a cited, multi-source web report that takes
 
 `tavily_research` (`tools.tavily.tavily_research` in Code Mode, `tavily_tavily_research` as a direct tool) searches many
 sources and writes one report. It takes several minutes, shows no progress until it ends, and costs 4 to 250 credits.
-One fact is one `tavily_search` with `search_depth: "basic"` (1 credit), even when the person says "research". Pass
-`account` when more than one alias is configured.
+One fact is one `tavily_search` with `search_depth: "basic"` (1 credit), even when the person says "research".
+The alias is the server (`tavily_tavily_research`, or `tools["tavily-work"].tavily_research` for `work`); a Tavily tool
+takes no `account` field.
 
 ## Propose it first
 

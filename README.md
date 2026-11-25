@@ -41,8 +41,11 @@ One account needs no options at all. Several are a map of alias to an empty prof
 }
 ```
 
-Methods that take an account accept `account: "work"` or `account: "personal"`. With two aliases and no account, a call
-is refused with `ACCOUNT_REQUIRED`, whose next step lists the aliases.
+Only the plugin's own `probe` takes `account`: pass `account: "work"` or `account: "personal"` to read that alias's
+OpenCode connection. With two aliases and none, `probe` is refused with `ACCOUNT_REQUIRED`, whose next step lists the
+aliases; an alias the plugin does not serve is `ACCOUNT_UNKNOWN`. Tavily's own tools do not take an account: the alias is
+the MCP server, and the tool name says which one (`tavily-work_tavily_search`, or `tools["tavily-work"].tavily_search` in
+Code Mode).
 
 ## Access
 
@@ -81,10 +84,11 @@ a Tavily tool added later is covered by the same `mcp:*` rule until a release re
   could not be added; an unreadable server list means OpenCode could not answer, so nothing is known.
 - **The Tavily tools are absent.** Check that OpenCode is 2.4.1 or another 2.4.x, the plugin is installed, and the
   alias's server is signed in. The tools are `tavily_tavily_search` for `default` and `tavily-<alias>_tavily_search` for
-  another alias, or `tools.tavily.tavily_search` in Code Mode.
-- **A call is refused.** `ACCOUNT_REQUIRED` means pass `account`; `ACCOUNT_UNKNOWN` means the alias is not configured;
-  `PERMISSION_DENIED` means the access level or a rule refuses it (under `read-only` every Tavily tool is off);
-  `INPUT_INVALID` means the tool's own schema was not met; `UNAVAILABLE` means the host could not answer — read `status`.
+  another alias, or `tools.tavily.tavily_search` in Code Mode (`tools["tavily-work"].tavily_search` for `work`).
+- **A call is refused.** `ACCOUNT_REQUIRED` or `ACCOUNT_UNKNOWN` comes from `probe` only: pass `account`, or use an alias
+  that exists. A Tavily tool has no `account` field; its alias is the server in its name. `PERMISSION_DENIED` means the
+  access level or a rule refuses it (under `read-only` every Tavily tool is off); `INPUT_INVALID` means the tool's own
+  schema was not met; `UNAVAILABLE` means the host could not answer — read `status`.
 
 ## Cost
 
