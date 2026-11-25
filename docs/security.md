@@ -31,10 +31,10 @@ unauthenticated `initialize` answers `401`), so the plugin neither repeats nor c
 
 ## Spending
 
-Every Tavily tool call spends credits from the signed-in alias, at the prices in the [README](../README.md#cost). The
-plugin sets no spending limit and cannot see the balance. `read-only` turns all five tools off; `ask-changes` makes each
-one ask first. An OpenCode automation that calls a tool spends credits on every run. `executionTimeoutMs` bounds the
-time, not the cost.
+Every Tavily tool call spends credits from the signed-in alias, at the prices in the [README](../README.md#cost), and
+asks first even at `access: "all"`; `ask-changes` is the same ask, and `read-only` turns all five off. The ask is a
+permission, not a spending confirmation: the plugin sets no spending limit and cannot see the balance. An OpenCode
+automation that calls a tool spends credits on every run. `executionTimeoutMs` bounds the time, not the cost.
 
 ## Access and confirmation
 

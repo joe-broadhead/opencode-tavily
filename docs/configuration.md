@@ -5,7 +5,7 @@ The options and their defaults, generated from `capabilities.options`.
 <!-- generated:configuration -->
 | Option | Type | Default | Description |
 |---|---|---|---|
-| `access` | `all` \| `ask-changes` \| `read-only` | `"all"` | How much the plugin's methods may do: all runs every method, ask-changes asks before a non-read, read-only turns every non-read off. |
+| `access` | `all` \| `ask-changes` \| `read-only` | `"all"` | How much the plugin's methods may do: all runs every method not marked effect ask, ask-changes asks before a non-read, read-only turns every non-read off. |
 | `accounts` | object | — | One empty profile per account alias. The alias is the whole setting; no secret goes in a profile. |
 | `allowUntestedHost` | boolean | `false` | Start outside the tested OpenCode range. |
 | `websearch` | boolean | `true` | Select OpenCode's built-in Tavily provider for the websearch tool when nothing earlier chose one. |
@@ -32,9 +32,9 @@ OpenCode's MCP sign-in.
 }
 ```
 
-- **`access`** is the ceiling: `all` runs every method, `ask-changes` asks before a non-read, `read-only` turns every
-  non-read off. The five Tavily tools are non-reads, because each call spends credits. A rule the person or an app adds
-  later still wins for one tool.
+- **`access`** is the ceiling: `all` runs every method not marked `effect: "ask"`, `ask-changes` asks before a non-read,
+  `read-only` turns every non-read off. The five Tavily tools are non-reads because each call spends credits, and they
+  carry `effect: "ask"`, so they ask even at `all`. A rule the person or an app adds later still wins for one tool.
 - **`accounts`** is one profile per alias. The profile is empty: the alias is the whole setting, and no secret goes in
   a profile. Each alias gets its own MCP server (`tavily-work`, `tavily-personal`) and its own OAuth sign-in.
 - **`websearch`** (default `true`) selects OpenCode's built-in Tavily web search provider when nothing earlier chose

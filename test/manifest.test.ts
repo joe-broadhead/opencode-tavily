@@ -42,9 +42,9 @@ test("every callable is classified, including the pass-through tools", () => {
   assert.deepEqual(item("status"), { class: "read", accounts: "none" })
   assert.deepEqual(item("probe"), { class: "read", accounts: "optional" })
   for (const tool of TOOLS) {
-    assert.deepEqual(item(`mcp:${tool}`), { class: "write", accounts: "optional", operations: [tool] })
+    assert.deepEqual(item(`mcp:${tool}`), { class: "write", accounts: "optional", operations: [tool], effect: "ask" })
   }
-  assert.deepEqual(item("mcp:*"), { class: "write", accounts: "optional" })
+  assert.deepEqual(item("mcp:*"), { class: "write", accounts: "optional", effect: "ask" })
   for (const entry of Object.values(manifest.methods)) assert.equal(entry.pinned, undefined)
 })
 

@@ -81,7 +81,7 @@
             "read-only"
           ],
           "default": "all",
-          "description": "How much the plugin's methods may do: all runs every method, ask-changes asks before a non-read, read-only turns every non-read off."
+          "description": "How much the plugin's methods may do: all runs every method not marked effect ask, ask-changes asks before a non-read, read-only turns every non-read off."
         },
         "accounts": {
           "type": "object",
@@ -128,39 +128,45 @@
         "accounts": "optional",
         "operations": [
           "tavily_search"
-        ]
+        ],
+        "effect": "ask"
       },
       "mcp:tavily_extract": {
         "class": "write",
         "accounts": "optional",
         "operations": [
           "tavily_extract"
-        ]
+        ],
+        "effect": "ask"
       },
       "mcp:tavily_map": {
         "class": "write",
         "accounts": "optional",
         "operations": [
           "tavily_map"
-        ]
+        ],
+        "effect": "ask"
       },
       "mcp:tavily_crawl": {
         "class": "write",
         "accounts": "optional",
         "operations": [
           "tavily_crawl"
-        ]
+        ],
+        "effect": "ask"
       },
       "mcp:tavily_research": {
         "class": "write",
         "accounts": "optional",
         "operations": [
           "tavily_research"
-        ]
+        ],
+        "effect": "ask"
       },
       "mcp:*": {
         "class": "write",
-        "accounts": "optional"
+        "accounts": "optional",
+        "effect": "ask"
       }
     },
     "sources": [],

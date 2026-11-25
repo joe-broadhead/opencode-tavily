@@ -53,19 +53,20 @@ Code Mode).
 
 | Level | `status` and `probe` | the five Tavily tools |
 |---|---|---|
-| `all` | run | run |
+| `all` | run | ask first |
 | `ask-changes` | run | ask first |
 | `read-only` | run | off |
 
 The five tools are classified `write` for access, not because they change anything at Tavily but because each call
-spends credits: a free-looking read that bills the person is not a read. `read-only` therefore turns all five off, and
-a Tavily tool added later is covered by the same `mcp:*` rule until a release reviews it.
+spends credits: a free-looking read that bills the person is not a read. They also carry `effect: "ask"`, so a call
+asks first even at `all`; `ask-changes` is the same ask, and `read-only` turns all five off. A Tavily tool added later is
+covered by `mcp:*`, which also asks, until a release reviews it.
 
 ## Options
 
 | Option | Default | Meaning |
 |---|---|---|
-| `access` | `all` | `all`, `ask-changes` or `read-only`: the ceiling for every method. |
+| `access` | `all` | `all`, `ask-changes` or `read-only`: the ceiling for every method; billed Tavily methods ask even at `all`. |
 | `accounts` | one `default` | One empty profile per alias; the alias is the whole setting. |
 | `allowUntestedHost` | `false` | Start outside `>=2.4.1 <2.5.0`. Leave it off. |
 | `websearch` | `true` | Select OpenCode's built-in Tavily web search provider when nothing earlier chose one. |
@@ -100,8 +101,9 @@ a Tavily tool added later is covered by the same `mcp:*` rule until a release re
 | Crawl | map's cost plus extract's for each page read |
 | Research | 4-110 credits (mini), 15-250 (pro) per task |
 
-`status` and `probe` cost nothing. The plugin sets no spending limit; Tavily's plan does. `executionTimeoutMs` bounds
-how long one call may run (15 minutes by default), not what it costs.
+`status` and `probe` cost nothing. Every Tavily tool call asks first, even at `access: "all"`; the ask is a permission,
+not a spending confirmation. The plugin sets no spending limit; Tavily's plan does. `executionTimeoutMs` bounds how long
+one call may run (15 minutes by default), not what it costs.
 
 ## Tavily's server instructions
 

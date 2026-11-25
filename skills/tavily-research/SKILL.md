@@ -12,7 +12,7 @@ takes no `account` field.
 
 ## Propose it first
 
-Tavily's tool runs without a permission prompt at the default access level, so you propose it. Before a Research task,
+Tavily's tool asks for permission, but that prompt is not a scope or cost confirmation, so you still propose it. Before a Research task,
 end your turn with a proposal and a question, so the person agrees to the scope and the cost:
 
 - **the draft `input`** you would send: the question, the items to cover, the time period, the criteria, sources to

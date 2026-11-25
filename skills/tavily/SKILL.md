@@ -53,7 +53,8 @@ Stop as soon as you can answer.
 | Research | 4-110 credits (mini), 15-250 (pro) per task |
 
 `include_usage: true` on Extract, Map and Crawl reports the credits a call used. Before a large Crawl, tell the person
-the cost. The plugin sets no spending limit; Tavily's plan does.
+the cost. Every Tavily call asks for permission first, even at `access: "all"`; that prompt is not a cost confirmation.
+The plugin sets no spending limit; Tavily's plan does.
 
 ## Is it set up?
 

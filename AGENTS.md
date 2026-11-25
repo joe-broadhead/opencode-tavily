@@ -64,7 +64,8 @@ scripts/record-fixture.mjs rebuilds the synthetic recording
    `status` takes none. A pass-through MCP tool takes no `account`; its alias is the MCP server and the tool name. Never
    assume `default`.
 3. **Classify every method truthfully.** A delete is `delete`, a send is `send`, a share is `share`; a tool that spends
-   money is never `read`. Every Tavily tool is `write`, so `read-only` turns it off.
+   money is never `read`. Every Tavily tool is `write` with `effect: "ask"`, so a call asks first even at `all`, and
+   `read-only` turns it off.
 4. **The vendor owns the tools.** Never add a handler for an `mcp:` method, never wrap a Tavily tool, and never copy its
    schema. The manifest declares the class; the server runs the call.
 5. **Errors** read `CODE: What happened. Next step: What to do.` Use the contract's codes; add a plugin code only in the

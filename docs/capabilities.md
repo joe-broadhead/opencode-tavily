@@ -40,10 +40,11 @@ None.
   no Tavily sign-in; `status` reports that.
 - **The five `mcp:` methods are Tavily's own tools.** The plugin does not register, wrap or proxy them: the hosted
   server owns their schemas and runs them. Each is declared so a consumer knows its access class before it calls one.
-  `mcp:tavily_search` has the operation `tavily_search`, which is the server's own tool name.
-- **`mcp:*`** is the same class, `write`: a Tavily tool added later is a change until a release reviews it. The
-  explicit rows give each known tool its true class, and the access rules put the wildcard before the specific rules so
-  a known tool keeps its own.
+  `mcp:tavily_search` has the operation `tavily_search`, which is the server's own tool name. Each declares
+  `effect: "ask"`, so a call asks first even at `access: "all"`: a billed call is never silent.
+- **`mcp:*`** is the same class, `write`, with `effect: "ask"`: a Tavily tool added later is a change until a release
+  reviews it, so it asks even at `access: "all"`. The explicit rows give each known tool its true class, and the access
+  rules put the wildcard before the specific rules so a known tool keeps its own.
 - **Per-alias names.** The alias is the MCP server, and the tool name carries it. OpenCode names a native tool
   `<server>_<tool>`: `tavily_tavily_search` for `default`, `tavily-work_tavily_search` for `work`. In Code Mode the alias
   is the namespace: `tools.tavily.tavily_search` for `default`, `tools["tavily-work"].tavily_search` for `work`. A Tavily
