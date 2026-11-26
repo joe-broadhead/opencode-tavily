@@ -1,96 +1,132 @@
-import { afterAll, describe, expect, test } from "bun:test"
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises"
+import assert from "node:assert/strict"
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
-import { dirname, join } from "node:path"
+import { join } from "node:path"
+import { test } from "node:test"
+import type { Plugin } from "@opencode/plugin"
 import { fileURLToPath } from "node:url"
-import { loadSkills, parseSkill, registerSkills } from "../../src/skills.js"
-import { transforms, type EditorOf } from "./fake.js"
-import { Skill, type Plugin } from "@opencode/plugin"
+import { readSkills, registerSkills } from "../../src/skills.ts"
 
-const root = await mkdtemp(join(tmpdir(), "tavily-skills-"))
-afterAll(() => rm(root, { recursive: true, force: true }))
+const root = fileURLToPath(new URL("../..", import.meta.url))
 
-/** Writes a skills folder fixture: `{ "<dir>": "<SKILL.md text>" | null }`, where null means no SKILL.md. */
-async function fixture(name: string, skills: Record<string, string | null>) {
-  const directory = join(root, name)
-  for (const [skill, text] of Object.entries(skills)) {
-    await mkdir(join(directory, skill), { recursive: true })
-    if (text !== null) await writeFile(join(directory, skill, "SKILL.md"), text)
+/** A temporary `skills/` directory holding one file per entry. */
+function fixture(files: Readonly<Record<string, string>>): string {
+  const directory = mkdtempSync(join(tmpdir(), "plugin-skills-"))
+  for (const [name, text] of Object.entries(files)) {
+    mkdirSync(join(directory, name), { recursive: true })
+    writeFileSync(join(directory, name, "SKILL.md"), text)
   }
   return directory
 }
 
-const skill = (name: string, description = `Use ${name}.`) => `---\nname: ${name}\ndescription: ${description}\n---\n\n# ${name}\n\nBody.\n`
-
-describe("loadSkills", () => {
-  test("loads every skills/*/SKILL.md with its frontmatter and body", async () => {
-    const directory = await fixture("valid", { tavily: skill("tavily"), "tavily-research": skill("tavily-research", "Run research.") })
-    const skills = await loadSkills(directory)
-    expect(skills.map((entry) => String(entry.id)).sort()).toEqual(["tavily", "tavily-research"])
-    const research = skills.find((entry) => entry.id === "tavily-research")
-    expect(research).toEqual({
-      id: Skill.ID.make("tavily-research"),
-      name: Skill.Name.make("tavily-research"),
-      description: "Run research.",
-      path: Skill.Info.fields.path.make(join(directory, "tavily-research", "SKILL.md")),
-      content: "# tavily-research\n\nBody.",
-    })
-    // OpenCode advertises a skill unless autoinvoke is false, so the plugin leaves it unset.
-    expect(research).not.toHaveProperty("autoinvoke")
-  })
-
-  test("accepts Windows line endings", async () => {
-    const directory = await fixture("crlf", { tavily: skill("tavily").replace(/\n/g, "\r\n") })
-    expect((await loadSkills(directory))[0]?.description).toBe("Use tavily.")
-  })
-
-  test.each([
-    ["no frontmatter", "# tavily\n", "skills/tavily/SKILL.md has no frontmatter"],
-    ["no name", "---\ndescription: Use it.\n---\nBody\n", `skills/tavily/SKILL.md has no "name" in its frontmatter`],
-    ["no description", "---\nname: tavily\n---\nBody\n", `skills/tavily/SKILL.md has no "description" in its frontmatter`],
-    ["an empty description", "---\nname: tavily\ndescription:\n---\nBody\n", `skills/tavily/SKILL.md has no "description" in its frontmatter`],
-    ["the wrong name", skill("other"), `skills/tavily/SKILL.md is named "other" but must be named "tavily"`],
-  ])("refuses a skill with %s", async (label, text, what) => {
-    const directory = await fixture(`bad-${label.replace(/\W/g, "-")}`, { tavily: text })
-    await expect(loadSkills(directory)).rejects.toThrow(`SKILLS_INVALID: ${what}. Next step: Reinstall the plugin.`)
-  })
-
-  test("refuses a skill folder without SKILL.md", async () => {
-    const directory = await fixture("no-file", { tavily: null })
-    await expect(loadSkills(directory)).rejects.toThrow("SKILLS_INVALID: skills/tavily has no SKILL.md. Next step: Reinstall the plugin.")
-  })
-
-  test("refuses a missing skills folder", async () => {
-    await expect(loadSkills(join(root, "absent"))).rejects.toThrow(
-      "SKILLS_INVALID: The skills folder is missing from the package. Next step: Reinstall the plugin.",
-    )
-  })
-
-  test("loads the shipped skills from skills/ at the package root", async () => {
-    const packageRoot = dirname(dirname(dirname(fileURLToPath(import.meta.url))))
-    const shipped = await loadSkills()
-    expect(shipped.map((info): string[] => [info.id, info.path]).sort()).toEqual(
-      ["tavily", "tavily-research"].map((id) => [id, join(packageRoot, "skills", id, "SKILL.md")]),
-    )
-    for (const info of shipped) expect(info.content.length, info.id).toBeGreaterThan(0)
-  })
+test("the package's skills are checked, with their frontmatter names, descriptions and bodies", () => {
+  const skills = readSkills()
+  assert.deepEqual(skills.map((skill) => skill.id), ["tavily", "tavily-research"])
+  const skill = skills[0]
+  assert.ok(skill !== undefined)
+  assert.equal(skill.name, "tavily")
+  assert.match(skill.description, /^Web search and page reading with Tavily/)
+  assert.match(skill.description, /Not for the project's files/)
+  assert.match(skill.content, /^# Tavily\n/)
+  assert.equal(skill.content.startsWith("---"), false)
+  assert.equal(skill.path, join(root, "skills", "tavily", "SKILL.md"))
+  const research = skills[1]
+  assert.ok(research !== undefined)
+  assert.equal(research.name, "tavily-research")
+  assert.match(research.description, /^A Tavily Research task/)
+  assert.match(research.content, /^# Tavily Research\n/)
 })
 
-describe("registerSkills", () => {
-  test("adds each skill on every rebuild", async () => {
-    const skills = [parseSkill("tavily", "/pkg/skills/tavily/SKILL.md", skill("tavily"))]
-    const domain = transforms<EditorOf<Plugin.Context["skill"]>>()
-    await registerSkills(domain, skills)
-    const added: Skill.Info[] = []
-    const editor: EditorOf<Plugin.Context["skill"]> = {
-      list: () => [],
-      get: () => undefined,
-      add: (info) => void added.push(info),
-      update: () => {},
-      remove: () => {},
+test("YAML block scalars are folded, literal or stripped as YAML specifies", () => {
+  const cases: readonly [string, string, string][] = [
+    ["folded", ">", "first line second line\n"],
+    ["literal", "|", "first line\nsecond line\n"],
+    ["folded-strip", ">-", "first line second line"],
+    ["literal-strip", "|-", "first line\nsecond line"],
+  ]
+  for (const [name, marker, expected] of cases) {
+    const directory = fixture({ [name]: `---\nname: ${name}\ndescription: ${marker}\n  first line\n  second line\n---\n\n# Body\n` })
+    try {
+      assert.equal(readSkills(directory)[0]?.description, expected, name)
+    } finally {
+      rmSync(directory, { recursive: true, force: true })
     }
-    domain.run(editor)
-    domain.run(editor)
-    expect(added).toEqual([...skills, ...skills])
-  })
+  }
+  const empty = fixture({ empty: "---\nname: empty\ndescription: >\n---\n\n# Body\n" })
+  try {
+    assert.throws(() => readSkills(empty), /has no frontmatter description/)
+  } finally {
+    rmSync(empty, { recursive: true, force: true })
+  }
+  const marker = fixture({ marker: "---\nname: marker\ndescription: '>'\n---\n\n# Body\n" })
+  try {
+    assert.throws(() => readSkills(marker), /only a block marker/)
+  } finally {
+    rmSync(marker, { recursive: true, force: true })
+  }
+  const broken = fixture({ broken: "---\nname: broken\ndescription: [unclosed\n---\n\n# Body\n" })
+  try {
+    assert.throws(() => readSkills(broken), /has frontmatter that is not valid YAML/)
+  } finally {
+    rmSync(broken, { recursive: true, force: true })
+  }
+})
+
+test("a skill file must have the frontmatter shape the plugin registers", () => {
+  const cases: readonly [string, Readonly<Record<string, string>>, RegExp][] = [
+    ["no frontmatter", { broken: "# Broken\n" }, /SCHEMA_VIOLATION: skills\/broken\/SKILL.md has no frontmatter\. Next step: /],
+    ["no name", { broken: "---\ndescription: A description.\n---\n\n# Body\n" }, /has no frontmatter name/],
+    ["another name", { broken: "---\nname: other\ndescription: A description.\n---\n\n# Body\n" }, /names "other", not its directory "broken"/],
+    ["no description", { broken: "---\nname: broken\n---\n\n# Body\n" }, /has no frontmatter description/],
+    ["empty content", { broken: "---\nname: broken\ndescription: A description.\n---\n\n" }, /has no content below its frontmatter/],
+  ]
+  for (const [name, files, expected] of cases) {
+    const directory = fixture(files)
+    try {
+      assert.throws(() => readSkills(directory), expected, name)
+    } finally {
+      rmSync(directory, { recursive: true, force: true })
+    }
+  }
+  const missing = mkdtempSync(join(tmpdir(), "plugin-skills-"))
+  try {
+    mkdirSync(join(missing, "empty"), { recursive: true })
+    assert.throws(() => readSkills(missing), /skills\/empty\/SKILL.md is missing/)
+  } finally {
+    rmSync(missing, { recursive: true, force: true })
+  }
+  const none = mkdtempSync(join(tmpdir(), "plugin-skills-"))
+  try {
+    assert.throws(() => readSkills(none), /skills\/ holds no <name>\/SKILL\.md/)
+  } finally {
+    rmSync(none, { recursive: true, force: true })
+  }
+})
+
+test("registerSkills adds every checked skill and returns a disposer", async () => {
+  const added: { id: string; name: string; description?: string; path: string; content: string }[] = []
+  let disposed = false
+  const context = {
+    skill: {
+      async transform(callback: (editor: { add: (skill: (typeof added)[number]) => void }) => void) {
+        callback({ add: (skill) => added.push(skill) })
+        return {
+          async dispose() {
+            disposed = true
+          },
+        }
+      },
+    },
+  } as unknown as Plugin.Context
+  const registration = await registerSkills(context)
+  assert.equal(added.length, 2)
+  assert.deepEqual(added.map((skill) => skill.id), ["tavily", "tavily-research"])
+  const skill = added[0]
+  assert.ok(skill !== undefined)
+  assert.equal(skill.name, "tavily")
+  assert.match(skill.description ?? "", /^Web search and page reading with Tavily/)
+  assert.equal(skill.path, join(root, "skills", "tavily", "SKILL.md"))
+  assert.match(skill.content, /^# Tavily\n/)
+  await registration.dispose()
+  assert.equal(disposed, true)
 })

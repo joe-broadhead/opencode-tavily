@@ -1,55 +1,44 @@
-import type { PluginOptions } from "@opencode/plugin"
+/**
+ * The plugin's own options: the two settings the contract does not know.
+ *
+ * `access`, `accounts` and `allowUntestedHost` are the contract's options and are read by its modules; this file reads
+ * `websearch` and `executionTimeoutMs`, checks them, and answers the defaults the manifest declares. A bad value is
+ * `OPTIONS_INVALID`, in the contract's one form, and setup stops before anything is registered.
+ */
 
-/** What the default rules allow. `all` is the default; the other two are how a user restricts the plugin. */
-export type Access = "all" | "ask-changes" | "read-only"
+/** The shortest call the manifest allows, in milliseconds: one minute. */
+export const MIN_EXECUTION_TIMEOUT_MS = 60_000
 
-const ACCESS_VALUES: readonly Access[] = ["all", "ask-changes", "read-only"]
+/** The longest call the manifest allows, in milliseconds: one hour. */
+export const MAX_EXECUTION_TIMEOUT_MS = 3_600_000
 
-interface Options {
-  /** Select the built-in Tavily provider as the web search default when config has no choice. */
+/** The manifest's default call time: fifteen minutes. */
+export const DEFAULT_EXECUTION_TIMEOUT_MS = 900_000
+
+/** The options the plugin's own code reads. The contract's options are read by the contract. */
+export interface PluginOptions {
+  /** Select OpenCode's built-in Tavily provider when nothing earlier chose one. */
   readonly websearch: boolean
-  /** MCP execution wall time in milliseconds. */
+  /** How long one Tavily tool call may run, in milliseconds. */
   readonly executionTimeoutMs: number
-  /** Run on an OpenCode version outside the tested range, with a warning. */
-  readonly allowUntestedHost: boolean
-  /** What the generated default rules allow: everything, changes ask, or read-only. */
-  readonly access: Access
 }
 
-const DEFAULT_OPTIONS: Options = {
-  websearch: true,
-  executionTimeoutMs: 900_000,
-  allowUntestedHost: false,
-  access: "all",
-}
+/** Every option the manifest declares, including the contract's. */
+const KNOWN = new Set(["access", "accounts", "allowUntestedHost", "websearch", "executionTimeoutMs"])
 
-const MIN_TIMEOUT_MS = 60_000
-const MAX_TIMEOUT_MS = 3_600_000
-// `access` is checked below: it is a string, not one of the booleans or the timeout.
-const KEYS = Object.keys(DEFAULT_OPTIONS)
+const invalid = (what: string): Error => new Error(`OPTIONS_INVALID: ${what}. Next step: fix the plugin's options in opencode.json.`)
 
-const invalid = (what: string) =>
-  new Error(`OPTIONS_INVALID: ${what}. Next step: Fix the plugin's options in opencode.json.`)
+/** Read and check the plugin's options, or refuse with `OPTIONS_INVALID`. */
+export function pluginOptions(options: Readonly<Record<string, unknown>>): PluginOptions {
+  for (const key of Object.keys(options)) if (!KNOWN.has(key)) throw invalid(`"${key}" is not an option; the options are ${[...KNOWN].join(", ")}`)
 
-const boolean = (input: PluginOptions, key: "websearch" | "allowUntestedHost") => {
-  const value = input[key]
-  if (value === undefined) return DEFAULT_OPTIONS[key]
-  if (typeof value !== "boolean") throw invalid(`"${key}" must be true or false`)
-  return value
-}
+  const websearch = options.websearch === undefined ? true : options.websearch
+  if (typeof websearch !== "boolean") throw invalid(`"websearch" must be true or false`)
 
-export function parseOptions(input: PluginOptions): Options {
-  for (const key of Object.keys(input)) if (!KEYS.includes(key)) throw invalid(`Unknown option "${key}"; the options are ${KEYS.join(", ")}`)
-  const timeout = input.executionTimeoutMs === undefined ? DEFAULT_OPTIONS.executionTimeoutMs : input.executionTimeoutMs
-  if (!Number.isInteger(timeout) || timeout < MIN_TIMEOUT_MS || timeout > MAX_TIMEOUT_MS)
-    throw invalid(`"executionTimeoutMs" must be an integer from ${MIN_TIMEOUT_MS} to ${MAX_TIMEOUT_MS}`)
-  const access = input.access === undefined ? DEFAULT_OPTIONS.access : input.access
-  if (typeof access !== "string" || !(ACCESS_VALUES as readonly string[]).includes(access))
-    throw invalid(`"access" must be "all", "ask-changes" or "read-only"`)
-  return {
-    websearch: boolean(input, "websearch"),
-    executionTimeoutMs: timeout,
-    allowUntestedHost: boolean(input, "allowUntestedHost"),
-    access: access as Access,
+  const executionTimeoutMs = options.executionTimeoutMs === undefined ? DEFAULT_EXECUTION_TIMEOUT_MS : options.executionTimeoutMs
+  if (typeof executionTimeoutMs !== "number" || !Number.isInteger(executionTimeoutMs) || executionTimeoutMs < MIN_EXECUTION_TIMEOUT_MS || executionTimeoutMs > MAX_EXECUTION_TIMEOUT_MS) {
+    throw invalid(`"executionTimeoutMs" must be an integer from ${MIN_EXECUTION_TIMEOUT_MS} to ${MAX_EXECUTION_TIMEOUT_MS}`)
   }
+
+  return { websearch, executionTimeoutMs }
 }

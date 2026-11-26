@@ -1,12 +1,26 @@
-name: ci
+name: CI
+
+# One job, named ci: the org ruleset requires a check with that name. It runs the whole gate, so the required check
+# covers lint, the committed bundle's freshness, typecheck, tests, the pack test, conformance, docs drift and the
+# forbidden scan.
+#
+# It runs locally too: npm ci --ignore-scripts && npm run check
+#
+# Public repository: a pull request from a fork must never reach a self-hosted runner. The runner rule below keeps
+# every fork pull request on ubuntu-24.04, and lets this repository's own runs use the org's public runner when set.
 
 on:
-  push:
-    branches: [master]
   pull_request:
+  push:
+    branches:
+      - master
 
 permissions:
   contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   ci:
@@ -20,22 +34,16 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 24
-      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
-        with:
-          bun-version: 1.4.5
-      # The one ci job installs the workflow linter itself: `npm run check` runs it when it is on PATH, and this keeps
-      # that stage real in CI. The archive is verified against the release's checksums before it is extracted.
-      - name: Install actionlint
-        run: |
-          set -euo pipefail
-          version=1.7.12
-          base="https://github.com/rhysd/actionlint/releases/download/v${version}"
-          mkdir -p "$RUNNER_TEMP/actionlint"
-          cd "$RUNNER_TEMP/actionlint"
-          curl -sSfLO "${base}/actionlint_${version}_linux_amd64.tar.gz"
-          curl -sSfLO "${base}/actionlint_${version}_checksums.txt"
-          grep " actionlint_${version}_linux_amd64.tar.gz$" "actionlint_${version}_checksums.txt" | sha256sum -c -
-          tar xzf "actionlint_${version}_linux_amd64.tar.gz" actionlint
-          echo "$RUNNER_TEMP/actionlint" >> "$GITHUB_PATH"
+          package-manager-cache: false
+      - name: Fetch the contract over HTTPS
+        # The contract is a public repository, and npm may record its GitHub dependency over ssh. A runner has no key.
+        run: git config --global url."https://github.com/".insteadOf "ssh://git@github.com/"
       - run: npm ci --ignore-scripts
-      - run: npm run check
+      - name: The committed bundle is current
+        run: npm run bundle && git diff --exit-code dist/
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run test:pack
+      - run: npx plugin-kit check
+      - run: npx plugin-kit docs --check

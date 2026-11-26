@@ -1,7 +1,4 @@
-node_modules
-dist
+node_modules/
+release/
 *.tgz
-.env
-.env.*
-*.log
 .DS_Store
