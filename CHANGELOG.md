@@ -11,6 +11,8 @@
   nothing earlier chose one) and `executionTimeoutMs` (the MCP server's `timeout.execution`).
 - Docs, two skills, generated doc sections, a synthetic two-alias conformance fixture, 61 unit and host tests and a pack test.
   Built with `plugin-kit`; no compatibility paths, no dead code.
+- `NOTICE` lists every package inlined into the bundle (the contract, yaml, zod) with its verbatim license, and a test
+  checks it against an esbuild metafile.
 
 ### Removed since v0.0.7
 
