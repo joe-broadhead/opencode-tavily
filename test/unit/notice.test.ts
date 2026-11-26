@@ -39,7 +39,12 @@ async function bundledPackages(): Promise<string[]> {
       metafile: true,
       banner: { js: `import { createRequire } from "node:module";\nconst require = createRequire(import.meta.url);\n// ${pkg.name} ${pkg.version}. Built by scripts/build.mjs; do not edit.` },
     })
-    return [...new Set(Object.keys(result.metafile.inputs).map(packageOf).filter((value): value is string => value !== undefined))].sort()
+    const packages = new Set(Object.keys(result.metafile.inputs).map(packageOf).filter((value): value is string => value !== undefined))
+    // zod is inlined inside the contract's dist, so it has no metafile input of its own; its code in the output is the
+    // proof that it ships.
+    const output = readFileSync(join(outdir, "index.js"), "utf8")
+    if (output.includes("$ZodType") || output.includes("ZodError")) packages.add("zod")
+    return [...packages].sort()
   } finally {
     rmSync(outdir, { recursive: true, force: true })
   }
@@ -47,7 +52,7 @@ async function bundledPackages(): Promise<string[]> {
 
 test("NOTICE covers every package inlined into dist/index.js, with its verbatim license", async () => {
   const packages = await bundledPackages()
-  assert.deepEqual(packages, ["@we-the-rebel-alliance/plugin-contract", "yaml"], "the bundle inlines exactly the contract and yaml")
+  assert.deepEqual(packages, ["@we-the-rebel-alliance/plugin-contract", "yaml", "zod"], "the bundle inlines exactly the contract, yaml and zod")
   const notice = readFileSync(join(root, "NOTICE"), "utf8")
   for (const name of packages) {
     const directory = join(root, "node_modules", name)
